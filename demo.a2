@@ -1,0 +1,55 @@
+
+# string
+s = 'test_string'
+v = 123456
+
+# map
+map = {
+	key = 123456
+	@s = @s
+	12345 = 'string'
+
+	func = function (){
+		print('string')
+	}
+}
+
+# array list
+array = [1, 2, 3, 4, 5, 'string'];
+
+# 闭包
+function cl(a, b, ...){
+	v1 = 12345
+	v2 = 'string'
+	return function (){
+		print(v1..v2..'adadada')
+		return  nil 
+	}
+} 
+
+
+# function 
+function func(...){
+	return a, b, c;
+}
+
+# loop
+foreach(i, v in map){
+	print('i='..i..'v='..v)
+}
+
+for(i=0; i<1000; i++){
+	
+}
+
+
+# if
+if(a>0){
+	
+}else if(b>0){
+	
+}else{
+	
+}
+
+
