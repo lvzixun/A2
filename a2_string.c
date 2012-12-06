@@ -7,7 +7,7 @@
 #define str_prefix	 ((size_t)(&(((struct a2_string*)0)->str[1])))
 #define str_head(s)	 ((struct a2_string*)((void*)(s)-str_prefix))
 #define str_level(s) ((byte)(str_head(s)->str[0]))
-#define str_deep(s)	 (1<<str_level(s)) 
+#define str_deep(s)	 (((size_t)1)<<str_level(s)) 
 #define _str(sp)	 ((char*)((void*)(sp)+str_prefix))
 
 
@@ -42,7 +42,6 @@ char* a2_string_new(const char* s){
 	struct a2_string* ret = NULL;
 	check_null(s, NULL);
 	ret = _resize_string(NULL);
-	printf("ret = %p a2_s = %p str[1] = %p str_prefix = %lu\n", ret, _str(ret), &(ret->str[1]), str_prefix );
 	while(s[i]){
 		ret = str_head(a2_string_append(_str(ret), s[i]));
 		i++;
