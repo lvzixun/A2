@@ -10,5 +10,4 @@ map = {
 	end
 }
 
-print(map.self())
 

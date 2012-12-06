@@ -9,10 +9,10 @@ static char* _key[] = {
 	"else", "foreach", "break", "nil", "in", NULL
 };
 
+#define MAX_IDE_TEMP_BUF 128
 
 struct a2_lex{
 	char* lex_map[32];
-
 };
 
 static void _init_lex(struct a2_lex* lex_p);
