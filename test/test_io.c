@@ -4,8 +4,8 @@
 
 
 int main(void){
-	struct a2_io*  p = a2_io_open("./tfile");
-	printf("----file-------\n");
+	struct a2_io*  p = a2_io_open("tfile");
+	printf("----file--- p= %p----\n", p);
 	while(!a2_io_end(p)){
 		printf("%c", a2_io_readchar(p));
 	}

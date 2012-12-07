@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "a2_conf.h"
 #include "a2_error.h"
+#include <string.h>
 
 #define MAX_IO_BUFFER 1024
 
@@ -8,12 +9,12 @@ struct a2_io{
 	FILE* fp;
 	size_t seek;
 	size_t len;
-	int step;
+	size_t rsize;
 	byte buf[1];
 };
 
-#define is_end(p)   ((((p)->step)*MAX_IO_BUFFER)+(p)->seek>=(p)->len)
-#define is_load(p)	((p)->seek==MAX_IO_BUFFER)&&(!is_end(p))
+#define is_end(p)   ((p)->rsize+(p)->seek>=(p)->len)
+#define is_load(p, c)	(((p)->seek+(c))>=MAX_IO_BUFFER)&&(!is_end(p))
 
 static void _a2_io_load(struct a2_io* io_p);
 
@@ -32,8 +33,8 @@ struct a2_io*  a2_io_open(const char* file_name){
 	fseek(fp, 0L, SEEK_SET);
 	ret->fp = fp;
 	ret->seek = 0;
-	ret->step = -1;
-	_a2_io_load(ret);
+	ret->rsize = 0;
+	fread(ret->buf, sizeof(byte), MAX_IO_BUFFER, ret->fp);
 	return ret;
 }
 
@@ -47,24 +48,36 @@ void a2_io_close(struct a2_io* io_p){
 
 // load objects from  fp
 static void _a2_io_load(struct a2_io* io_p){
-	size_t len = fread(io_p->buf, sizeof(byte), MAX_IO_BUFFER, io_p->fp);
-	if(len)
-		(io_p->step)++;
-	io_p->seek = 0;
+	memcpy(io_p->buf, &(io_p->buf[io_p->seek]), MAX_IO_BUFFER-io_p->seek);
+	size_t len = fread( &(io_p->buf[MAX_IO_BUFFER-io_p->seek]), sizeof(byte), io_p->seek, io_p->fp);
+	assert(len);
+	io_p->rsize += io_p->seek;
+	io_p->seek = MAX_IO_BUFFER-io_p->seek;
 }
 
 // read a char from io buf
-char a2_io_readchar(struct a2_io* io_p){
-	check_null(io_p, '\0');
+inline char a2_io_readchar(struct a2_io* io_p){
+	assert(io_p);
 	if(is_end(io_p)) 
 		return '\0';
-	if(is_load(io_p)) 
+	if(is_load(io_p, 0)) 
 		_a2_io_load(io_p);
 	
 	return io_p->buf[io_p->seek++];
 }
 
-int a2_io_end(struct a2_io* io_p){
-	check_null(io_p, a2_true);
+// match next char
+inline int a2_io_matchchar(struct a2_io* io_p, char c){
+	assert(io_p);
+	if(is_end(io_p))
+		return a2_fail;
+	if(is_load(io_p, 1))
+		_a2_io_load(io_p);
+	return io_p->buf[io_p->seek+1];
+}
+
+// 
+inline int a2_io_end(struct a2_io* io_p){
+	assert(io_p);
 	return is_end(io_p);
 }
