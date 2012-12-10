@@ -69,7 +69,11 @@ void a2_string_free(char* a2_s){
 	free(str_head(a2_s));
 }
 
-
+void a2_string_clear(char* a2_s){
+	if(a2_s==NULL)
+		return;
+	str_head(a2_s)->len = 0;
+}
 
 
 

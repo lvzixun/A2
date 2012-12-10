@@ -17,6 +17,7 @@ typedef double	 a2_number;
 #define a2_assert assert
 #define malloc a2_malloc
 #define free   a2_free
+#define atonum(s) (a2_number)atof(s)
 
 #define a2_true 0
 #define a2_fail !a2_true

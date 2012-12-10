@@ -8,7 +8,7 @@ enum {
 	tk_ide,			// identifier   var
 	tk_string,		// string       'abcdefg'
 	tk_number,		// number       12345
-	tk_note,		// note :       # des
+	tk_end,			//  /n:       	
 	tk_op, 			// operate      like: + - * / ( ) [ ]
 	tk_args,		// variable parameters ...
 	tk_strcat 		// string aappend ..
@@ -16,6 +16,7 @@ enum {
 
 struct a2_token{
 	uint32 tt;
+	size_t line;
 	union{
 		a2_number number;
 		char* str;
@@ -23,6 +24,10 @@ struct a2_token{
 };
 
 struct a2_lex;
+struct a2_io;
+
+#define tt2tk(tt)	((tt)>>24)
+#define tt2op(tt)	((tt)&0xffffff)
 
 struct a2_lex* a2_lex_open();
 void a2_lex_close(struct a2_lex* lex_p);

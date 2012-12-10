@@ -66,14 +66,26 @@ inline char a2_io_readchar(struct a2_io* io_p){
 	return io_p->buf[io_p->seek++];
 }
 
-// match next char
-inline int a2_io_matchchar(struct a2_io* io_p, char c){
+// current char	 
+inline char a2_io_atchar(struct a2_io* io_p){
+	assert(io_p);
+	return io_p->buf[io_p->seek];
+}
+
+// match n char
+inline char a2_io_matchchar(struct a2_io* io_p, int n){
 	assert(io_p);
 	if(is_end(io_p))
-		return a2_fail;
-	if(is_load(io_p, 1))
-		_a2_io_load(io_p);
-	return io_p->buf[io_p->seek+1];
+		return '\0';
+	else if (n<=0 && ((-n)<=io_p->seek) )
+		return io_p->buf[io_p->seek+n];
+	else if( n>0 && n<MAX_IO_BUFFER){
+		if(is_load(io_p, n))
+			_a2_io_load(io_p);
+		return io_p->buf[io_p->seek+n];
+	}
+
+	return '\0';
 }
 
 // 

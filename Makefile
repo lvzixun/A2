@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS += -g -Wall 
 
 A2_OBJ = a2_mem.o a2_error.o a2_io.o a2_lex.o a2_map.o a2_string.o
-TEST_OBJ = ./test/test_io.o ./test/test_string.o
+TEST_OBJ = ./test/test_io.o ./test/test_string.o ./test/test_lex.o
 OBJ = $(A2_OBJ) $(TEST_OBJ)
 
 TEST =  $(foreach s, $(TEST_OBJ), $(basename $(s)))
