@@ -25,7 +25,6 @@ static char cmask[] = {
 #define lex_error(s) a2_error("[lex error @line: %lu]:%s\n", lex_p->line, s)
 #define _mask(c)	(cmask[(uchar)(c)])
 //#define tk_mask(tk, v)	 ((((uint32)tk)<<24)|(v))
-#define _is_key(lex_p, s)	((lex_p)->lex_map[_lex_hash(s)]!=NULL)
 
 struct _tokens{
 	size_t len;
@@ -34,6 +33,7 @@ struct _tokens{
 };
 
 struct a2_lex{
+
 	char* lex_map[32];
 	size_t line;
 	char*  a2_s_num_bufs;
@@ -48,6 +48,7 @@ static inline void lex_number(struct a2_lex* lex_p, struct a2_io* io_p);
 static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p);
 static inline a2_number _hex2number(char* a2_s);
 static inline uint32 tk_mask(byte op, const char* s);
+static inline int _is_key(struct a2_lex* lex_p, char* s);
 
 struct a2_lex* a2_lex_open(){
 	struct a2_lex* ret = NULL;
@@ -177,20 +178,20 @@ void a2_lex_clear(struct a2_lex* lex_p){
 	// temp  
 	for(i=0; i<lex_p->ts_p->len; i++){
 		struct a2_token* p = &(lex_p->ts_p->token_p[i]);
-		if(tt2tk(p->tt) == tk_ide || tt2tk(p->tt) == tk_string)
+		if(tt2tk(p->tt) == tk_ide || tt2tk(p->tt) == tk_string || tt2tk(p->tt) == tk_key)
 			a2_string_free(p->v.str);
 	}
 	lex_p->ts_p->len = 0;
 }
 
 inline  size_t _lex_hash(char* s){
-	return s[0] + s[strlen(s)-1];
+	return (s[0] + s[strlen(s)-1])%32;
 }
 
 static void _init_lex(struct a2_lex* lex_p){
 	int i=0;
 	while(_key[i]){
-		size_t idx = _lex_hash(_key[i])%32;
+		size_t idx = _lex_hash(_key[i]);
 		a2_assert(!lex_p->lex_map[idx]);
 		lex_p->lex_map[idx] = _key[i];
 		i++;
@@ -298,7 +299,8 @@ static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p){
 		a2_io_readchar(io_p);
 	}
 
-	if(_is_key(lex_p, token.v.str))
+	printf("ide = %s %s\n", token.v.str, (lex_p)->lex_map[_lex_hash(token.v.str)]);
+	if(_is_key(lex_p, token.v.str)==a2_true)
 		token.tt = tk_mask(tk_key, 0);
 	else
 		token.tt = tk_mask(tk_ide, 0);
@@ -337,4 +339,9 @@ static inline uint32 tk_mask(byte op, const char* s){
 	return (ret) | (op<<24);
 }
 
+static inline int _is_key(struct a2_lex* lex_p, char* s){
+	char* _s = lex_p->lex_map[_lex_hash(s)];
+	
+	return (_s && strcmp(_s, s)==0)?(a2_true):(a2_fail);
+}
 
