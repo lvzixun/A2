@@ -3,6 +3,7 @@
 #include "a2_map.h"
 #include "a2_obj.h"
 #include "a2_gc.h"
+#include <stdio.h>
 
 struct a2_slot{
 	struct a2_obj key;
@@ -18,7 +19,7 @@ struct a2_map{
 	struct a2_slot* slot_p;
 };
 
-#define DEFAULT_MAP_LEN		256
+#define DEFAULT_MAP_LEN		32
 #define is_nil(v) ((v).type==A2_TSNIL)
 
 static size_t calc_hash(byte* name, size_t len)
@@ -55,7 +56,7 @@ void a2_map_free(struct a2_map* map_p){
 static void map_resize(struct a2_map* map_p){
 	size_t i, new_size = map_p->size<<1, hash;
 	struct a2_slot* new_slot = (struct a2_slot*)calloc(new_size, sizeof(*new_slot));
-
+	printf("====map_resize!====\n");
 	for(i=0; i<map_p->size; i++){
 		hash = map_p->slot_p[i].hash % new_size;
 		if(is_nil(new_slot[hash].key)){
@@ -64,7 +65,7 @@ static void map_resize(struct a2_map* map_p){
 			new_slot[hash].value = map_p->slot_p[i].value;
 		}else{
 			size_t emp = hash;
-			for( ; !is_nil(new_slot[emp].key); ){
+			for( ; !is_nil(new_slot[emp].key); )
 				emp = (emp+1)%new_size;
 
 				new_slot[emp].key = map_p->slot_p[i].key;
@@ -72,13 +73,13 @@ static void map_resize(struct a2_map* map_p){
 				new_slot[emp].value = map_p->slot_p[i].value;
 				new_slot[emp].next = new_slot[hash].next;
 				new_slot[hash].next = emp+1;
-			}
 		}
 	}
 
 	free(map_p->slot_p);
 	map_p->size = new_size;
 	map_p->slot_p = new_slot;
+	printf("-----map resize end------\n");
 }
 
 static struct a2_obj* _a2_map_query(struct a2_map* map_p, struct a2_obj* key, struct a2_obj** _key){
@@ -124,14 +125,16 @@ int a2_map_add(struct a2_map* map_p, struct a2_kv* kv){
 	}else{
 		size_t emp=sh, idx=sh;
 		for( ;; ){
-			if(map_p->slot_p[idx].hash == hash &&  a2_obj_cmp(&map_p->slot_p[idx].key, kv->key)==a2_true)
+			if(map_p->slot_p[idx].hash == hash &&  a2_obj_cmp(&map_p->slot_p[idx].key, kv->key)==a2_true){
+				printf("the key is exits!\n");
 				return a2_fail;
+			}
 			if(map_p->slot_p[idx].next==0)
 				break;
 			idx = map_p->slot_p[idx].next-1;
 		}
 
-		for( ; is_nil(map_p->slot_p[emp].key); )
+		for( ; !is_nil(map_p->slot_p[emp].key); )
 			emp=(emp+1)%map_p->size;
 
 		map_p->slot_p[emp].hash = hash;
@@ -157,4 +160,17 @@ int a2_map_del(struct a2_map* map_p, struct a2_obj* key){
 		return a2_true;
 	}
 }
+
+
+// test dump
+void map_dump(struct a2_map* map_p){
+	size_t i =0;
+	for(i=0; i<map_p->size; i++){
+		printf("k= ");
+		obj_dump(&(map_p->slot_p[i].key));
+		printf("%s", "  v = ");
+		obj_dump(&(map_p->slot_p[i].value));
+		printf("\n");
+	}
+}	
 

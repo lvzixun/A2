@@ -1,12 +1,13 @@
 #include "a2_obj.h"
 #include "a2_string.h"
 #include <string.h>
+#include <stdio.h>
 
 typedef void(* _obj_free)(struct a2_obj*);
 
 static void _obj_strfree(struct a2_obj* obj_p);
 
-_obj_free obj_free_func[] = {
+static _obj_free obj_free_func[] = {
 	NULL,
 	_obj_strfree,
 	NULL
@@ -67,7 +68,26 @@ static void _obj_strfree(struct a2_obj* obj_p){
 }
 
 int a2_obj_cmp(struct a2_obj* obj1, struct a2_obj* obj2){
+	printf("cmp obj1 = ");
+	obj_dump(obj1);
+	printf("\ncmp obj2 = ");
+	obj_dump(obj2);
 	return ((obj1->type == obj2->type) && 
 			a2_obj_size(obj1)==a2_obj_size(obj2) && 
 			memcmp(a2_obj_bytes(obj1), a2_obj_bytes(obj2), a2_obj_size(obj1))==0)?(a2_true):(a2_fail); 
+}
+
+// test obj dump
+void obj_dump(struct a2_obj* obj){
+	switch(obj->type){
+		case A2_TSTRING:
+			printf("%s", str_obj(obj));
+			break;
+		case A2_TNUMBER:
+			printf("%lf", num_obj(obj));
+			break;
+		default:
+			printf("<null>");
+			break;
+	}
 }

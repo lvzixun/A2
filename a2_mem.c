@@ -13,6 +13,7 @@ void* a2_malloc(size_t size){
 void* a2_calloc(size_t count, size_t size){
 	void* ret = malloc(size*count);
 	memset(ret, 0, size*count);
+	mc++;
 	return ret;
 }
 
