@@ -6,6 +6,7 @@
 
 #undef malloc
 #undef free
+#undef calloc
 
 typedef unsigned char byte;
 typedef byte uchar;
@@ -17,6 +18,7 @@ typedef double	 a2_number;
 #define a2_assert assert
 #define malloc a2_malloc
 #define free   a2_free
+#define calloc a2_calloc
 #define atonum(s) (a2_number)atof(s)
 
 #define a2_true 0
@@ -26,5 +28,6 @@ typedef double	 a2_number;
 
 void* a2_malloc(size_t size);
 void  a2_free(void* p);
+void* a2_calloc(size_t count, size_t size);
 void mem_print();
 #endif

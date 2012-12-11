@@ -2,6 +2,7 @@
 #define _A2_LEX_H_
 
 #include "a2_conf.h"
+#include "a2_env.h"
 
 enum {
 	tk_key,			// keyWord     like: function if else ..
@@ -29,7 +30,7 @@ struct a2_io;
 #define tt2tk(tt)	((tt)>>24)
 #define tt2op(tt)	((tt)&0xffffff)
 
-struct a2_lex* a2_lex_open();
+struct a2_lex* a2_lex_open(struct a2_env* env_p);
 void a2_lex_close(struct a2_lex* lex_p);
 void a2_lex_clear(struct a2_lex* lex_p);
 

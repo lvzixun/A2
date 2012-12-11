@@ -1,6 +1,7 @@
 #include "../a2_lex.h"
 #include "../a2_io.h"
 #include <stdio.h>
+#include "../a2_env.h"
 
 static char ops[4] = {'\0'};
 
@@ -35,7 +36,8 @@ int main(int argc, char const *argv[])
 
 	size_t i, len = 0;
 	struct a2_io* io_p = a2_io_open("lex.a2");
-	struct a2_lex* lex_p = a2_lex_open();
+	struct a2_env* env_p = a2_env_new();
+	struct a2_lex* lex_p = a2_lex_open(env_p);
 	struct a2_token* tp = NULL;
 
 	tp = a2_lex_read(lex_p, io_p, &len);
@@ -51,6 +53,7 @@ int main(int argc, char const *argv[])
 	}
 
 	a2_lex_close(lex_p);
+	a2_env_free(env_p);
 	a2_io_close(io_p);
 	mem_print();	
 	return 0;

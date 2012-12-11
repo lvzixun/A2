@@ -8,6 +8,6 @@ struct a2_env;
 struct a2_env* a2_env_new();
 void a2_env_free(struct a2_env* env_p);
 
-char* a2_env_addstring(struct a2_env* env_p, char* a2_str);	
+char* a2_env_addstr(struct a2_env* env_p, char* a2_str);	
 
 #endif

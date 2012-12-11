@@ -33,7 +33,7 @@ struct _tokens{
 };
 
 struct a2_lex{
-
+	struct a2_env* env_p;
 	char* lex_map[32];
 	size_t line;
 	char*  a2_s_num_bufs;
@@ -50,11 +50,12 @@ static inline a2_number _hex2number(char* a2_s);
 static inline uint32 tk_mask(byte op, const char* s);
 static inline int _is_key(struct a2_lex* lex_p, char* s);
 
-struct a2_lex* a2_lex_open(){
+struct a2_lex* a2_lex_open(struct a2_env* env_p){
 	struct a2_lex* ret = NULL;
 	ret = (struct a2_lex*)malloc(sizeof(*ret));
 	memset(ret, 0, sizeof(*ret));
 	_init_lex(ret);
+	ret->env_p = env_p;
 	ret->ts_p = _lex_resize(NULL);
 	ret->a2_s_num_bufs = a2_str_new;
 	return ret;
@@ -222,23 +223,23 @@ inline struct _tokens* _lex_addtoken(struct _tokens* ts_p, struct a2_token* toke
 // analysis string
 static inline void lex_string(struct a2_lex* lex_p, struct a2_io* io_p){
 	char c;
+	a2_string_clear(lex_p->a2_s_num_bufs);
 	struct a2_token  token;
 	token.tt = tk_mask(tk_string, 0);
 	token.line = lex_p->line;
-	token.v.str = a2_str_new;
 
 	a2_io_readchar(io_p);		// match '
 	while(!a2_io_end(io_p)){
 		c=a2_io_readchar(io_p);
 		if( c!='\'' )
-			token.v.str = a2_string_append(token.v.str, c);
+			lex_p->a2_s_num_bufs = a2_string_append(lex_p->a2_s_num_bufs, c);
 		else{
+			token.v.str = a2_env_addstr(lex_p->env_p, lex_p->a2_s_num_bufs);
 			lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
 			return;
 		}
 	}
-
-	a2_string_free(token.v.str);
+	
 	lex_error("not match \"\'\"");
 }
 
@@ -286,24 +287,25 @@ static inline void lex_number(struct a2_lex* lex_p, struct a2_io* io_p){
 // analysis identifier
 static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p){
 	char c;
+	a2_string_clear(lex_p->a2_s_num_bufs);
 	struct a2_token token;
 	token.line = lex_p->line;
-	token.v.str = a2_str_new;
 
 	while(!a2_io_end(io_p)){
 		c=a2_io_atchar(io_p);
 		if(_mask(c)=='A'||_mask(c)=='0')
-			token.v.str = a2_string_append(token.v.str, c);
+			lex_p->a2_s_num_bufs = a2_string_append(lex_p->a2_s_num_bufs, c);
 		else
 			break;
 		a2_io_readchar(io_p);
 	}
 
-	printf("ide = %s %s\n", token.v.str, (lex_p)->lex_map[_lex_hash(token.v.str)]);
+	printf("ide = %s %s\n", token.v.str, (lex_p)->lex_map[_lex_hash(lex_p->a2_s_num_bufs)]);
 	if(_is_key(lex_p, token.v.str)==a2_true)
 		token.tt = tk_mask(tk_key, 0);
 	else
 		token.tt = tk_mask(tk_ide, 0);
+	token.v.str = a2_env_addstr(lex_p->env_p, lex_p->a2_s_num_bufs);
 	lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
 }
 
