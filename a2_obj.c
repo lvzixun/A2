@@ -10,6 +10,7 @@ static void _obj_strfree(struct a2_obj* obj_p);
 static _obj_free obj_free_func[] = {
 	NULL,
 	_obj_strfree,
+	NULL,
 	NULL
 };
 
@@ -28,6 +29,14 @@ struct a2_obj a2_number2obj(a2_number num){
 	struct a2_obj ret;
 	ret.type = A2_TNUMBER;
 	ret.value.number = num;
+	return ret;
+}
+
+// void* point to obj
+struct a2_obj  a2_point2obj(void* p){
+	struct a2_obj ret;
+	ret.type = A2_TPOINT;
+	ret.value.point = p;
 	return ret;
 }
 

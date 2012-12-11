@@ -45,7 +45,7 @@ int main(int argc, char const *argv[])
 	for(i=0; i<len; i++){
 		printf("[line:%lu]tk = %s  op =\" %s \" \n", tp[i].line, _lk[tt2tk(tp[i].tt)], op2s(tt2op(tp[i].tt)));
 		if(tt2tk(tp[i].tt)==tk_ide || tt2tk(tp[i].tt)==tk_key || tt2tk(tp[i].tt)==tk_string){
-			printf("v=%s", tp[i].v.str);
+			printf("v=%s %p", tp[i].v.str, tp[i].v.str);
 		}else if(tt2tk(tp[i].tt)==tk_number){
 			printf("v=%lf", tp[i].v.number);
 		}

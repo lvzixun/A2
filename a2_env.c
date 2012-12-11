@@ -47,15 +47,16 @@ char* a2_env_addstr(struct a2_env* env_p, char* a2_s){
 	struct a2_obj* vp=a2_map_query(env_p->g_str, _fill_str2obj(env_p, a2_s));
 	if(vp==NULL){
 		struct a2_obj k, v;
-		v.type = A2_TSNIL;
+		v.type = A2_TPOINT;
 		struct a2_kv kv = {
 			&k, &v
 		};
 		a2_s = a2_string_new(a2_s);
 		k = a2_string2obj(a2_s);
+		v.value.point = a2_s;
 		a2_gc_add(env_p->gc_p, k.value.obj);		// add gc chain
 		a2_map_add(env_p->g_str, &kv);				// add global string map
 		return a2_s;
 	}else
-		return  a2_gcobj2string(vp->value.obj);
+		return  (char*)(vp->value.point);
 }

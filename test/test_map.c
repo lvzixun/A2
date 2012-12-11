@@ -26,11 +26,16 @@ int main(int argc, char const *argv[])
 			a2_obj_free(&k);
 	}
 
-	k = a2_number2obj(12345);
-	if(a2_map_add(map_p, &kv)==a2_fail){
-		printf("add key is error!\n");
-		a2_obj_free(&k);
+	k = a2_string2obj( a2_string_new("key_168aaa07"));
+	struct a2_obj* kp = NULL;
+	if( (kp=a2_map_query(map_p, &k))==NULL ){
+		printf("query key is error!\n");
+	}else{
+		printf("query = ");
+		obj_dump(kp);
+		printf("\n");
 	}
+	a2_obj_free(&k);
 
 	k = a2_number2obj(12345);
 	if(a2_map_add(map_p, &kv)==a2_fail){

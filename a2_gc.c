@@ -41,6 +41,7 @@ void a2_gc_free(struct a2_gc* gc_p){
 		}
 		gc_p->chain = p;
 	}
+	free(gc_p);
 }
 
 void a2_gc_add(struct a2_gc* gc_p, struct a2_gcobj* gcobj){

@@ -13,16 +13,16 @@ static char* _key[] = {
 
 static char cmask[] = {
 	'\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\t', '\n', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', ' ', '!', '\0', '#', '\0', '\0', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', '0', '0', '0', 
-	'0', '0', '0', '0', '0', '0', '0', '\0', '\0', '<', '=', '>', '\0', '\0', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', '\0', '\0', '\0', '\0', 'A', '\0', 'A', 'A', 'A', 'A', 'A', 
+	'0', '0', '0', '0', '0', '0', '0', '\0', ';', '<', '=', '>', '\0', '\0', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', '[', '\0', ']', '\0', 'A', '\0', 'A', 'A', 'A', 'A', 'A', 
 	'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', '{', '|', '}', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', 
 	'\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', 
-	'\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', 
+	'\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'
 };
 
 #define DEFAULT_TOKENS_LEVEL 5
 #define DEFAULT_TOKENS_LEN	(1<<DEFAULT_TOKENS_LEVEL)
-#define _deep(l) (((size_t)1)<<(l))
 #define lex_error(s) a2_error("[lex error @line: %lu]:%s\n", lex_p->line, s)
+#define _deep(l) (((size_t)1)<<(l))
 #define _mask(c)	(cmask[(uchar)(c)])
 //#define tk_mask(tk, v)	 ((((uint32)tk)<<24)|(v))
 
@@ -63,7 +63,6 @@ struct a2_lex* a2_lex_open(struct a2_env* env_p){
 
 void a2_lex_close(struct a2_lex* lex_p){
 	if(lex_p==NULL) return;
-	a2_lex_clear(lex_p);
 	free(lex_p->ts_p);
 	a2_string_free(lex_p->a2_s_num_bufs);
 	free(lex_p);
@@ -76,6 +75,7 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 	assert(token_len);
 
 	lex_p->line = 1;
+
 	while(!a2_io_end(io_p)){
 		// printf("%c", a2_io_readchar(io_p));
 		// continue;
@@ -114,6 +114,8 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 			case '{':
 			case '}':
 			case '(':
+			case '[':
+			case ']':
 			case ')':
 			case ',':			// op ,
 			case '&':			// logic &
@@ -150,20 +152,22 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 				lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
 			}	
 				break;
+
 			case '\n':			// next line
-				if(lex_p->ts_p->len>0 && lex_p->ts_p->token_p[lex_p->ts_p->len-1].tt != tk_end){
+				(lex_p->line)++;
+			case ';':
+				if(lex_p->ts_p->len>0 && tt2tk(lex_p->ts_p->token_p[lex_p->ts_p->len-1].tt) != tk_end){
 					struct a2_token token;
-					token.line = lex_p->line;
+					token.line = lex_p->line-1;
 					token.tt = tk_mask(tk_end, 0);
 					lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
 				}
-				(lex_p->line)++;
 			case '\t':
 			case ' ':			// jump
 				a2_io_readchar(io_p);
 				break;
 			default:			// error
-				lex_error("th character is not assic");
+				a2_error("[lex error @line: %lu]: the character\' %c \' is not allow.\n", lex_p->line, c);
 				break;
 		}
 	}
@@ -174,14 +178,7 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 }
 
 void a2_lex_clear(struct a2_lex* lex_p){
-	size_t i;
 	if(!lex_p) return;
-	// temp  
-	for(i=0; i<lex_p->ts_p->len; i++){
-		struct a2_token* p = &(lex_p->ts_p->token_p[i]);
-		if(tt2tk(p->tt) == tk_ide || tt2tk(p->tt) == tk_string || tt2tk(p->tt) == tk_key)
-			a2_string_free(p->v.str);
-	}
 	lex_p->ts_p->len = 0;
 }
 
@@ -239,7 +236,7 @@ static inline void lex_string(struct a2_lex* lex_p, struct a2_io* io_p){
 			return;
 		}
 	}
-	
+
 	lex_error("not match \"\'\"");
 }
 
@@ -301,7 +298,7 @@ static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p){
 	}
 
 	printf("ide = %s %s\n", token.v.str, (lex_p)->lex_map[_lex_hash(lex_p->a2_s_num_bufs)]);
-	if(_is_key(lex_p, token.v.str)==a2_true)
+	if(_is_key(lex_p, lex_p->a2_s_num_bufs)==a2_true)
 		token.tt = tk_mask(tk_key, 0);
 	else
 		token.tt = tk_mask(tk_ide, 0);

@@ -50,6 +50,9 @@ int main(int argc, char const *argv[])
 	cmask['\n'] = '\n';
 	cmask[' '] = ' ';
 	cmask['\t'] = '\t';
+	cmask[';'] = ';';
+	cmask['['] = '[';
+	cmask[']'] = ']';
 
 	for(i='0'; i<='9'; i++){
 		cmask[i] = '0';
