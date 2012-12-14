@@ -3,6 +3,7 @@
 #include "a2_lex.h"
 #include "a2_string.h"
 #include "a2_gc.h"
+#include "a2_gc.h"
 
 struct a2_env{
 	struct a2_map* g_str;			// global string map
@@ -40,10 +41,14 @@ static inline struct a2_obj* _fill_str2obj(struct a2_env* env_p, char* a2_s){
 	return &(env_p->_forge_obj);
 }
 
-char* a2_env_addstr(struct a2_env* env_p, char* a2_s){
+inline char* a2_env_addstr(struct a2_env* env_p, char* a2_s){
+	return a2_gcobj2string(a2_env_addstrobj(env_p, a2_s));
+}
+
+struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s){
 	assert(a2_s);
 	assert(env_p);
-
+	
 	struct a2_obj* vp=a2_map_query(env_p->g_str, _fill_str2obj(env_p, a2_s));
 	if(vp==NULL){
 		struct a2_obj k, v;
@@ -53,10 +58,51 @@ char* a2_env_addstr(struct a2_env* env_p, char* a2_s){
 		};
 		a2_s = a2_string_new(a2_s);
 		k = a2_string2obj(a2_s);
-		v.value.point = a2_s;
+		v.value.point = k.value.obj;
 		a2_gc_add(env_p->gc_p, k.value.obj);		// add gc chain
 		a2_map_add(env_p->g_str, &kv);				// add global string map
-		return a2_s;
+		return k.value.obj;
 	}else
-		return  (char*)(vp->value.point);
+		return  vp->value.point;
+}
+
+
+inline int a2_ktisfunction(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokenisfunction(env_p->lex_p, token);
+}
+
+inline int a2_ktisreturn(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokenisreturn(env_p->lex_p, token);
+}
+
+inline int a2_ktiscontinue(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokeniscontinue(env_p->lex_p, token);
+}
+
+inline int a2_ktisfor(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokenisfor(env_p->lex_p, token);
+}
+
+inline int a2_ktisif(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokenisif(env_p->lex_p, token);
+}
+
+inline int a2_ktiselse(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokeniselse(env_p->lex_p, token);
+}
+
+inline int a2_ktisforeach(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokenisforeach(env_p->lex_p, token);
+}
+
+inline int a2_ktisbreak(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokenisbreak(env_p->lex_p, token);
+}
+
+inline int a2_ktisnil(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokenisnil(env_p->lex_p, token);
+}
+
+inline int a2_ktisin(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokenisin(env_p->lex_p, token);
 }

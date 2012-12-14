@@ -3,13 +3,15 @@
 #include "a2_conf.h"
 #include "a2_gc.h"
 
-struct a2_obj{
-	int type;
-	union {
+typedef union {
 		struct a2_gcobj* obj;
 		a2_number number;
 		void* point;
-	}value;
+}a2_value;
+
+struct a2_obj{
+	int type;
+	a2_value value;
 };
 
 enum{

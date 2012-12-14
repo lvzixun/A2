@@ -1,4 +1,5 @@
 #include "../a2_lex.h"
+#include "../a2_gc.h"
 #include "../a2_io.h"
 #include <stdio.h>
 #include "../a2_env.h"
@@ -44,8 +45,10 @@ int main(int argc, char const *argv[])
 	printf("lex read end!\n");
 	for(i=0; i<len; i++){
 		printf("[line:%lu]tk = %s  op =\" %s \" \n", tp[i].line, _lk[tt2tk(tp[i].tt)], op2s(tt2op(tp[i].tt)));
-		if(tt2tk(tp[i].tt)==tk_ide || tt2tk(tp[i].tt)==tk_key || tt2tk(tp[i].tt)==tk_string){
+		if(tt2tk(tp[i].tt)==tk_ide || tt2tk(tp[i].tt)==tk_key){
 			printf("v=%s %p", tp[i].v.str, tp[i].v.str);
+		}else if(tt2tk(tp[i].tt)==tk_string){
+			printf("v = %s %p", a2_gcobj2string(tp[i].v.obj), a2_gcobj2string(tp[i].v.obj));
 		}else if(tt2tk(tp[i].tt)==tk_number){
 			printf("v=%lf", tp[i].v.number);
 		}

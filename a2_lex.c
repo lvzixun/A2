@@ -19,7 +19,7 @@ static char cmask[] = {
 	'\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'
 };
 
-#define DEFAULT_TOKENS_LEVEL 5
+#define DEFAULT_TOKENS_LEVEL 8
 #define DEFAULT_TOKENS_LEN	(1<<DEFAULT_TOKENS_LEVEL)
 #define lex_error(s) a2_error("[lex error @line: %lu]:%s\n", lex_p->line, s)
 #define _deep(l) (((size_t)1)<<(l))
@@ -35,6 +35,7 @@ struct _tokens{
 struct a2_lex{
 	struct a2_env* env_p;
 	char* lex_map[32];
+	byte  lex_str2hash[sizeof(_key)/sizeof(char*)];
 	size_t line;
 	char*  a2_s_num_bufs;
 	struct _tokens* ts_p;			// tokens buffer
@@ -49,6 +50,7 @@ static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p);
 static inline a2_number _hex2number(char* a2_s);
 static inline uint32 tk_mask(byte op, const char* s);
 static inline int _is_key(struct a2_lex* lex_p, char* s);
+static char* op2s(char* ops, uint32 op);
 
 struct a2_lex* a2_lex_open(struct a2_env* env_p){
 	struct a2_lex* ret = NULL;
@@ -183,13 +185,14 @@ void a2_lex_clear(struct a2_lex* lex_p){
 }
 
 inline  size_t _lex_hash(char* s){
-	return (s[0] + s[strlen(s)-1])%32;
+	return (s[0] + s[strlen(s)])%32;
 }
 
 static void _init_lex(struct a2_lex* lex_p){
 	int i=0;
 	while(_key[i]){
 		size_t idx = _lex_hash(_key[i]);
+		lex_p->lex_str2hash[i] = (byte)idx;
 		a2_assert(!lex_p->lex_map[idx]);
 		lex_p->lex_map[idx] = _key[i];
 		i++;
@@ -231,7 +234,7 @@ static inline void lex_string(struct a2_lex* lex_p, struct a2_io* io_p){
 		if( c!='\'' )
 			lex_p->a2_s_num_bufs = a2_string_append(lex_p->a2_s_num_bufs, c);
 		else{
-			token.v.str = a2_env_addstr(lex_p->env_p, lex_p->a2_s_num_bufs);
+			token.v.obj = a2_env_addstrobj(lex_p->env_p, lex_p->a2_s_num_bufs);
 			lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
 			return;
 		}
@@ -297,9 +300,11 @@ static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p){
 		a2_io_readchar(io_p);
 	}
 
-	printf("ide = %s %s\n", token.v.str, (lex_p)->lex_map[_lex_hash(lex_p->a2_s_num_bufs)]);
-	if(_is_key(lex_p, lex_p->a2_s_num_bufs)==a2_true)
+//	printf("ide = %s %s\n", token.v.str, (lex_p)->lex_map[_lex_hash(lex_p->a2_s_num_bufs)]);
+	if(_is_key(lex_p, lex_p->a2_s_num_bufs)==a2_true){
 		token.tt = tk_mask(tk_key, 0);
+		token.tt |= _lex_hash(lex_p->a2_s_num_bufs);
+	}
 	else
 		token.tt = tk_mask(tk_ide, 0);
 	token.v.str = a2_env_addstr(lex_p->env_p, lex_p->a2_s_num_bufs);
@@ -344,3 +349,85 @@ static inline int _is_key(struct a2_lex* lex_p, char* s){
 	return (_s && strcmp(_s, s)==0)?(a2_true):(a2_fail);
 }
 
+#define _token_check(i)		(tt2op(token->tt) == lex_p->lex_str2hash[i])?(a2_true):(a2_fail)
+// check token is function
+inline int a2_tokenisfunction(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(0);
+}
+
+inline int a2_tokenisreturn(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(1);
+}
+
+inline int a2_tokeniscontinue(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(2);
+}
+
+inline int a2_tokenisfor(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(3);
+}
+
+inline int a2_tokenisif(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(4);
+}
+
+inline int a2_tokeniselse(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(5);
+}
+
+inline int a2_tokenisforeach(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(6);
+}
+
+inline int a2_tokenisbreak(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(7);
+}
+
+inline int a2_tokenisnil(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(8);
+}
+
+inline int a2_tokenisin(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(9);
+}
+
+char* a2_token2str(struct a2_token* token, char* ts_buf){
+	assert(token);
+	switch( tt2tk (token->tt) ){
+		case tk_args:
+			return "...";
+		case tk_end:
+			return "exp end";
+		case tk_number:
+			sprintf(ts_buf, "%lf", token->v.number);
+			return ts_buf;
+		case tk_key:
+		case tk_ide:
+			return token->v.str;
+		case tk_string:
+			return a2_gcobj2string(token->v.obj);
+		case tk_strcat:
+			return "..";
+		case tk_op:
+			return op2s(ts_buf, tt2op(token->tt));
+		default:
+			assert(0);
+	}
+	return  NULL;
+}
+
+static char* op2s(char* ops, uint32 op){
+	int i=0;
+	char c=0;
+	c = (op&0xff0000)>>16;
+	if(c)
+		ops[i++]=c;
+	c=(op&0xff00)>>8;
+	if(c)
+		ops[i++]=c;
+	c=(op&0xff);
+	if(c)
+		ops[i++]=c;
+	ops[i] = '\0';
+	return ops;
+}
