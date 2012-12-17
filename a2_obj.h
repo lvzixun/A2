@@ -18,7 +18,10 @@ enum{
 	A2_TSNIL,
 	A2_TSTRING,
 	A2_TNUMBER,
-	A2_TPOINT
+	A2_TPOINT,
+	A2_TMAP,
+	A2_TARRAY,
+	A2_TFUNCTION
 };
 
 #define str_obj(obj_p)  (a2_gcobj2string((obj_p)->value.obj))

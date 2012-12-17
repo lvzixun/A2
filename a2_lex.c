@@ -8,7 +8,7 @@
 // the key word
 static char* _key[] = {
 	"function", "return", "continue", "for", "if",
-	"else", "foreach", "break", "nil", "in", NULL
+	"else", "foreach", "break", "nil", "in", "true","fail", NULL
 };
 
 static char cmask[] = {
@@ -48,7 +48,6 @@ static inline void lex_string(struct a2_lex* lex_p, struct a2_io* io_p);
 static inline void lex_number(struct a2_lex* lex_p, struct a2_io* io_p);
 static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p);
 static inline a2_number _hex2number(char* a2_s);
-static inline uint32 tk_mask(byte op, const char* s);
 static inline int _is_key(struct a2_lex* lex_p, char* s);
 static char* op2s(char* ops, uint32 op);
 
@@ -333,7 +332,7 @@ static inline a2_number _hex2number(char* a2_s){
 	return ret;
 }
 
-static inline uint32 tk_mask(byte op, const char* s){
+inline uint32 tk_mask(byte op, const char* s){
 	uint32 ret=0;
 	int i=0;
 	for(i=0; s&&s[i]&&i<3; i++){
@@ -406,8 +405,6 @@ char* a2_token2str(struct a2_token* token, char* ts_buf){
 			return token->v.str;
 		case tk_string:
 			return a2_gcobj2string(token->v.obj);
-		case tk_strcat:
-			return "..";
 		case tk_op:
 			return op2s(ts_buf, tt2op(token->tt));
 		default:

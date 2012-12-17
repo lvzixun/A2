@@ -13,7 +13,6 @@ enum {
 	tk_end,			//  /n:       	
 	tk_op, 			// operate      like: + - * / ( ) [ ]
 	tk_args,		// variable parameters ...
-	tk_strcat 		// string aappend ..
 };
 
 struct a2_lex;
@@ -31,6 +30,8 @@ struct a2_token{
 
 #define tt2tk(tt)	((tt)>>24)
 #define tt2op(tt)	((tt)&0xffffff)
+#define kp2tt(k, p) (((k)<<24) | (p)) 
+inline uint32 tk_mask(byte op, const char* s);
 
 struct a2_lex* a2_lex_open(struct a2_env* env_p);
 void a2_lex_close(struct a2_lex* lex_p);
