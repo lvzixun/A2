@@ -16,6 +16,9 @@ enum node_type{
 	// string node
 	strcat_node,// ..
 
+	str_node,
+	num_node,
+
 	// arithmetic node
 	add_node,	// +
 	sub_node,	// -
@@ -40,6 +43,10 @@ enum node_type{
 	args_node,	// ...
 	chi_node, 	// .
 	func_node, 	// def function
+	map_node,   // def map
+	array_node, // def array
+	for_node,
+	foreach_node,
 
 	var_node = (nt_lmask | 0x00),  // variable node
 	ass_node = (nt_lmask | 0x01),   // =
@@ -71,7 +78,7 @@ struct a2_parse{
 #define _node_deep(l)	(1<<(l))
 #define node_p(i)	(&(parse_p->node_buf[i-1]))
 #define is_end		(parse_p->t_idx>=parse_p->len)	
-#define parse_error(s)	a2_error("[parse error@line: %d]: %s", cur_token.line, (s))
+#define parse_error(s)	a2_error("[parse error@line: %d]: %s", (is_end)?(parse_p->token_chain[parse_p->t_idx-1].line):(cur_token.line), (s))
 
 static void _init_node(struct a2_parse* parse_p);
 
@@ -108,6 +115,10 @@ static size_t parse_comma(struct a2_parse* parse_p);
 static size_t parse_cargs(struct a2_parse* parse_p);
 static size_t parse_child(struct a2_parse* parse_p);
 static size_t parse_stringcats(struct a2_parse* parse_p);
+static inline  size_t parse_cfunc(struct a2_parse* parse_p);
+static inline size_t parse_cma(struct a2_parse* parse_p);
+static inline size_t parse_scop(struct a2_parse* parse_p);
+static size_t parse_elif(struct a2_parse* parse_p);
 
 struct a2_parse*  a2_parse_open(struct a2_env* env_p){
 	struct a2_parse* ret = (struct a2_parse*)malloc(sizeof(*ret));
@@ -345,10 +356,79 @@ EXP_ERROR:{
 }
 
 static size_t parse_map(struct a2_parse* parse_p){
+	size_t head=0, back=0, nn=0;
+	assert( tt2op(parse_readtoken(parse_p)->tt)=='{');		// JUMP  {
+
+	back = head = new_node(parse_p, NULL, map_node);
+	for(;!is_end; ){
+		if(tt2op(cur_token.tt)=='}')
+			return head;
+		if(tt2tk(cur_token.tt)==tk_end){   // jump end
+			parse_readtoken(parse_p);
+			continue;
+		}
+
+		switch(tt2tk(cur_token.tt)){
+			case tk_ide:
+				nn = new_node(parse_p, &cur_token, var_node);
+				break;
+			case tk_number:
+				nn = new_node(parse_p, &cur_token, num_node);
+				break;
+			case tk_string:
+				nn = new_node(parse_p, &cur_token, str_node);
+				break;
+			default:{
+				char ts_buf[64] = {0};
+				a2_error("[parse error@line: %d]: the token \' %s \' is can not set key.",
+					cur_token, a2_token2str(&cur_token, ts_buf));
+			}
+		}
+
+		parse_readtoken(parse_p);		// jump  key
+		if(tt2op(parse_readtoken(parse_p)->tt)!='=') // jump '='
+			parse_error("you lost \' = \'.");
+		node_p(nn)->childs[0] = parse_exp(parse_p);
+		struct a2_token* tp = parse_readtoken(parse_p);
+		if(!tp) break;
+		switch(tt2op(tp->tt)){
+			case ',':
+				break;
+			case '}':
+				return head;
+			default:{
+				char ts_buf[64] = {0};
+				a2_error("[parse error@line: %d]: you lost \' , \' or \' } \' before the token \' %s \'.",
+					tp->tt, a2_token2str(tp, ts_buf));
+			}
+		}
+
+		node_p(back)->next = nn;
+		back = node_p(back)->next;
+	}
+
+	parse_error("you lost \' } \'.");
 	return 0;
 }
 
 static size_t parse_array(struct a2_parse* parse_p){
+	size_t head=0, back=0;
+	assert(tt2op(parse_readtoken(parse_p)->tt)=='['); // jump '['
+	back = head = new_node(parse_p, NULL, array_node);
+	for(; !is_end;){
+		if(tt2op(cur_token.tt)==']')
+			return head;
+		if(tt2tk(cur_token.tt)==tk_end){   // jump end
+			parse_readtoken(parse_p);
+			continue;
+		}
+
+		node_p(back)->next = parse_exp(parse_p);
+		back = node_p(back)->next;
+		if(tt2op(parse_readtoken(parse_p)->tt)!=',') // jump ','
+			parse_error("you lost \' , \'.");
+	}
+	parse_error("you lost \' ] \'.");
 	return 0;
 }
 
@@ -370,19 +450,22 @@ static  size_t _parse_operation(struct a2_parse* parse_p, parse_func pfunc){
 	if( !tp || tt2tk(tp->tt)==tk_end) return exp1;
 
 	switch(tt2op(tp->tt)){
-		case '=':
-			// check left vaule 
-			if( nt2ne(node_p(exp1)->type)==ne_left )
-				head = new_node(parse_p, &cur_token, ass_node);
-			else
-				parse_error("the expression is can not left value");
-			break;
+		case '=':{
+			// check left vaule
+			size_t texp1 = exp1;
+			for(;texp1;texp1=node_p(texp1)->next){
+				if( nt2ne(node_p(texp1)->type)!=ne_left )
+					parse_error("the expression is can not left value");
+			}
+			head = new_node(parse_p, &cur_token, ass_node);
+		}
+			break; 
 		default:
 			assert(0);	
 	}
 
 	parse_readtoken(parse_p);		// jump = 
-	exp2 = pfunc(parse_p);
+	exp2 = _parse_operation(parse_p, pfunc);
 	node_p(head)->childs[0] = exp1;
 	node_p(head)->childs[1] = exp2;
 	return head;
@@ -415,7 +498,7 @@ static size_t parse_logic(struct a2_parse* parse_p){
 	if(tt2op(tp->tt) == '|'){
 		head = new_node(parse_p, &cur_token, or_node);
 		parse_readtoken(parse_p);
-		exp2 = parse_interval(parse_p);
+		exp2 = parse_logic(parse_p);
 		node_p(head)->childs[0] = exp1;
 		node_p(head)->childs[1] = exp2;
 		return head;
@@ -439,7 +522,7 @@ static size_t parse_interval(struct a2_parse* parse_p){
 	if(tt2op(tp->tt) == '&'){
 		head = new_node(parse_p, &cur_token, and_node);
 		parse_readtoken(parse_p);
-		exp2 = parse_limits(parse_p);
+		exp2 = parse_interval(parse_p);
 		node_p(head)->childs[0] = exp1;
 		node_p(head)->childs[1] = exp2;
 		return head;
@@ -484,7 +567,7 @@ static size_t parse_limits(struct a2_parse* parse_p){
 	}
 
 	parse_readtoken(parse_p);
-	exp2 = parse_arithmetic(parse_p);
+	exp2 = parse_limits(parse_p);
 	node_p(head)->childs[0] = exp1;
 	node_p(head)->childs[1] = exp2;
 	return head;
@@ -510,7 +593,7 @@ static size_t parse_arithmetic(struct a2_parse* parse_p){
 	}
 
 	parse_readtoken(parse_p);
-	exp2 = parse_advanced(parse_p);
+	exp2 = parse_arithmetic(parse_p);
 	node_p(head)->childs[0] = exp1;
 	node_p(head)->childs[1] = exp2;
 	return head;
@@ -536,7 +619,7 @@ static size_t parse_advanced(struct a2_parse* parse_p){
 	}
 
 	parse_readtoken(parse_p);
-	exp2 = parse_base(parse_p);
+	exp2 = parse_advanced(parse_p);
 	node_p(head)->childs[0] = exp1;
 	node_p(head)->childs[1] = exp2;
 	return head;
@@ -563,31 +646,35 @@ static size_t parse_base(struct a2_parse* parse_p){
 			}else{
 				switch(tt2op(ntp->tt)){
 					case '(':{		// function call
-						head = new_node(parse_p, tp, cfunc_node);
-						node_p(head)->childs[0] = parse_cargs(parse_p);
+						head = parse_cfunc(parse_p);
 					}
 						return head;
 					case '[':{		// map or array 
-						head = new_node(parse_p, tp, cma_node);
-						parse_readtoken(parse_p); // jump [
-						node_p(head)->childs[0] = parse_expression(parse_p);
-						if(tt2op(parse_readtoken(parse_p)->tt)!=']')
-							parse_error("you lost \']\'.");
+						head = parse_cma(parse_p);
 					}
 						return head;
 					case '.':{
-						head = new_node(parse_p, tp, chi_node);
-						node_p(head)->next = parse_child(parse_p);
+						head = parse_child(parse_p);
 					}
 						return head;
 					case (('.'<<8)+'.'):{	// string cats
-						head = new_node(parse_p, tp, strcat_node);
-						node_p(head)->next = parse_stringcats(parse_p);
+						head = parse_stringcats(parse_p);
 					}
 						return head;
 					default:
 						return head;
 				}
+			}
+		}
+			break;
+		case tk_string:{
+			struct a2_token* ntp = parse_matchtoken(parse_p, 1);
+			if(!ntp || tt2op(ntp->tt)!=(('.'<<8)+'.')){
+				char ts_buf[64] = {0};
+				a2_error("[parse error@line: %d]: the string \'%s\' is error operation, you maybe lost \'..\'.",
+					cur_token.line, a2_token2str(&cur_token, ts_buf));
+			}else{
+				return parse_stringcats(parse_p);
 			}
 		}
 			break;
@@ -622,12 +709,36 @@ static size_t parse_base(struct a2_parse* parse_p){
 		default:
 			assert(0);
 	}
+	return 0;
+}
+
+
+static inline  size_t parse_cfunc(struct a2_parse* parse_p){
+	size_t head=0;
+	assert(tt2tk(cur_token.tt)==tk_ide);
+	parse_readtoken(parse_p);	// jump ide
+	head = new_node(parse_p, &cur_token, cfunc_node);
+	node_p(head)->childs[0] = parse_cargs(parse_p);
+	return head;
+}
+
+static inline size_t parse_cma(struct a2_parse* parse_p){
+	size_t head=0;
+	assert(tt2tk(cur_token.tt)==tk_ide);
+	head = new_node(parse_p, &cur_token, cma_node);
+	parse_readtoken(parse_p); // jump [
+	node_p(head)->childs[0] = parse_expression(parse_p);
+	if(tt2op(parse_readtoken(parse_p)->tt)!=']')
+		parse_error("you lost \']\'.");
 	return head;
 }
 
 static size_t parse_child(struct a2_parse* parse_p){
 	size_t head=0, back=0;
 	struct a2_token* tp=NULL;
+	assert(tt2tk(cur_token.tt)==tk_ide);
+	back = head = new_node(parse_p, parse_readtoken(parse_p), chi_node);
+
 	for(; !is_end; ){
 		if(tt2op(parse_attoken(parse_p)->tt)=='.')
 			parse_readtoken(parse_p); // jump .
@@ -641,19 +752,22 @@ static size_t parse_child(struct a2_parse* parse_p){
 			a2_error("[parse error@line: %d]: the token \' %s \', is not ungrammatical.",
 				&cur_token, a2_token2str(&cur_token, ts_buf));
 		}
-		if(!head)
-			head = back = new_node(parse_p, &cur_token, chi_node);
-		else{
-			node_p(back)->next = new_node(parse_p, &cur_token, chi_node);
+
+		tp = parse_matchtoken(parse_p, 1);
+		if(tp==NULL || (tt2op(tp->tt)!='(' && tt2op(tp->tt)!='[')){
+			node_p(back)->next = new_node(parse_p, &cur_token, var_node);
+			back = node_p(back)->next;
+		}else if(tt2op(tp->tt)=='('){		// is function
+			node_p(back)->next = parse_cfunc(parse_p);
+			back = node_p(back)->next;
+		}else if(tt2op(tp->tt)=='['){
+			node_p(back)->next = parse_cma(parse_p);
 			back = node_p(back)->next;
 		}
-
-		parse_readtoken(parse_p);
 	}
 
 	return head;
 }
-
 
 static  size_t parse_function(struct a2_parse* parse_p){
 	size_t head;
@@ -663,7 +777,8 @@ static  size_t parse_function(struct a2_parse* parse_p){
 		tp = parse_readtoken(parse_p);
 
 	head = new_node(parse_p, tp, func_node);
-	if( tt2op(parse_attoken(parse_p)->tt)!='(' )
+	tp= parse_attoken(parse_p);
+	if( !tp || tt2op(tp->tt)!='(' )
 		parse_error("the function's grammar is error, you lost \'(\' after \'function\'.");
 	node_p(head)->childs[0] = parse_args(parse_p);
 	node_p(head)->childs[1] = parse_lsegment(parse_p);
@@ -753,18 +868,135 @@ static size_t parse_args(struct a2_parse* parse_p){
 }
 
 static size_t parse_stringcats(struct a2_parse* parse_p){
+	size_t head=0;
+	head = new_node(parse_p, NULL, strcat_node);
+	node_p(head)->childs[0] = parse_scop(parse_p);
+
+	struct a2_token* tp = parse_attoken(parse_p);
+	if(!tp || tt2op(tp->tt)!= (('.'<<8)+'.') )
+		return head;
+
+	parse_readtoken(parse_p);
+	node_p(head)->childs[1] = parse_stringcats(parse_p);
+	return head;
+}
+
+static inline size_t parse_scop(struct a2_parse* parse_p){
+	switch( tt2tk(cur_token.tt)){
+		case tk_string:
+			return new_node(parse_p, &cur_token, str_node);
+		case tk_number:
+			return new_node(parse_p, &cur_token, num_node);
+		case tk_ide:{
+			struct a2_token* ntp = parse_matchtoken(parse_p, 1);
+			switch(tt2op(ntp->tt)){
+				case '(':
+					return parse_cfunc(parse_p);
+				case '[':
+					return parse_cma(parse_p);
+				default:
+					return new_node(parse_p, parse_readtoken(parse_p), var_node);
+			}
+		}
+			break;
+		default:{
+			char ts_buf[64] = {0};
+			a2_error("[parse error@line: %d]: the token \' %s \' is not string append.",
+				cur_token.line, a2_token2str(&cur_token, ts_buf));
+		}
+	}
+
 	return 0;
+}
+
+static inline int match_op(struct a2_parse* parse_p, char c){
+	struct a2_token* tp = parse_readtoken(parse_p);
+	return (!tp || tt2op(tp->tt)!= c)?(a2_fail):(a2_true);
 }
 
 static  size_t parse_for(struct a2_parse* parse_p){
-	return 0;
+	size_t head=0;
+	assert(a2_ktisfor(parse_p->env_p, &cur_token)==a2_true);
+	struct a2_token* tp = parse_readtoken(parse_p);	//JUMP for
+
+	if(match_op(parse_p, '(')==a2_fail) parse_error("you lost \' ( \' after for.");
+
+	head = new_node(parse_p, tp, for_node);
+	node_p(head)->childs[0] = parse_exp(parse_p);
+	node_p(head)->childs[1] = parse_logic(parse_p);
+	node_p(head)->childs[2] = parse_exp(parse_p);
+
+	if(match_op(parse_p, ')')==a2_fail) parse_error("you lost \' ) \' after for.");
+
+	tp = parse_attoken(parse_p);
+	if(!tp) parse_error("you lost \' { \' after for expression.");
+    if(tt2op(tp->tt)!='{')
+    	node_p(head)->childs[3] = parse_expression(parse_p);
+    else
+    	node_p(head)->childs[3] = parse_lsegment(parse_p);
+
+	return head;
 }
 
 static  size_t parse_foreach(struct a2_parse* parse_p){
-	return 0;
+	size_t head=0;
+	assert(a2_ktisforeach(parse_p->env_p, &cur_token)==a2_true);
+	struct a2_token* tp = parse_readtoken(parse_p); // jump foreach
+
+	if(match_op(parse_p, '(')) 	parse_error("you lost \' ( \' after for.");
+
+	head = new_node(parse_p, tp, foreach_node);
+	size_t kvt = node_p(head)->childs[0] = parse_expression(parse_p);
+	for( ;kvt; kvt=node_p(kvt)->next){
+		if( nt2ne(node_p(kvt)->type)!=ne_left )
+			parse_error("the expression is can not left value");
+	}
+
+	tp = parse_readtoken(parse_p);
+	if(!tp || a2_ktisin(parse_p->env_p, tp)==a2_fail)
+		parse_error("you lost \' in \'.");
+	node_p(head)->childs[1] = parse_exp(parse_p);
+
+	tp = parse_attoken(parse_p);
+	if(!tp) parse_error("you lost \' { \' after for expression.");
+    if(tt2op(tp->tt)!='{')
+    	node_p(head)->childs[2] = parse_expression(parse_p);
+    else
+    	node_p(head)->childs[2] = parse_lsegment(parse_p);
+
+	return head;
 }
 
 static  size_t parse_if(struct a2_parse* parse_p){
-	return 0;
+	size_t head=0;
+	assert(a2_ktisif(parse_p->env_p, &cur_token)==a2_true);
+	struct a2_token* _tp = parse_readtoken(parse_p);  // jump if
+
+	if(match_op(parse_p, '(')==a2_fail) parse_error("you lost \' ( \' after for.");
+	head = new_node(parse_p, _tp, if_node);
+	node_p(head)->childs[0] = parse_logic(parse_p);
+	if(match_op(parse_p, ')')==a2_fail) parse_error("you lost \' ) \' after for.");
+	node_p(head)->childs[1] = parse_lsegment(parse_p);
+	node_p(head)->childs[2] = parse_elif(parse_p);
+	return head;
+}
+
+static size_t parse_elif(struct a2_parse* parse_p){
+	size_t head=0;
+	if( is_end || a2_ktiselse(parse_p->env_p, &cur_token)==a2_fail )
+		return 0;
+	parse_readtoken(parse_p); // jump else
+
+	struct a2_token* tp = parse_attoken(parse_p);
+	if(!tp) parse_error("the else is ungrammatical.");
+	if(a2_ktisif(parse_p->env_p, tp)==a2_true){ // else if
+		head = parse_if(parse_p);
+	}else{
+		if(tt2op(cur_token.tt)=='{')  //else
+			head = parse_lsegment(parse_p);
+		else
+			head = parse_expression(parse_p);
+	}
+	return head;
 }
 
