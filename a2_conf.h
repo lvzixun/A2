@@ -13,6 +13,7 @@ typedef byte uchar;
 
 typedef int32_t  int32;
 typedef uint32_t uint32;
+typedef uint16_t uint16;
 typedef double	 a2_number;
 
 #define a2_assert assert

@@ -2,6 +2,8 @@
 #include "a2_lex.h"
 #include "a2_env.h"
 #include "a2_error.h"
+#include <string.h>
+#include <stdio.h>
 
 enum ne{
 	ne_right = 0,
@@ -58,7 +60,7 @@ enum node_type{
 };
 
 struct a2_node{
-	byte type;
+	uint16_t type;
 	struct a2_token* token;
 	size_t childs[4];
 	size_t next;
@@ -174,7 +176,7 @@ static inline size_t get_node(struct a2_parse* parse_p){
 	if(parse_p->cap>=_node_deep(parse_p->level))
 		_resize_node(parse_p);
 
-	return parse_p->cap++;
+	return ++(parse_p->cap);
 }
 
 static inline void clear_node(struct a2_parse* parse_p){
@@ -186,6 +188,7 @@ static inline size_t new_node(struct a2_parse* parse_p, struct a2_token* token, 
 	node_p(idx)->next=0;
 	node_p(idx)->token = token;
 	node_p(idx)->type = nt;
+	memset(node_p(idx)->childs, 0, sizeof(node_p(idx)->childs));
 	return idx;
 }
 
@@ -284,6 +287,7 @@ static void parse_gsegment(struct a2_parse* parse_p){
 	for( ; !is_end; ){
 		parse_segcontent(parse_p);
 		// TODO: IR parser
+
 	}
 }
 
@@ -361,6 +365,7 @@ static   size_t _parse_expression(struct a2_parse* parse_p, parse_func pfunc){
 		}
 			break;
 		default:
+			assert(0);
 			goto EXP_ERROR;
 	}
 
@@ -478,7 +483,7 @@ static  size_t _parse_operation(struct a2_parse* parse_p, parse_func pfunc){
 		}
 			break; 
 		default:
-			assert(0);	
+			return exp1;	
 	}
 
 	parse_readtoken(parse_p);		// jump = 
@@ -495,8 +500,9 @@ static size_t parse_comma(struct a2_parse* parse_p){
 	if(!head) return 0;
 
 	for(; !is_end; ){
-		if( tt2op(parse_readtoken(parse_p)->tt)!=',' )
+		if( tt2op(parse_attoken(parse_p)->tt)!=',' )
 			break;
+		parse_readtoken(parse_p);
 		node_p(back)->next = parse_logic(parse_p);
 		back = node_p(back)->next;
 	}  
@@ -519,12 +525,8 @@ static size_t parse_logic(struct a2_parse* parse_p){
 		node_p(head)->childs[0] = exp1;
 		node_p(head)->childs[1] = exp2;
 		return head;
-	}else{
-		char ts_buf[32] = {0};
-		a2_error("[parse error@line: %d]: the token \'%s\' is grammar error.", 
-			cur_token.line, 
-			a2_token2str(&cur_token, ts_buf));
 	}
+
 	return exp1;
 }
 
@@ -543,12 +545,8 @@ static size_t parse_interval(struct a2_parse* parse_p){
 		node_p(head)->childs[0] = exp1;
 		node_p(head)->childs[1] = exp2;
 		return head;
-	}else{
-		char ts_buf[32] = {0};
-		a2_error("[parse error@line: %d]: the token \'%s\' is grammar error.", 
-			cur_token.line, 
-			a2_token2str(&cur_token, ts_buf));
 	}
+
 	return exp1;
 }
 
@@ -580,7 +578,7 @@ static size_t parse_limits(struct a2_parse* parse_p){
 			head = new_node(parse_p, &cur_token, ne_node);
 			break;
 		default:
-			assert(0);
+			return exp1;
 	}
 
 	parse_readtoken(parse_p);
@@ -606,7 +604,7 @@ static size_t parse_arithmetic(struct a2_parse* parse_p){
 			head = new_node(parse_p, &cur_token, sub_node);
 			break;
 		default:
-			assert(0);
+			return exp1;
 	}
 
 	parse_readtoken(parse_p);
@@ -632,7 +630,7 @@ static size_t parse_advanced(struct a2_parse* parse_p){
 			head = new_node(parse_p, &cur_token, div_node);
 			break;
 		default:
-			assert(0);
+			return exp1;
 	}
 
 	parse_readtoken(parse_p);
@@ -697,6 +695,10 @@ static size_t parse_base(struct a2_parse* parse_p){
 			}
 		}
 			break;
+		case tk_number:
+			head = new_node(parse_p, tp, num_node);
+			parse_readtoken(parse_p);
+			return head;
 		case tk_op:{
 			switch(tt2op(tp->tt)){
 				case '!':{
@@ -726,6 +728,7 @@ static size_t parse_base(struct a2_parse* parse_p){
 		}
 			break;
 		default:
+			print_token(tp);
 			assert(0);
 	}
 	return 0;
@@ -1017,5 +1020,50 @@ static size_t parse_elif(struct a2_parse* parse_p){
 			head = parse_expression(parse_p);
 	}
 	return head;
+}
+
+// for test 
+void dump_node(struct a2_parse* parse_p, size_t root){
+	for( ;root; ){
+		char ts_buf[64] = {0};
+		printf("[%lu] nt=%d token=\' %s \'\n", root, node_p(root)->type, 
+			a2_token2str(node_p(root)->token, ts_buf));
+		printf("    childs[%lu %lu %lu %lu] next[%lu]\n", node_p(root)->childs[0],
+			node_p(root)->childs[1],node_p(root)->childs[2],node_p(root)->childs[3], node_p(root)->next);
+		int i;
+		for(i=0; i<4; i++){
+			if(node_p(root)->childs[i]==0)
+				break;
+			dump_node(parse_p, node_p(root)->childs[i]);
+		}
+
+		root = node_p(root)->next;
+	}
+}
+
+static inline size_t _parse_gsegment(struct a2_parse* parse_p){
+	size_t head=0, back=0;
+	for( ; !is_end; ){
+		size_t root = parse_segcontent(parse_p);
+		if(!head)
+			head = back = root;
+		else{
+			node_p(back)->next = root;
+			back = node_p(back)->next;
+		}
+	}
+	return head;
+}
+
+size_t parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t len){
+	assert(parse_p);
+	assert(token_chain);
+	assert(len);
+
+	parse_p->len = len;
+	parse_p->token_chain = token_chain;
+	parse_p->t_idx = 0;
+
+	return _parse_gsegment(parse_p);
 }
 

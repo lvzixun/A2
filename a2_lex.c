@@ -32,9 +32,10 @@ struct _tokens{
 	struct a2_token token_p[1];
 };
 
+#define LEX_MAP_DEEP 32
 struct a2_lex{
 	struct a2_env* env_p;
-	char* lex_map[32];
+	char* lex_map[LEX_MAP_DEEP];
 	byte  lex_str2hash[sizeof(_key)/sizeof(char*)];
 	size_t line;
 	char*  a2_s_num_bufs;
@@ -184,7 +185,7 @@ void a2_lex_clear(struct a2_lex* lex_p){
 }
 
 inline  size_t _lex_hash(char* s){
-	return (s[0] + s[strlen(s)])%32;
+	return (s[0] + s[strlen(s)-1])%LEX_MAP_DEEP;
 }
 
 static void _init_lex(struct a2_lex* lex_p){
@@ -354,7 +355,7 @@ static inline int _is_key(struct a2_lex* lex_p, char* s){
 	return (_s && strcmp(_s, s)==0)?(a2_true):(a2_fail);
 }
 
-#define _token_check(i)		(token->tt == kp2tt(tk_key,lex_p->lex_str2hash[i]))?(a2_true):(a2_fail)
+#define _token_check(i)		(token->tt == kp2tt(tk_key, lex_p->lex_str2hash[i]))?(a2_true):(a2_fail)
 // check token is function
 inline int a2_tokenisfunction(struct a2_lex* lex_p, struct a2_token* token){
 	return _token_check(0);
@@ -422,6 +423,15 @@ char* a2_token2str(struct a2_token* token, char* ts_buf){
 			assert(0);
 	}
 	return  NULL;
+}
+
+void print_token(struct a2_token* token){
+	if(!token)
+		printf("<null>\n");
+	else{
+		char ts_buf[64] = {0};
+		printf("%s\n", a2_token2str(token, ts_buf));
+	}
 }
 
 static char* op2s(char* ops, uint32 op){

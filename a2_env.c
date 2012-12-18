@@ -4,11 +4,14 @@
 #include "a2_string.h"
 #include "a2_gc.h"
 #include "a2_gc.h"
+#include "a2_io.h"
+#include "a2_parse.h"
 
 struct a2_env{
 	struct a2_map* g_str;			// global string map
 	struct a2_lex* lex_p;
 	struct a2_gc*  gc_p;
+	struct a2_parse* parse_p;
 
 	// private forge a2_obj
 	struct a2_obj _forge_obj;
@@ -19,6 +22,7 @@ struct a2_env* a2_env_new(){
 	struct a2_env* ret = (struct a2_env*)malloc(sizeof(*ret));
 	ret->g_str = a2_map_new();
 	ret->lex_p = a2_lex_open(ret);
+	ret->parse_p = a2_parse_open(ret);
 	ret->gc_p = a2_gc_new();
 	ret->_forge_gcobj = a2_nil2gcobj();
 	ret->_forge_obj.type = A2_TSNIL;
@@ -29,6 +33,7 @@ void a2_env_free(struct a2_env* env_p){
 	assert(env_p);
 	a2_map_free(env_p->g_str);
 	a2_lex_close(env_p->lex_p);
+	a2_parse_close(env_p->parse_p);
 	a2_gc_free(env_p->gc_p);
 	a2_gcobj_nilfree(env_p->_forge_gcobj);
 	free(env_p);
@@ -65,7 +70,6 @@ struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s){
 	}else
 		return  vp->value.point;
 }
-
 
 inline int a2_ktisfunction(struct a2_env* env_p, struct a2_token* token){
 	return a2_tokenisfunction(env_p->lex_p, token);
@@ -105,4 +109,13 @@ inline int a2_ktisnil(struct a2_env* env_p, struct a2_token* token){
 
 inline int a2_ktisin(struct a2_env* env_p, struct a2_token* token){
 	return a2_tokenisin(env_p->lex_p, token);
+}
+
+// for test 
+inline struct a2_lex* a2_envlex(struct a2_env* env_p){
+	return env_p->lex_p;
+}
+
+inline struct a2_parse* a2_envparse(struct a2_env* env_p){
+	return env_p->parse_p;
 }

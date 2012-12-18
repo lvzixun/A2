@@ -56,4 +56,7 @@ inline int a2_tokenisnil(struct a2_lex* lex_p, struct a2_token* token);
 inline int a2_tokenisin(struct a2_lex* lex_p, struct a2_token* token);
 
 
+// for test
+void print_token(struct a2_token* token);
+
 #endif

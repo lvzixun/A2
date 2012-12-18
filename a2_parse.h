@@ -9,4 +9,9 @@ void a2_parse_close(struct a2_parse* parse_p);
 void a2_parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t len);
 void a2_parse_clear(struct a2_parse* parse_p);
 
+
+// for test
+size_t parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t len);
+void dump_node(struct a2_parse* parse_p, size_t root);
+
 #endif

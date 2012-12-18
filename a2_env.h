@@ -24,4 +24,9 @@ inline int a2_ktisbreak(struct a2_env* env_p, struct a2_token* token);
 inline int a2_ktisnil(struct a2_env* env_p, struct a2_token* token);
 inline int a2_ktisin(struct a2_env* env_p, struct a2_token* token);
 
+
+// for test
+inline struct a2_lex* a2_envlex(struct a2_env* env_p);
+inline struct a2_parse* a2_envparse(struct a2_env* env_p);
+
 #endif
