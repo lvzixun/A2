@@ -39,12 +39,16 @@ enum node_type{
 
 	if_node,	// if
 
+	bool_node,
 	cfunc_node,	//  call  func()
 	args_node,	// ...
 	chi_node, 	// .
 	func_node, 	// def function
 	map_node,   // def map
 	array_node, // def array
+	return_node,
+	break_node,
+	continue_node,
 	for_node,
 	foreach_node,
 
@@ -208,6 +212,14 @@ static inline struct a2_token* parse_matchtoken(struct a2_parse* parse_p, size_t
 	return &(parse_p->token_chain[parse_p->t_idx+n]);
 }
 
+static size_t parse_return(struct a2_parse* parse_p){
+	size_t head;
+	struct a2_token* tp = parse_readtoken(parse_p); // jump return
+	head = new_node(parse_p, tp, return_node);
+	node_p(head)->childs[0] = parse_expression(parse_p);
+	return head;
+}
+
 static size_t parse_segcontent(struct a2_parse* parse_p){
 	switch( tt2tk(cur_token.tt) ){
 		case tk_end:   // 
@@ -223,9 +235,13 @@ static size_t parse_segcontent(struct a2_parse* parse_p){
 			}else if(a2_ktisfor(parse_p->env_p, &cur_token) == a2_true){ // parse for
 				return 	parse_for(parse_p);
 			}else if(a2_ktisreturn(parse_p->env_p, &cur_token) == a2_true){ // parse return
-
+				return parse_return(parse_p);
 			}else if(a2_ktisif(parse_p->env_p, &cur_token) == a2_true){	// parse if
 				return 	parse_if(parse_p);
+			}else if(a2_ktisbreak(parse_p->env_p, &cur_token) == a2_true){  // parse break
+				return new_node(parse_p, &cur_token, break_node);
+			}else if(a2_ktiscontinue(parse_p->env_p, &cur_token)== a2_true){  // parse continue
+				return new_node(parse_p, &cur_token, continue_node);
 			}else{	// error token
 				goto ERROR_TOKEN;
 			}
@@ -327,6 +343,7 @@ static   size_t _parse_expression(struct a2_parse* parse_p, parse_func pfunc){
 			else
 				return parse_function(parse_p);
 			break;
+		case tk_bool:
 		case tk_string:
 		case tk_number:
 			return pfunc(parse_p);
@@ -667,6 +684,8 @@ static size_t parse_base(struct a2_parse* parse_p){
 			}
 		}
 			break;
+		case tk_bool:
+			return new_node(parse_p, tp, bool_node);
 		case tk_string:{
 			struct a2_token* ntp = parse_matchtoken(parse_p, 1);
 			if(!ntp || tt2op(ntp->tt)!=(('.'<<8)+'.')){

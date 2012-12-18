@@ -13,6 +13,7 @@ enum {
 	tk_end,			//  /n:       	
 	tk_op, 			// operate      like: + - * / ( ) [ ]
 	tk_args,		// variable parameters ...
+	tk_bool			// bool true/false
 };
 
 struct a2_lex;

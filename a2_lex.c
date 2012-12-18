@@ -8,7 +8,7 @@
 // the key word
 static char* _key[] = {
 	"function", "return", "continue", "for", "if",
-	"else", "foreach", "break", "nil", "in", "true","fail", NULL
+	"else", "foreach", "break", "nil", "in", "true","false", NULL
 };
 
 static char cmask[] = {
@@ -301,8 +301,14 @@ static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p){
 
 //	printf("ide = %s %s\n", token.v.str, (lex_p)->lex_map[_lex_hash(lex_p->a2_s_num_bufs)]);
 	if(_is_key(lex_p, lex_p->a2_s_num_bufs)==a2_true){
-		token.tt = tk_mask(tk_key, 0);
-		token.tt |= _lex_hash(lex_p->a2_s_num_bufs);
+		if(strcmp(lex_p->a2_s_num_bufs, "true")==0){
+			token.tt = kp2tt(tk_bool, 1);
+		}else if(strcmp(lex_p->a2_s_num_bufs, "false")==0){
+			token.tt = kp2tt(tk_bool, 0);
+		}else{
+			token.tt = tk_mask(tk_key, 0);
+			token.tt |= _lex_hash(lex_p->a2_s_num_bufs);
+		}
 	}
 	else
 		token.tt = tk_mask(tk_ide, 0);
@@ -348,7 +354,7 @@ static inline int _is_key(struct a2_lex* lex_p, char* s){
 	return (_s && strcmp(_s, s)==0)?(a2_true):(a2_fail);
 }
 
-#define _token_check(i)		(tt2op(token->tt) == lex_p->lex_str2hash[i])?(a2_true):(a2_fail)
+#define _token_check(i)		(token->tt == kp2tt(tk_key,lex_p->lex_str2hash[i]))?(a2_true):(a2_fail)
 // check token is function
 inline int a2_tokenisfunction(struct a2_lex* lex_p, struct a2_token* token){
 	return _token_check(0);
@@ -389,6 +395,11 @@ inline int a2_tokenisnil(struct a2_lex* lex_p, struct a2_token* token){
 inline int a2_tokenisin(struct a2_lex* lex_p, struct a2_token* token){
 	return _token_check(9);
 }
+
+inline int a2_tokenistrue(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(10);
+}
+
 
 char* a2_token2str(struct a2_token* token, char* ts_buf){
 	assert(token);
