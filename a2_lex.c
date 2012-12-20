@@ -272,8 +272,10 @@ static inline void lex_number(struct a2_lex* lex_p, struct a2_io* io_p){
 	else{		// 10
 		while(!a2_io_end(io_p)){
 			c=a2_io_atchar(io_p);
-			if(c=='.' || _mask(c)=='0')
+			if( (c=='.' && _mask(a2_io_matchchar(io_p, 1))=='0') || _mask(c)=='0')
 				lex_p->a2_s_num_bufs = a2_string_append(lex_p->a2_s_num_bufs, c);
+			else if(c=='.' && a2_io_matchchar(io_p, 1)!='.')
+				lex_error("the number is error, must number char after \' . \'.");
 			else
 				break;
 			a2_io_readchar(io_p);
