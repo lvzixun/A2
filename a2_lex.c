@@ -419,6 +419,8 @@ char* a2_token2str(struct a2_token* token, char* ts_buf){
 			return a2_gcobj2string(token->v.obj);
 		case tk_op:
 			return op2s(ts_buf, tt2op(token->tt));
+		case tk_bool:
+			return (tt2op(token->tt))?("true"):("false");
 		default:
 			assert(0);
 	}
