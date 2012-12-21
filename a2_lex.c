@@ -405,7 +405,7 @@ inline int a2_tokenistrue(struct a2_lex* lex_p, struct a2_token* token){
 
 
 char* a2_token2str(struct a2_token* token, char* ts_buf){
-	assert(token);
+	if(!token) return "<null>";
 	switch( tt2tk (token->tt) ){
 		case tk_args:
 			return "...";

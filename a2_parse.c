@@ -67,6 +67,7 @@ enum node_type{
 	ass_node = (nt_lmask | 0x01),   // =
 	cma_node = (nt_rmask | nt_lmask | 0x02),	// map['key'] or  array[idx]
 	chi_node = (nt_rmask | nt_lmask | 0x03), 	// .
+	comma_node = (nt_lmask | 0x04) // ,
 };
 
 struct a2_node{
@@ -232,9 +233,6 @@ static size_t parse_return(struct a2_parse* parse_p){
 
 static size_t parse_segcontent(struct a2_parse* parse_p){
 	switch( tt2tk(cur_token.tt) ){
-		case tk_end:   // 
-			(parse_p->t_idx)++;
-			break;
 		case tk_key:
 			if(a2_ktisfunction(parse_p->env_p, &cur_token) == a2_true){ //  parse function
 				return	parse_function(parse_p);
@@ -293,6 +291,8 @@ ERROR_TOKEN:{
 static void parse_gsegment(struct a2_parse* parse_p){
 	for( ; !is_end; ){
 		parse_segcontent(parse_p);
+		if(!is_end && tt2tk(cur_token.tt)==tk_end)
+			parse_readtoken(parse_p);
 		// TODO: IR parser
 
 	}
@@ -316,6 +316,9 @@ static size_t parse_lsegment(struct a2_parse* parse_p){
 			node_p(back)->next = parse_segcontent(parse_p);
 			back = node_p(back)->next;
 		}
+
+		if(!is_end && tt2tk(cur_token.tt)==tk_end)
+			parse_readtoken(parse_p);
 	}
 
 	parse_error("the segment lost '}'.");
@@ -529,8 +532,12 @@ static size_t parse_comma(struct a2_parse* parse_p){
 	back = head = parse_logic(parse_p);
 	if(!head) return 0;
 
+	if(!is_end && tt2op(cur_token.tt)==','){
+		head = new_node(parse_p, &cur_token, comma_node);
+		node_p(head)->childs[0] = back;
+	}
 	for(; !is_end; ){
-		if( tt2op(parse_attoken(parse_p)->tt)!=',' )
+		if( tt2op(cur_token.tt)!=',' )
 			break;
 		parse_readtoken(parse_p);
 		node_p(back)->next = parse_logic(parse_p);
@@ -755,7 +762,7 @@ static size_t parse_base(struct a2_parse* parse_p){
 	switch(tt2tk(tp->tt)){
 		case tk_ide:{
 			struct a2_token* ntp = parse_matchtoken(parse_p, 1);
-			if(!ntp) goto BASE_DEF;
+			if(!ntp || tt2tk(ntp->tt)==tk_end) goto BASE_DEF;
 			if(tt2tk(ntp->tt)!=tk_op){
 				char ts_buf[64] = {0};
 				a2_error("[parse error@line: %d]: the token \'%s\' is not operation token.", 
@@ -817,6 +824,8 @@ static  size_t parse_function(struct a2_parse* parse_p){
 	if(!tp) parse_error("you function is ungrammatical.");
 	if(tt2tk(tp->tt)==tk_ide)
 		tp = parse_readtoken(parse_p);
+	else
+		tp = NULL;
 
 	head = new_node(parse_p, tp, func_node);
 	tp= parse_attoken(parse_p);
@@ -891,7 +900,7 @@ static size_t parse_args(struct a2_parse* parse_p){
 				if(tt2op(parse_readtoken(parse_p)->tt)==')')
 					return head;
 				else
-					goto ARGS_END;
+					parse_error("the last args must is \' ... \'.");
 			}
 				break;
 			default:{
@@ -903,11 +912,10 @@ static size_t parse_args(struct a2_parse* parse_p){
 
 		tp = parse_readtoken(parse_p);
 		if(!tp) break;
-		if(tt2op(parse_readtoken(parse_p)->tt)==',') continue;
-		else if(tt2op(parse_readtoken(parse_p)->tt)==')') return head;
+		if(tt2op(tp->tt)==',') continue;
+		else if(tt2op(tp->tt)==')') return head;
 	}
 
-ARGS_END:
 	parse_error("you are lost \' ) \'.");
 	return 0;
 }
@@ -1032,6 +1040,8 @@ static inline size_t _parse_gsegment(struct a2_parse* parse_p){
 			node_p(back)->next = root;
 			back = node_p(back)->next;
 		}
+		if(!is_end && tt2tk(cur_token.tt)==tk_end)
+			parse_readtoken(parse_p);
 	}
 	return head;
 }
