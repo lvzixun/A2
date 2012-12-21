@@ -1,2 +1,3 @@
-
-{a = 1, b=2}
+function func(a, b){
+	return 123
+}
