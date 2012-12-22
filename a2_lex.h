@@ -12,7 +12,6 @@ enum {
 	tk_number,		// number       12345
 	tk_end,			//  /n:       	
 	tk_op, 			// operate      like: + - * / ( ) [ ]
-	tk_args,		// variable parameters ...
 	tk_bool			// bool true/false
 };
 

@@ -1,2 +1,54 @@
-a,b = 1, 2
-3
+function func(){
+	a = 1 
+	b = 2
+	return function (){
+		return a+b
+	}
+}
+
+map = {
+	a = 1,
+	b = 2,
+	1 = 'string',
+	'strkey' = 3,
+	funcmap = function(){
+		return 4
+	}
+}
+
+
+array = [1, 2, [3, 4], 
+	func,
+	map,
+	function(){
+		return 1>2
+	}
+]
+
+for(i=0, i<100, i = i+1){
+	print('index = '..i)
+}
+
+if(1>2 & 2>1){
+	a
+}else if(4>5){
+	b
+}else if(7==8)
+	c
+else if(6<=7)
+	d
+else if(8>=6)
+	f
+else if(a==b)
+	g
+else if(true)
+	h
+else if(false)
+	i
+else
+	j
+
+foreach(k, v in table)
+	h
+	
+main()

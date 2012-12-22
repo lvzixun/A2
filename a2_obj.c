@@ -77,8 +77,6 @@ static void _obj_strfree(struct a2_obj* obj_p){
 }
 
 int a2_obj_cmp(struct a2_obj* obj1, struct a2_obj* obj2){
-	obj_dump(obj1);
-	obj_dump(obj2);
 	return ((obj1->type == obj2->type) && 
 			a2_obj_size(obj1)==a2_obj_size(obj2) && 
 			memcmp(a2_obj_bytes(obj1), a2_obj_bytes(obj2), a2_obj_size(obj1))==0)?(a2_true):(a2_fail); 

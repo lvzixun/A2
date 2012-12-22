@@ -6,6 +6,14 @@
 #include "../a2_error.h"
 #include <stdio.h>
 
+static void dump_token(struct a2_token* tc, size_t len){
+	size_t i;
+	printf("-----token list------\n");
+	for(i=0; i<len;i++){
+		print_token(&tc[i]);
+	}
+	printf("---------------------\n");
+}
 
 int main(int argc, char const *argv[])
 {
@@ -18,6 +26,7 @@ int main(int argc, char const *argv[])
 	size_t token_len =0;
 	struct a2_token* token_chain = a2_lex_read(lex_p, io_p, &token_len);
 
+	dump_token(token_chain, token_len);
 	size_t root = parse_run(parse_p, token_chain, token_len);
 	dump_node(parse_p, root);
 

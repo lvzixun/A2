@@ -157,12 +157,16 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 
 			case '\n':			// next line
 				(lex_p->line)++;
-			case ';':
-				if(lex_p->ts_p->len>0 && tt2tk(lex_p->ts_p->token_p[lex_p->ts_p->len-1].tt) != tk_end){
-					struct a2_token token;
-					token.line = lex_p->line-1;
-					token.tt = tk_mask(tk_end, 0);
-					lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
+			case ';':{
+				struct a2_token* tp = &(lex_p->ts_p->token_p[lex_p->ts_p->len-1]);
+					uint32 up_tt = tp->tt;
+					if(lex_p->ts_p->len>0 && tt2tk(up_tt) != tk_end 
+					   && tt2tk(up_tt)!=tk_op && (tt2tk(up_tt)!=tk_key || a2_ktisreturn(lex_p->env_p, tp)==a2_true)){
+						struct a2_token token;
+						token.line = lex_p->line-1;
+						token.tt = tk_mask(tk_end, 0);
+						lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
+					}
 				}
 			case '\t':
 			case ' ':			// jump
@@ -407,8 +411,6 @@ inline int a2_tokenistrue(struct a2_lex* lex_p, struct a2_token* token){
 char* a2_token2str(struct a2_token* token, char* ts_buf){
 	if(!token) return "<null>";
 	switch( tt2tk (token->tt) ){
-		case tk_args:
-			return "...";
 		case tk_end:
 			return "exp end";
 		case tk_number:
