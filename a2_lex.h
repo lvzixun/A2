@@ -3,7 +3,7 @@
 
 #include "a2_conf.h"
 #include "a2_env.h"
-#include "a2_gc.h"
+#include "a2_obj.h"
 
 enum {
 	tk_key,			// keyWord     like: function if else ..
@@ -12,7 +12,8 @@ enum {
 	tk_number,		// number       12345
 	tk_end,			//  /n:       	
 	tk_op, 			// operate      like: + - * / ( ) [ ]
-	tk_bool			// bool true/false
+	tk_bool,		// bool true/false
+	tk_nil 			// nil
 };
 
 struct a2_lex;
@@ -21,11 +22,7 @@ struct a2_io;
 struct a2_token{
 	uint32 tt;
 	size_t line;	
-	union{
-		a2_number number;
-		char* str;
-		struct a2_gcobj* obj;
-	}v;
+	a2_value v;
 };
 
 #define tt2tk(tt)	((tt)>>24)
@@ -53,7 +50,7 @@ inline int a2_tokenisforeach(struct a2_lex* lex_p, struct a2_token* token);
 inline int a2_tokenisbreak(struct a2_lex* lex_p, struct a2_token* token);
 inline int a2_tokenisnil(struct a2_lex* lex_p, struct a2_token* token);
 inline int a2_tokenisin(struct a2_lex* lex_p, struct a2_token* token);
-
+inline int a2_tokenislocal(struct a2_lex* lex_p, struct a2_token* token);
 
 // for test
 void print_token(struct a2_token* token);

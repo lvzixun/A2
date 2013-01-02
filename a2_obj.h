@@ -7,6 +7,7 @@ typedef union {
 		struct a2_gcobj* obj;
 		a2_number number;
 		void* point;
+		uint32 uinteger; 
 }a2_value;
 
 struct a2_obj{
@@ -15,6 +16,9 @@ struct a2_obj{
 };
 
 enum{
+	//private type
+	_A2_TUINTEGER,
+	// public type
 	A2_TSNIL,
 	A2_TSTRING,
 	A2_TNUMBER,
@@ -22,6 +26,7 @@ enum{
 	A2_TMAP,
 	A2_TARRAY,
 	A2_TFUNCTION
+
 };
 
 #define str_obj(obj_p)  (a2_gcobj2string((obj_p)->value.obj))
@@ -34,6 +39,7 @@ int a2_obj_cmp(struct a2_obj* obj1, struct a2_obj* obj2);
 struct a2_obj  a2_string2obj(char* a2_s);
 struct a2_obj  a2_number2obj(a2_number num);
 struct a2_obj  a2_point2obj(void* p);
+struct a2_obj a2_uinteger2obj(uint32 v);
 void a2_obj_free(struct a2_obj* obj_p);
 
 

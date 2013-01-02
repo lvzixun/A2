@@ -12,6 +12,7 @@ struct a2_map;
 
 struct a2_map* a2_map_new();
 void a2_map_free(struct a2_map* map_p);
+void a2_map_clear(struct a2_map* map_p);
 
 int a2_map_add(struct a2_map* map_p, struct a2_kv* kv);
 int a2_map_del(struct a2_map* map_p, struct a2_obj* key);

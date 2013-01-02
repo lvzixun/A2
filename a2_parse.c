@@ -2,80 +2,10 @@
 #include "a2_lex.h"
 #include "a2_env.h"
 #include "a2_error.h"
+#include "a2_parse.h"
+#include "a2_ir.h"
 #include <string.h>
 #include <stdio.h>
-
-enum {
-	ne_right = 0,
-	ne_left = 1
-};
-
-enum {
-	nr_nil = 0,
-	nr_read =1
-};
-
-#define nt_lmask  ((ne_left)<<8)
-#define nt2ne(nt)	(((nt)>>8)&(0x01))
-
-#define nt_rmask  ((nr_read)<<9)
-#define nt2nr(nt) (((nt)>>9)*(0x01))
-
-
-enum node_type{
-
-	// string node
-	strcat_node,// ..
-
-	str_node,
-	num_node,
-
-	// arithmetic node
-	add_node,	// +
-	sub_node,	// -
-	mul_node,	// *
-	div_node,	// /
-
-	// logic node
-	and_node,	// &
-	or_node,	// |
-	not_node,	// !
-	neg_node,   // -
-	gt_node,	// >
-	lt_node,	// <
-	equ_node,	// ==
-	gte_node, 	// >=
-	lte_node,	// <=
-	ne_node,	// !=
-
-	if_node,	// if
-
-	bool_node,
-	args_node,	// ...
-	func_node, 	// def function
-	map_node,   // def map
-	array_node, // def array
-	return_node,
-	break_node,
-	continue_node,
-	for_node,
-	foreach_node,
-
-	cfunc_node = (nt_rmask | 0x00),	//  call  func()
-
-	var_node = (nt_rmask | nt_lmask | 0x00),  // variable node
-	ass_node = (nt_lmask | 0x01),   // =
-	cma_node = (nt_rmask | nt_lmask | 0x02),	// map['key'] or  array[idx]
-	chi_node = (nt_rmask | nt_lmask | 0x03), 	// .
-	comma_node = (nt_lmask | 0x04) // ,
-};
-
-struct a2_node{
-	uint16_t type;
-	struct a2_token* token;
-	size_t childs[4];
-	size_t next;
-};
 
 struct a2_parse{
 	struct a2_env* env_p;
@@ -132,7 +62,7 @@ static size_t parse_comma(struct a2_parse* parse_p);
 static size_t parse_cargs(struct a2_parse* parse_p);
 static size_t parse_elif(struct a2_parse* parse_p);
 static size_t parse_deep(struct a2_parse* parse_p);
-
+static inline size_t parse_local(struct a2_parse* parse_p);
 
 struct a2_parse*  a2_parse_open(struct a2_env* env_p){
 	struct a2_parse* ret = (struct a2_parse*)malloc(sizeof(*ret));
@@ -168,6 +98,12 @@ void a2_parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t
 
 	parse_gsegment(parse_p);
 }
+
+
+inline struct a2_node* a2_node_p(struct a2_parse* parse_p, size_t idx){
+	return node_p(idx);
+}
+
 
 // node function
 static void _init_node(struct a2_parse* parse_p){
@@ -234,7 +170,9 @@ static size_t parse_return(struct a2_parse* parse_p){
 static size_t parse_segcontent(struct a2_parse* parse_p){
 	switch( tt2tk(cur_token.tt) ){
 		case tk_key:
-			if(a2_ktisfunction(parse_p->env_p, &cur_token) == a2_true){ //  parse function
+			if(a2_ktislocal(parse_p->env_p, &cur_token) == a2_true){		// parse local
+				return parse_local(parse_p);
+			}else if(a2_ktisfunction(parse_p->env_p, &cur_token) == a2_true){ //  parse function
 				return	parse_function(parse_p);
 			}else if(a2_ktisfor(parse_p->env_p, &cur_token) == a2_true){ // parse for
 				return 	parse_for(parse_p);
@@ -294,9 +232,11 @@ static void parse_gsegment(struct a2_parse* parse_p){
 			parse_readtoken(parse_p);
 			continue;
 		}
-		parse_segcontent(parse_p);
-		// TODO: IR parser
-
+		size_t root = parse_segcontent(parse_p);
+		// TODO: IR generation
+		a2_irexec(parse_p->env_p, root);
+		// clear node buf
+		clear_node(parse_p);
 	}
 }
 
@@ -841,6 +781,38 @@ BASE_DEF:
 		}
 	}
 	return 0;
+}
+
+// parse local 
+static inline size_t parse_local(struct a2_parse* parse_p){
+	size_t head=0, back=0;
+	struct a2_token* tp=NULL;
+	back = head = new_node(parse_p, parse_readtoken(parse_p), local_node);
+
+	tp = parse_attoken(parse_p);
+	if(!tp || tt2tk(tp->tt)!=tk_ide) parse_error("you local is ungrammatical.");
+	while(!is_end){
+		if(tt2tk(tp->tt)==tk_ide){
+			struct a2_token* ntp = parse_matchtoken(parse_p, 1);
+			if(!ntp){
+				node_p(back)->next = new_node(parse_p, parse_readtoken(parse_p), var_node);
+				back = node_p(back)->next;
+				break;
+			}else if(tt2op(ntp->tt)=='='){
+				node_p(back)->next = parse_exp(parse_p);
+				back = node_p(back)->next;
+			}
+
+			tp = parse_attoken(parse_p);
+			if(tp && tt2op(tp->tt)==','){
+				parse_readtoken(parse_p);
+				tp = parse_attoken(parse_p);
+			}else 
+				break;
+		}else
+			break;
+	}
+	return head;
 }
 
 static  size_t parse_function(struct a2_parse* parse_p){

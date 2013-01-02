@@ -6,12 +6,14 @@
 #include "a2_gc.h"
 #include "a2_io.h"
 #include "a2_parse.h"
+#include "a2_ir.h"
 
 struct a2_env{
 	struct a2_map* g_str;			// global string map
 	struct a2_lex* lex_p;
 	struct a2_gc*  gc_p;
 	struct a2_parse* parse_p;
+	struct a2_ir* ir_p;
 
 	// private forge a2_obj
 	struct a2_obj _forge_obj;
@@ -46,10 +48,6 @@ static inline struct a2_obj* _fill_str2obj(struct a2_env* env_p, char* a2_s){
 	return &(env_p->_forge_obj);
 }
 
-inline char* a2_env_addstr(struct a2_env* env_p, char* a2_s){
-	return a2_gcobj2string(a2_env_addstrobj(env_p, a2_s));
-}
-
 struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s){
 	assert(a2_s);
 	assert(env_p);
@@ -69,6 +67,14 @@ struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s){
 		return k.value.obj;
 	}else
 		return  vp->value.point;
+}
+
+inline void a2_irexec(struct a2_env* env_p, size_t root){
+	a2_ir_exec(env_p->ir_p, root);
+}
+
+inline struct a2_node* a2_nodep(struct a2_env* env_p, size_t idx){
+	return a2_node_p(env_p->parse_p, idx);
 }
 
 inline int a2_ktisfunction(struct a2_env* env_p, struct a2_token* token){
@@ -111,6 +117,10 @@ inline int a2_ktisin(struct a2_env* env_p, struct a2_token* token){
 	return a2_tokenisin(env_p->lex_p, token);
 }
 
+inline int a2_ktislocal(struct a2_env* env_p, struct a2_token* token){
+	return a2_tokenislocal(env_p->lex_p, token);
+}
+
 // for test 
 inline struct a2_lex* a2_envlex(struct a2_env* env_p){
 	return env_p->lex_p;
@@ -118,4 +128,8 @@ inline struct a2_lex* a2_envlex(struct a2_env* env_p){
 
 inline struct a2_parse* a2_envparse(struct a2_env* env_p){
 	return env_p->parse_p;
+}
+
+inline struct a2_ir* a2_envir(struct a2_env* env_p){
+	return env_p->ir_p;
 }

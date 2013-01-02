@@ -8,7 +8,8 @@
 // the key word
 static char* _key[] = {
 	"function", "return", "continue", "for", "if",
-	"else", "foreach", "break", "nil", "in", "true","false", NULL
+	"else", "foreach", "break", "nil", "in", "true",
+	"false", "local", NULL
 };
 
 static char cmask[] = {
@@ -312,6 +313,8 @@ static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p){
 			token.tt = kp2tt(tk_bool, 1);
 		}else if(strcmp(lex_p->a2_s_num_bufs, "false")==0){
 			token.tt = kp2tt(tk_bool, 0);
+		}else if(strcmp(lex_p->a2_s_num_bufs, "nil")==0){
+			token.tt = kp2tt(tk_nil, 0);
 		}else{
 			token.tt = tk_mask(tk_key, 0);
 			token.tt |= _lex_hash(lex_p->a2_s_num_bufs);
@@ -319,7 +322,7 @@ static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p){
 	}
 	else
 		token.tt = tk_mask(tk_ide, 0);
-	token.v.str = a2_env_addstr(lex_p->env_p, lex_p->a2_s_num_bufs);
+	token.v.obj = a2_env_addstrobj(lex_p->env_p, lex_p->a2_s_num_bufs);
 	lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
 }
 
@@ -407,6 +410,14 @@ inline int a2_tokenistrue(struct a2_lex* lex_p, struct a2_token* token){
 	return _token_check(10);
 }
 
+inline int a2_tokenisfalse(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(11);
+}
+
+inline int a2_tokenislocal(struct a2_lex* lex_p, struct a2_token* token){
+	return _token_check(12);
+}
+
 
 char* a2_token2str(struct a2_token* token, char* ts_buf){
 	if(!token) return "<null>";
@@ -418,13 +429,14 @@ char* a2_token2str(struct a2_token* token, char* ts_buf){
 			return ts_buf;
 		case tk_key:
 		case tk_ide:
-			return token->v.str;
 		case tk_string:
 			return a2_gcobj2string(token->v.obj);
 		case tk_op:
 			return op2s(ts_buf, tt2op(token->tt));
 		case tk_bool:
 			return (tt2op(token->tt))?("true"):("false");
+		case tk_nil:
+			return "nil";
 		default:
 			assert(0);
 	}

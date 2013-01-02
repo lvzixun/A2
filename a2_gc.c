@@ -81,15 +81,14 @@ inline char* a2_gcobj2string(struct a2_gcobj* gcobj){
 }
 
 // TODO: because gc , the gcobj only's mark.
-static void _gcobj_strMfree(struct a2_gcobj* gcobj){
+void a2_gcobj_stringfree(struct a2_gcobj* gcobj){
 	//mart it:
 	
 }
 
-void a2_gcobj_stringfree(struct a2_gcobj* gcobj){
+static void _gcobj_strMfree(struct a2_gcobj* gcobj){
 	assert(gcobj);
 	assert(gcobj->type==A2_TSTRING);
-
 	a2_string_free(gcobj->value.str);
 	free(gcobj); 
 }

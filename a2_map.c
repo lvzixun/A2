@@ -43,20 +43,26 @@ struct a2_map* a2_map_new(){
 
 void a2_map_free(struct a2_map* map_p){
 	assert(map_p);
+	
+	free(map_p->slot_p);
+	free(map_p);
+}
+
+void a2_map_clear(struct a2_map* map_p){
 	size_t i;
 	for(i=0; i<map_p->size; i++){
 		a2_obj_free(&map_p->slot_p[i].key);
 		a2_obj_free(&map_p->slot_p[i].value);
 	}
-	free(map_p->slot_p);
-	free(map_p);
+	
+	memset(map_p->slot_p, 0, sizeof(struct a2_slot)*map_p->size);
+	map_p->cap = 0;
 }
 
 
 static void map_resize(struct a2_map* map_p){
 	size_t i, new_size = map_p->size<<1, hash;
 	struct a2_slot* new_slot = (struct a2_slot*)calloc(new_size, sizeof(*new_slot));
-	printf("====map_resize!====\n");
 	for(i=0; i<map_p->size; i++){
 		hash = map_p->slot_p[i].hash % new_size;
 		if(is_nil(new_slot[hash].key)){
@@ -79,7 +85,6 @@ static void map_resize(struct a2_map* map_p){
 	free(map_p->slot_p);
 	map_p->size = new_size;
 	map_p->slot_p = new_slot;
-	printf("-----map resize end------\n");
 }
 
 static struct a2_obj* _a2_map_query(struct a2_map* map_p, struct a2_obj* key, struct a2_obj** _key){

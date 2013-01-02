@@ -1,0 +1,7 @@
+a  = 2
+local b = 3
+
+function func()
+    local c =b=2
+end
+
