@@ -19,6 +19,9 @@
 #define curr_cls (ir_p->cls_sym_chain->cls)
 #define curr_clssym (ir_p->cls_sym_chain)
 #define add_arg ((curr_clssym->arg_cap)++)
+#define curr_arg (curr_clssym->arg_cap)
+#define set_arg(i) (curr_clssym->arg_cap = i)
+
 #define top_arg (assert(curr_clssym->arg_cap), curr_clssym->arg_cap-1)
 #define del_arg (assert(curr_clssym->arg_cap), (curr_clssym->arg_cap)--)
 
@@ -56,7 +59,6 @@ struct a2_ir{
 
 static inline void new_symbol(struct a2_ir* ir_p);
 static inline void free_symbol(struct a2_ir* ir_p);
-static inline int query_symbol(struct a2_ir* ir_p, struct a2_obj* k);
 static inline void _a2_ir_exec(struct a2_ir* ir_p, struct cls_sym* cls_sp, size_t root);
 
 static struct cls_sym* cls_sym_new();
@@ -70,6 +72,7 @@ static inline struct a2_obj node2obj(struct a2_ir* ir_p, size_t node);
 static int a2_ir_ass(struct a2_ir* ir_p, size_t root);
 static void a2_ir_local(struct a2_ir* ir_p, size_t root);
 static int a2_ir_exp(struct a2_ir* ir_p, size_t root);
+static inline int a2_ir_var(struct a2_ir* ir_p, size_t root);
 
 struct a2_ir* a2_ir_open(struct a2_env* env){
 	assert(env);
@@ -362,31 +365,21 @@ static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
 	assert(0);
 }
 
-#define CHECK_CONSTOP(op)  if(node_ct(root, 0)==num_node && node_ct(root, 1)==num_node){ \
-								a2_number _num = node_cp(root, 0)->token->v.number op node_cp(root, 1)->token->v.number; \
-								struct a2_obj k = a2_number2obj(_num); \
-								return add_csymbol(ir_p, &k); \
-							}
-
 static int a2_ir_exp(struct a2_ir* ir_p, size_t root){
 	int op, _b, l_idx, r_idx;
 	switch(node_p(root)->type){
 		case add_node:
-			CHECK_CONSTOP(+); // SO magical
 			op = ADD;
 			goto OP_IR;
 		case sub_node:
-			CHECK_CONSTOP(-);
 			op = SUB;
 			goto OP_IR;
 		case mul_node:
-			CHECK_CONSTOP(*);
 			op = MUL;
 			goto OP_IR;
 		case div_node:
-			CHECK_CONSTOP(/);
 OP_IR:
-			_b = curr_clssym->arg_cap;
+			_b = curr_arg;
 			l_idx = a2_ir_exp(ir_p, node_p(root)->childs[0]); // left op value
 			r_idx = a2_ir_exp(ir_p, node_p(root)->childs[1]); // right op value
 			if(is_Blimit(l_idx)){
@@ -398,9 +391,11 @@ OP_IR:
 				r_idx = top_arg;
 			}
 			closure_add_ir(curr_cls, ir_abc(ADD, _b, l_idx, r_idx));
-			curr_clssym->arg_cap = _b+1;
+			set_arg(_b+1);
 			curr_clssym->is_recycle = 1;
 			return _b;
+		case var_node:
+			return a2_ir_var(ir_p, root);
 		case num_node:{
 			struct a2_obj k = a2_number2obj(node_p(root)->token->v.number);
 			return add_csymbol(ir_p, &k);
@@ -418,6 +413,34 @@ OP_IR:
 	assert(0);
 }
 
+// parse varable
+static inline int a2_ir_var(struct a2_ir* ir_p, size_t root){
+	struct a2_obj k = node2obj(ir_p, root);
+	int vt;
+	int idx = get_symbol(ir_p, &k, &vt);
+	if(!idx){
+		int k_idx = add_csymbol(ir_p, &k);
+		closure_add_ir(curr_cls, ir_abx(GETGLOBAL, add_arg, k_idx));
+		curr_clssym->is_recycle = 1;
+		return top_arg;
+	}else{
+		switch(vt){
+			case var_global:
+				closure_add_ir(curr_cls, ir_abx(GETGLOBAL, add_arg, idx));
+				curr_clssym->is_recycle = 1;
+				return top_arg;
+			case var_local:
+				curr_clssym->is_recycle = 0;
+				return idx;
+			case var_upvalue:
+				closure_add_ir(curr_cls, ir_abx(GETUPVALUE, add_arg, idx));
+				curr_clssym->is_recycle = 1;
+				return top_arg;
+			default:
+				assert(0);
+		}
+	}
+}
 
 
 

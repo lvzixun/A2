@@ -22,7 +22,7 @@ struct a2_map{
 #define DEFAULT_MAP_LEN		32
 #define is_nil(v) ((v).type==A2_TSNIL)
 
-static size_t calc_hash(byte* name, size_t len)
+inline size_t calc_hash(byte* name, size_t len)
 {
 	size_t h = len;
 	size_t step = (len>>5)+1;

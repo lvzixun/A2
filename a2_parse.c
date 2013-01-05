@@ -22,6 +22,7 @@ struct a2_parse{
 #define DEFAULT_NODE_LEVEL	6
 #define _node_deep(l)	(1<<(l))
 #define node_p(i)	(assert(i), &(parse_p->node_buf[i-1]))
+#define node_t(i)    (node_p(i)->type)
 #define _node_set(n, f) do{size_t _n=(f); (n)=_n;}while(0)
 
 #define is_end		(parse_p->t_idx>=parse_p->len)	
@@ -446,10 +447,33 @@ static inline  size_t parse_op(struct a2_parse* parse_p){
 	return _parse_operation(parse_p, parse_logic);
 }
 
+#define MERGER(op) if(node_t(exp1)==num_node && node_t(exp2)==num_node){ \
+						node_p(exp1)->token->v.number = node_p(exp1)->token->v.number op node_p(exp2)->token->v.number;\
+						return new_node(parse_p, node_p(exp1)->token, num_node); \
+					}
+// #undef MERGER
+					
+// #define MERGER(...)
+
 #define CHECK_EXP12 	if(!exp1 || !exp2) { \
 							char ts_buf[64] = {0}; \
 							a2_error("[parse error@line: %d]: unexpected symbol near token \' %s \'.\n", \
 							tp->line, a2_token2str(tp, ts_buf)); \
+						}else{ \
+							switch(tt2op(tp->tt)){ \
+								case '+': \
+									MERGER(+); \
+									break; \
+								case '-': \
+									MERGER(-) \
+									break; \
+								case '*': \
+									MERGER(*) \
+									break; \
+								case '/': \
+									MERGER(/) \
+									break; \
+							} \
 						}
 
 static  size_t _parse_operation(struct a2_parse* parse_p, parse_func pfunc){

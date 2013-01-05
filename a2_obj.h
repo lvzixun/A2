@@ -16,8 +16,6 @@ struct a2_obj{
 };
 
 enum{
-	//private type
-	_A2_TUINTEGER,
 	// public type
 	A2_TSNIL,
 	A2_TSTRING,
@@ -25,8 +23,11 @@ enum{
 	A2_TPOINT,
 	A2_TMAP,
 	A2_TARRAY,
-	A2_TFUNCTION
+	A2_TFUNCTION,
 
+
+	//private type
+	_A2_TUINTEGER
 };
 
 #define str_obj(obj_p)  (a2_gcobj2string((obj_p)->value.obj))

@@ -190,7 +190,8 @@ void a2_lex_clear(struct a2_lex* lex_p){
 }
 
 inline  size_t _lex_hash(char* s){
-	return (s[0] + s[strlen(s)-1])%LEX_MAP_DEEP;
+	size_t ret = ((s[0] + s[strlen(s)-1] + (s[0]<<8)) % 100);
+	return ret%LEX_MAP_DEEP;
 }
 
 static void _init_lex(struct a2_lex* lex_p){
