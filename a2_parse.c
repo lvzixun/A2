@@ -236,6 +236,7 @@ static void parse_gsegment(struct a2_parse* parse_p){
 		size_t root = parse_segcontent(parse_p);
 		// TODO: IR generation
 		a2_irexec(parse_p->env_p, root);
+		// for test 
 		// clear node buf
 		clear_node(parse_p);
 	}
@@ -1079,6 +1080,10 @@ static inline size_t _parse_gsegment(struct a2_parse* parse_p){
 		}
 
 		size_t root = parse_segcontent(parse_p);
+		printf("----parse----\n");
+		dump_node(parse_p, root);
+		printf("----end------\n");
+		a2_irexec(parse_p->env_p, root);
 		if(!head)
 			head = back = root;
 		else{

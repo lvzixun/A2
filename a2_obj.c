@@ -9,9 +9,14 @@ static void _obj_strfree(struct a2_obj* obj_p);
 
 static _obj_free obj_free_func[] = {
 	NULL,
+	_obj_strfree,  // string
 	NULL,
-	_obj_strfree,
 	NULL,
+	NULL,
+	NULL,
+	NULL,  // closure
+	NULL,
+
 	NULL
 };
 
@@ -50,7 +55,7 @@ struct a2_obj a2_uinteger2obj(uint32 v){
 }
 
 void a2_obj_free(struct a2_obj* obj_p){
-	assert(obj_p);
+	assert(obj_p && obj_p->type <=4);
 	if(obj_free_func[obj_p->type])
 		obj_free_func[obj_p->type](obj_p);
 	obj_p->type = A2_TSNIL;
@@ -89,6 +94,19 @@ int a2_obj_cmp(struct a2_obj* obj1, struct a2_obj* obj2){
 	return ((obj1->type == obj2->type) && 
 			a2_obj_size(obj1)==a2_obj_size(obj2) && 
 			memcmp(a2_obj_bytes(obj1), a2_obj_bytes(obj2), a2_obj_size(obj1))==0)?(a2_true):(a2_fail); 
+}
+
+inline char* obj2str(struct a2_obj* obj, char* buf, size_t len){
+	assert(obj);
+	switch(obj->type){
+		case A2_TNUMBER:
+			snprintf(buf, len, "%lf", obj->value.number);
+			return buf;
+		case A2_TSTRING:
+			return a2_gcobj2string(obj->value.obj);
+		default:
+			assert(0);
+	}
 }
 
 // test obj dump

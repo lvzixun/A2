@@ -15,6 +15,8 @@ struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s);
 inline void a2_irexec(struct a2_env* env_p, size_t root);
 // parse operation function
 inline struct a2_node* a2_nodep(struct a2_env* env_p, size_t idx);
+// add gc object
+inline  void a2_gcadd(struct a2_env* env_p, struct a2_gcobj* gcobj);
 
 // key token check
 inline int a2_ktisfunction(struct a2_env* env_p, struct a2_token* token);
@@ -32,5 +34,6 @@ inline int a2_ktislocal(struct a2_env* env_p, struct a2_token* token);
 // for test
 inline struct a2_lex* a2_envlex(struct a2_env* env_p);
 inline struct a2_parse* a2_envparse(struct a2_env* env_p);
+inline struct a2_ir* a2_envir(struct a2_env* env_p);
 
 #endif

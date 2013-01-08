@@ -5,6 +5,7 @@
 #include "a2_parse.h"
 #include "a2_map.h"
 #include "a2_ir.h"
+#include "a2_gc.h"
 #include "a2_closure.h"
 #include <stdio.h>
 
@@ -99,6 +100,7 @@ static struct cls_sym* cls_sym_new(){
 	struct cls_sym* ret = (struct cls_sym*)malloc(sizeof(*ret));
 	ret->next = NULL;
 	ret->cls = a2_closure_new();
+
 	ret->sym.cap=0;
 	ret->sym.size=DEF_SYM_SIZE;
 	ret->sym.cap=0;
@@ -158,6 +160,9 @@ static inline void free_symbol(struct a2_ir* ir_p){
 
 static inline void  new_clssym(struct a2_ir* ir_p){
 	struct cls_sym* np = cls_sym_new();
+	// add closure to gc chain
+	a2_gcadd(ir_p->env_p,  a2_closure2gcobj(np->cls));
+	
 	np->next = ir_p->cls_sym_chain;
 	ir_p->cls_sym_chain = np;
 	new_symbol(ir_p); // const symbol
@@ -440,6 +445,70 @@ static inline int a2_ir_var(struct a2_ir* ir_p, size_t root){
 				assert(0);
 		}
 	}
+}
+
+
+
+// for test 
+char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
+	static char* _irs[] = {
+		"NIL",
+		"GETGLOBAL",  // get global variable
+		"SETGLOBAL",  // set global variable 
+		"GETUPVALUE",	// get upvalue
+		"SETUPVALUE",	// set upvalue
+		"LOAD",	 	// load const value to register
+		"ADD",	 	// +
+		"SUB",	 	// -
+		"MUL",		// *
+		"DIV" 		// /
+	};
+
+	int op = ir_gop(_ir);
+	assert(op>0 && op<ir_count);
+
+	char* ops = _irs[op];
+	int a = ir_ga(_ir);
+	switch(ir_gmodle(_ir)){
+		case ABC_MODE:{
+			int b = ir_gb(_ir);
+			int c = ir_gc(_ir);
+			char b_buf[32] = {0};
+			char* bs = (b<0)?(obj2str(closure_at_cstack(cls, b), b_buf, sizeof(b_buf)-1)):(NULL);
+			char c_buf[32] = {0};
+			char* cs = (c<0)?(obj2str(closure_at_cstack(cls, c), c_buf, sizeof(c_buf)-1)):(NULL);
+			
+			int cap = snprintf(str, size, "%s\t%d    %d    %d;",ops, a, ir_gb(_ir), ir_gc(_ir));
+			if(bs)
+				cap += snprintf(str+cap, size-cap, "%s ", bs);
+			if(cs)
+				cap = snprintf(str+cap, size-cap, "%s\n", cs);
+		}
+			break;
+		case ABX_MODE:{
+			int bx = ir_gbx(_ir);
+			char bx_buf[32] = {0};
+			char*  bxs = (bx<0)?(obj2str(closure_at_cstack(cls, bx), bx_buf, sizeof(bx_buf)-1)):(NULL);
+			int cap = snprintf(str, size, "%s\t%d    %d;", ops, a, ir_gbx(_ir));
+			if(bxs)
+				snprintf(str+cap, size-cap, "%s\n", bxs);
+		}
+			break;
+		default:
+			assert(0);
+	}
+
+	// printf("%s", str);
+	// exit(0);
+	return str;
+}
+
+void dump_ir(struct a2_ir* ir_p){
+	assert(ir_p);
+
+	// only current
+	printf("ir arg=%d\n", curr_clssym->arg_cap);
+	dump_closure(curr_cls);
 }
 
 

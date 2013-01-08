@@ -23,6 +23,7 @@ enum{
 	A2_TPOINT,
 	A2_TMAP,
 	A2_TARRAY,
+	A2_TCLOSURE,
 	A2_TFUNCTION,
 
 
@@ -43,6 +44,7 @@ struct a2_obj  a2_point2obj(void* p);
 struct a2_obj a2_uinteger2obj(uint32 v);
 void a2_obj_free(struct a2_obj* obj_p);
 
+inline char* obj2str(struct a2_obj* obj, char* buf, size_t len);
 
 // test obj dump
 void obj_dump(struct a2_obj* obj);

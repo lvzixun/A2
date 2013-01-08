@@ -2,6 +2,7 @@
 #include "a2_obj.h"
 #include "a2_ir.h"
 #include "a2_error.h"
+#include <stdio.h>
 
 #define DEF_STK_SIZE 32
 #define DEF_UPVALUE_SIZE 32
@@ -94,12 +95,10 @@ inline int closure_push_cstack(struct a2_closure* cls, struct a2_obj* obj){
 	return ret;
 }
 
-inline void closure_pop_cstack(struct a2_closure* cls, int cap){
+inline struct  a2_obj* closure_at_cstack(struct a2_closure* cls, int idx){
 	assert(cls);
-	assert(cap>0);
-	cap = (cls->stack.top<cap)?(cls->stack.top):(cap);
-	// TODO: free obj
-	cls->stack.top -= cap;
+	assert(idx<0 && ((0-idx-1)<cls->stack.top));
+	return &(cls->stack.stk_p[0-idx-1]);
 }
 
 // upvalue op
@@ -118,6 +117,17 @@ inline int closure_push_upvalue(struct a2_closure* cls, struct a2_closure* cls_p
 	int ret = cls->upvalue.len;
 	cls_p->upvalue.upvalue_chain[(cls->upvalue.len)++].arg_idx = arg_idx;
 	return ret;
+}
+
+// for test 
+void dump_closure(struct a2_closure* cls){
+	int i;
+	assert(cls);
+	char buf[512] = {0};
+	printf("\n\n----arg=%d upvalue=%d addr=%p-----\n", cls->arg.cap, cls->upvalue.len, cls);
+	for(i=0;i<cls->len; i++){
+		printf("%s\n", ir2string(cls, cls->ir_chain[i], buf, sizeof(buf)));
+	}
 }
 
 

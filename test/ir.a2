@@ -1,14 +1,3 @@
 
-_a = 12345 # global a
-function func(){
-	a = 1
-	b = 2
-
-	return function(){
-		b = 3
-		return function(){		
-			print b
-		}
-	}	
-}
+local a = 12
 
