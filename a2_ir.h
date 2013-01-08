@@ -53,17 +53,14 @@ struct a2_closure;
 
 #define _ir_gb(i)		  ((ir_gmaskx(B_SIZE, B_POS) & (i))>>B_POS)
 #define ir_gb(i)		  _ir_sig(_ir_gb(i), B_SIZE)
-//#define ir_gb(i)		  (_ir_sig(_ir_gb(i), B_SIZE) | _ir_gb(i) )
 
 
 #define _ir_gc(i)		  ((ir_gmaskx(C_SIZE, C_POS) & (i))>>C_POS)
 #define ir_gc(i)		  _ir_sig(_ir_gc(i), C_SIZE)
-//#define ir_gc(i)		  (_ir_sig(_ir_gc(i), C_SIZE) | _ir_gc(i))
 
 
 #define _ir_gbx(i)		  ((ir_gmaskx(BX_SIZE, BX_POS) & (i))>>BX_POS)
 #define ir_gbx(i)		  _ir_sig(_ir_gbx(i), BX_SIZE)
-//#define ir_gbx(i)		  (_ir_sig(_ir_gbx(i), BX_SIZE) | _ir_gbx(i))
 
 enum ir_op{
 	NIL,  // nil op
