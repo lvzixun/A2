@@ -1,7 +1,4 @@
-a  = 2
-local b = 3
+local a = 1
+local b = 2+3
 
-function func()
-    local c =b=2
-end
 

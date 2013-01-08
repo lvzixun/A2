@@ -125,7 +125,7 @@ void dump_closure(struct a2_closure* cls){
 	int i;
 	assert(cls);
 	char buf[512] = {0};
-	printf("\n\n----arg=%d upvalue=%d addr=%p-----\n", cls->arg.cap, cls->upvalue.len, cls);
+	printf("\n\n----arg=%d upvalue=%d const=%d addr=%p-----\n", cls->arg.cap, cls->upvalue.len, cls->stack.top, cls);
 	for(i=0;i<cls->len; i++){
 		printf("%s\n", ir2string(cls, cls->ir_chain[i], buf, sizeof(buf)));
 	}

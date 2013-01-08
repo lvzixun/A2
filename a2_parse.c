@@ -500,7 +500,7 @@ static  size_t _parse_operation(struct a2_parse* parse_p, parse_func pfunc){
 	}
 
 	parse_readtoken(parse_p);		// jump = 
-	exp2 = _parse_expression(parse_p, pfunc);
+	exp2 = _parse_operation(parse_p, pfunc);
 	CHECK_EXP12;
 	node_p(head)->childs[0] = exp1;
 	node_p(head)->childs[1] = exp2;
@@ -788,7 +788,7 @@ BASE_DEF:
 					parse_readtoken(parse_p);
 					head = parse_expression(parse_p);
 					tp = parse_readtoken(parse_p);
-					if(is_end|| tt2op(tp->tt)!=')'){
+					if(!tp || tt2op(tp->tt)!=')'){
 						char ts_buf[64] = {0};
 						a2_error("[parse error@line: %d]: unexpected symbol  near \' %s \'.\n", tp->line,
 							a2_token2str(tp, ts_buf));

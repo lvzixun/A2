@@ -100,7 +100,7 @@ inline char* obj2str(struct a2_obj* obj, char* buf, size_t len){
 	assert(obj);
 	switch(obj->type){
 		case A2_TNUMBER:
-			snprintf(buf, len, "%lf", obj->value.number);
+			snprintf(buf, len, "%.14g", obj->value.number);
 			return buf;
 		case A2_TSTRING:
 			return a2_gcobj2string(obj->value.obj);
@@ -116,7 +116,7 @@ void obj_dump(struct a2_obj* obj){
 			printf("%s", str_obj(obj));
 			break;
 		case A2_TNUMBER:
-			printf("%lf", num_obj(obj));
+			printf("%.14g", num_obj(obj));
 			break;
 		default:
 			printf("<null>");

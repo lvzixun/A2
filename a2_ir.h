@@ -24,6 +24,7 @@ struct a2_closure;
 #define C_POS (0)
 #define BX_POS (C_POS)
 
+#define ARG_MAX (A_MAX)
 #define A_MAX  ((1<<A_SIZE)-1)
 #define B_MAX  ((1<<(B_SIZE-1))-1)
 #define C_MAX  B_MAX

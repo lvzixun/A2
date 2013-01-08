@@ -19,12 +19,12 @@
 #define curr_csym (ir_p->cls_sym_chain->sym.sym_chain[0])
 #define curr_cls (ir_p->cls_sym_chain->cls)
 #define curr_clssym (ir_p->cls_sym_chain)
-#define add_arg ((curr_clssym->arg_cap)++)
+#define add_arg  _add_arg(ir_p)
 #define curr_arg (curr_clssym->arg_cap)
-#define set_arg(i) (curr_clssym->arg_cap = i)
+#define set_arg(i) _set_arg(ir_p,i)
 
 #define top_arg (assert(curr_clssym->arg_cap), curr_clssym->arg_cap-1)
-#define del_arg (assert(curr_clssym->arg_cap), (curr_clssym->arg_cap)--)
+#define del_arg  _del_arg(ir_p)
 
 #define sym_v(vt,i)	(((vt)<<(sizeof(uint32)-2))|(i))
 #define v2vt(v)  ((v)>>(sizeof(uint32)-2)) 
@@ -48,6 +48,7 @@ struct cls_sym{
 	struct symbol  sym;
 	struct a2_closure* cls;
 	int arg_cap;
+	int max_arg;
 	byte is_recycle;
 	struct cls_sym* next;
 };
@@ -57,6 +58,10 @@ struct a2_ir{
 	struct cls_sym* cls_sym_chain;
 	struct a2_map* global_sym;
 };
+
+static inline int _add_arg(struct a2_ir* ir_p);
+static inline int _del_arg(struct a2_ir* ir_p);
+static inline int _set_arg(struct a2_ir* ir_p, int i);
 
 static inline void new_symbol(struct a2_ir* ir_p);
 static inline void free_symbol(struct a2_ir* ir_p);
@@ -105,6 +110,7 @@ static struct cls_sym* cls_sym_new(){
 	ret->sym.size=DEF_SYM_SIZE;
 	ret->sym.cap=0;
 	ret->arg_cap = 0;
+	ret->max_arg = 0;
 	ret->sym.sym_chain = (struct a2_map**)malloc(sizeof(struct a2_map*)*DEF_SYM_SIZE);
 	return ret;
 }
@@ -117,6 +123,26 @@ static void cls_sym_free(struct cls_sym* p){
 	free(p->sym.sym_chain);
 	// pass cls
 	free(p);
+}
+
+static inline int _add_arg(struct a2_ir* ir_p){
+	if(curr_clssym->arg_cap>=(ARG_MAX-1))
+		a2_error("the varable more than %d at closure.\n", ARG_MAX);
+	if(curr_clssym->arg_cap+1>curr_clssym->max_arg)
+		curr_clssym->max_arg = curr_clssym->arg_cap+1;
+	return curr_clssym->arg_cap++;
+}
+
+static inline int _del_arg(struct a2_ir* ir_p){
+	assert(curr_clssym->arg_cap>0);
+	return curr_clssym->arg_cap--;
+}
+
+static inline int _set_arg(struct a2_ir* ir_p, int i){
+	assert(i>=0&&i<ARG_MAX);
+	if(i>curr_clssym->max_arg)
+		curr_clssym->max_arg = i;
+	return curr_clssym->arg_cap = i;
 }
 
 inline void a2_ir_exec(struct a2_ir* ir_p, size_t root){
@@ -225,7 +251,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 	int i;
 	struct a2_obj* vp = NULL;
 	// loop sym at cur_cls
-	for(i=curr_clssym->sym.cap-1; i<=1; i--){
+	for(i=curr_clssym->sym.cap-1; i>=1; i--){
 		vp = a2_map_query(curr_clssym->sym.sym_chain[i], k);
 		if(vp){
 			assert(vp->type==_A2_TUINTEGER);
@@ -238,7 +264,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 	struct cls_sym* p = curr_clssym->next;
 	while(p){
 		struct cls_sym* np = p->next;
-		for(i=p->sym.cap-1; i<=1; i--){
+		for(i=p->sym.cap-1; i>=1; i--){
 			vp = a2_map_query(p->sym.sym_chain[i], k);
 			if(vp){
 				assert(vp->type==_A2_TUINTEGER);
@@ -335,7 +361,7 @@ static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
 					closure_add_ir(curr_cls, ir_abc(SETGLOBAL, r_idx, top_arg, r_idx));
 					del_arg;
 				}else{
-					if(r_idx<0 && (-1-r_idx)>C_MAX){
+					if(is_Climit(r_idx)){
 						int ki=top_arg;
 						closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, r_idx));
 						closure_add_ir(curr_cls, ir_abc(SETGLOBAL, ki, ki, top_arg));
@@ -383,6 +409,7 @@ static int a2_ir_exp(struct a2_ir* ir_p, size_t root){
 			op = MUL;
 			goto OP_IR;
 		case div_node:
+			op = DIV;
 OP_IR:
 			_b = curr_arg;
 			l_idx = a2_ir_exp(ir_p, node_p(root)->childs[0]); // left op value
@@ -395,7 +422,7 @@ OP_IR:
 				closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, r_idx));
 				r_idx = top_arg;
 			}
-			closure_add_ir(curr_cls, ir_abc(ADD, _b, l_idx, r_idx));
+			closure_add_ir(curr_cls, ir_abc(op, _b, l_idx, r_idx));
 			set_arg(_b+1);
 			curr_clssym->is_recycle = 1;
 			return _b;
@@ -412,6 +439,8 @@ OP_IR:
 			return add_csymbol(ir_p, &k);
 		}
 			break;
+		case ass_node:
+			return a2_ir_ass(ir_p, root);
 		default:
 			assert(0);
 	}
@@ -436,9 +465,9 @@ static inline int a2_ir_var(struct a2_ir* ir_p, size_t root){
 				return top_arg;
 			case var_local:
 				curr_clssym->is_recycle = 0;
-				return idx;
+				return idx-1;
 			case var_upvalue:
-				closure_add_ir(curr_cls, ir_abx(GETUPVALUE, add_arg, idx));
+				closure_add_ir(curr_cls, ir_abx(GETUPVALUE, add_arg, idx-1));
 				curr_clssym->is_recycle = 1;
 				return top_arg;
 			default:
@@ -478,20 +507,20 @@ char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
 			char c_buf[32] = {0};
 			char* cs = (c<0)?(obj2str(closure_at_cstack(cls, c), c_buf, sizeof(c_buf)-1)):(NULL);
 			
-			int cap = snprintf(str, size, "%s\t%d    %d    %d;",ops, a, ir_gb(_ir), ir_gc(_ir));
+			int cap = snprintf(str, size, "%s  %d  %d  %d;",ops, a, ir_gb(_ir), ir_gc(_ir));
 			if(bs)
 				cap += snprintf(str+cap, size-cap, "%s ", bs);
 			if(cs)
-				cap = snprintf(str+cap, size-cap, "%s\n", cs);
+				snprintf(str+cap, size-cap, "%s", cs);
 		}
 			break;
 		case ABX_MODE:{
 			int bx = ir_gbx(_ir);
 			char bx_buf[32] = {0};
 			char*  bxs = (bx<0)?(obj2str(closure_at_cstack(cls, bx), bx_buf, sizeof(bx_buf)-1)):(NULL);
-			int cap = snprintf(str, size, "%s\t%d    %d;", ops, a, ir_gbx(_ir));
+			int cap = snprintf(str, size, "%s  %d  %d;", ops, a, ir_gbx(_ir));
 			if(bxs)
-				snprintf(str+cap, size-cap, "%s\n", bxs);
+				snprintf(str+cap, size-cap, "%s", bxs);
 		}
 			break;
 		default:

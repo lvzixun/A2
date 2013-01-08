@@ -1,4 +1,1 @@
-local a = 1
-local b = 2+3
-
-
+a = 12
