@@ -67,6 +67,7 @@ void a2_closure_free(struct a2_closure* cls){
 	free(cls->stack.stk_p);
 	// TODO: upvalue obj free
 	free(cls->upvalue.upvalue_chain);
+	free(cls);
 }
 
 // IR OP

@@ -30,6 +30,7 @@ int main(int argc, char const *argv[])
 
 	a2_io_close(io);
 	a2_env_free(env);
+
 	mem_print();
 	return 0;
 }
