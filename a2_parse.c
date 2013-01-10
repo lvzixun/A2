@@ -452,9 +452,22 @@ static inline  size_t parse_op(struct a2_parse* parse_p){
 						node_p(exp1)->token->v.number = node_p(exp1)->token->v.number op node_p(exp2)->token->v.number;\
 						return new_node(parse_p, node_p(exp1)->token, num_node); \
 					}
-// #undef MERGER
-					
-// #define MERGER(...)
+
+/*
+#define MERGER_LOGIC(op) 	if(node_t(exp1)==bool_node && node_t(exp2)==bool_node){ \
+								assert(tt2tk(node_p(exp1)->token->tt) == tk_bool); \
+								assert(tt2tk(node_p(exp2)->token->tt) == tk_bool); \
+								uint32 _op = (tt2op(node_p(exp1)->token->tt) op tt2op(node_p(exp2)->token->tt)); \
+								node_p(exp1)->token->tt = kp2tt(tk_bool, _op); \
+								return new_node(parse_p, node_p(exp1)->token, bool_node); \
+							}
+
+#define MERGER_LIMIT(op)	if(node_t(exp1)==num_node && node_t(exp2)==num_node){ \
+								uint32 _op = (node_p(exp1)->token->v.number op node_p(exp2)->token->v.number);\
+								node_p(exp1)->token->tt = kp2tt(tk_bool, _op); \
+								return new_node(parse_p, node_p(exp1)->token, bool_node); \
+							}
+*/
 
 #define CHECK_EXP12 	if(!exp1 || !exp2) { \
 							char ts_buf[64] = {0}; \
@@ -463,7 +476,7 @@ static inline  size_t parse_op(struct a2_parse* parse_p){
 						}else{ \
 							switch(tt2op(tp->tt)){ \
 								case '+': \
-									MERGER(+); \
+									MERGER(+) \
 									break; \
 								case '-': \
 									MERGER(-) \
@@ -530,53 +543,67 @@ static size_t parse_comma(struct a2_parse* parse_p){
 
 // root = '|' 
 static size_t parse_logic(struct a2_parse* parse_p){
-	size_t head, exp2;
-	size_t exp1 = parse_interval(parse_p);
-	struct a2_token* tp = parse_attoken(parse_p);
+	size_t head, exp1, exp2;
+	head = exp1 = parse_interval(parse_p);
+	struct a2_token* tp = NULL;
 
-	if( !tp || tt2tk(tp->tt)==tk_end) return exp1;
+	while(!is_end){
+		tp = parse_attoken(parse_p);
+		if(tt2tk(tp->tt)==tk_end) return exp1;
 
-	if(tt2op(tp->tt) == '|'){
-		head = new_node(parse_p, &cur_token, or_node);
-		parse_readtoken(parse_p);
-		exp2 = parse_logic(parse_p);
-		CHECK_EXP12;
-		node_p(head)->childs[0] = exp1;
-		node_p(head)->childs[1] = exp2;
-		return head;
-	}
+		switch(tt2op(tp->tt)){
+			case '|':
+				head = new_node(parse_p, &cur_token, or_node);
+				break;
+			default:
+				return exp1;
+		}
 
-	return exp1;
-}
-
-// root = '&'
-static size_t parse_interval(struct a2_parse* parse_p){
-	size_t head, exp2;
-	size_t exp1 = parse_limits(parse_p);
-	struct a2_token* tp = parse_attoken(parse_p);
-
-	if( !tp || tt2tk(tp->tt)==tk_end) return exp1;
-
-	if(tt2op(tp->tt) == '&'){
-		head = new_node(parse_p, &cur_token, and_node);
 		parse_readtoken(parse_p);
 		exp2 = parse_interval(parse_p);
 		CHECK_EXP12;
 		node_p(head)->childs[0] = exp1;
 		node_p(head)->childs[1] = exp2;
-		return head;
+		exp1 = head;
 	}
+	return head;
+}
 
-	return exp1;
+// root = '&'
+static size_t parse_interval(struct a2_parse* parse_p){
+	size_t head, exp1, exp2;
+	head = exp1 = parse_limits(parse_p);
+	struct a2_token* tp = NULL;
+
+	while(!is_end){
+		tp = parse_attoken(parse_p);
+		if(tt2tk(tp->tt)==tk_end) return exp1;
+
+		switch(tt2op(tp->tt)){
+			case '&':
+				head = new_node(parse_p, &cur_token, and_node);
+				break;
+			default:
+				return exp1;
+		}
+
+		parse_readtoken(parse_p);
+		exp2 = parse_limits(parse_p);
+		CHECK_EXP12;
+		node_p(head)->childs[0] = exp1;
+		node_p(head)->childs[1] = exp2;
+		exp1 = head;
+	}
+	return head;
 }
 
 // root = '>' '<' '>=' '<='
 static size_t parse_limits(struct a2_parse* parse_p){
-	size_t head, exp2;
-	size_t exp1 = parse_arithmetic(parse_p);
+	size_t head, exp1, exp2;
+	head = exp1 = parse_arithmetic(parse_p);
 	struct a2_token* tp = parse_attoken(parse_p);
 
-	if( !tp || tt2tk(tp->tt)==tk_end) return exp1;
+	if(!tp || tt2tk(tp->tt)==tk_end) return exp1;
 
 	switch(tt2op(tp->tt)){
 		case '>':
@@ -602,7 +629,7 @@ static size_t parse_limits(struct a2_parse* parse_p){
 	}
 
 	parse_readtoken(parse_p);
-	exp2 = parse_limits(parse_p);
+	exp2 = parse_arithmetic(parse_p);
 	CHECK_EXP12;
 	node_p(head)->childs[0] = exp1;
 	node_p(head)->childs[1] = exp2;
@@ -611,57 +638,64 @@ static size_t parse_limits(struct a2_parse* parse_p){
 
 // root= '+' '-'
 static size_t parse_arithmetic(struct a2_parse* parse_p){
-	size_t head, exp2;
-	size_t exp1 = parse_advanced(parse_p);
-	struct a2_token* tp = parse_attoken(parse_p);
+	size_t head, exp1, exp2;
+	head = exp1 = parse_advanced(parse_p);
+	struct a2_token* tp = NULL;
 
-	if( !tp || tt2tk(tp->tt)==tk_end) return exp1;
+	while(!is_end){
+		tp = parse_attoken(parse_p);
+		if( !tp || tt2tk(tp->tt)==tk_end) return exp1;
 
-	switch(tt2op(tp->tt)){
-		case '+':
-			head = new_node(parse_p, &cur_token, add_node);
-			break;
-		case '-':
-			head = new_node(parse_p, &cur_token, sub_node);
-			break;
-		default:
-			return exp1;
+		switch(tt2op(tp->tt)){
+			case '+':
+				head = new_node(parse_p, &cur_token, add_node);
+				break;
+			case '-':
+				head = new_node(parse_p, &cur_token, sub_node);
+				break;
+			default:
+				return exp1;
+		}
+
+		parse_readtoken(parse_p);
+		exp2 = parse_advanced(parse_p);
+		CHECK_EXP12;
+		node_p(head)->childs[0] = exp1;
+		node_p(head)->childs[1] = exp2;
+		exp1 = head;
 	}
-
-	parse_readtoken(parse_p);
-	exp2 = parse_arithmetic(parse_p);
-	CHECK_EXP12;
-	node_p(head)->childs[0] = exp1;
-	node_p(head)->childs[1] = exp2;
 	return head;
 }
 
 // root = '*' '/'
 static size_t parse_advanced(struct a2_parse* parse_p){
-	size_t head, exp2;
-	size_t exp1 = parse_deep(parse_p);
-	struct a2_token* tp = parse_attoken(parse_p);
+	size_t head, exp1, exp2;
+	head = exp1 = parse_deep(parse_p);
+	struct a2_token* tp = NULL;
 
-	if( !tp || tt2tk(tp->tt)==tk_end) return exp1;
+	while(!is_end){
+		tp = parse_attoken(parse_p);
+		if(tt2tk(tp->tt)==tk_end) return exp1;
 
-	switch(tt2op(tp->tt)){
-		case '*':
-			head = new_node(parse_p, &cur_token, mul_node);
-			break;
-		case '/':
-			head = new_node(parse_p, &cur_token, div_node);
-			break;
-		default:
-			return exp1;
+		switch(tt2op(tp->tt)){
+			case '*':
+				head = new_node(parse_p, &cur_token, mul_node);
+				break;
+			case '/':
+				head = new_node(parse_p, &cur_token, div_node);
+				break;
+			default:
+				return exp1;
+		}
+
+		parse_readtoken(parse_p);
+		exp2 = parse_deep(parse_p);
+		CHECK_EXP12;
+		node_p(head)->childs[0] = exp1;
+		node_p(head)->childs[1] = exp2;
+		exp1 = head;
 	}
-
-	parse_readtoken(parse_p);
-	exp2 = parse_advanced(parse_p);
-	CHECK_EXP12;
-	node_p(head)->childs[0] = exp1;
-	node_p(head)->childs[1] = exp2;
 	return head;
-
 }
 
 
@@ -760,6 +794,8 @@ BASE_DEF:
 			}
 		}
 			break;
+		case tk_nil:
+			return new_node(parse_p, parse_readtoken(parse_p), nil_node);
 		case tk_bool:
 			return new_node(parse_p, parse_readtoken(parse_p), bool_node);
 		case tk_string:
@@ -786,7 +822,7 @@ BASE_DEF:
 				case '(':{
 					struct a2_token* tp = NULL;
 					parse_readtoken(parse_p);
-					head = parse_expression(parse_p);
+					head = parse_exp(parse_p);
 					tp = parse_readtoken(parse_p);
 					if(!tp || tt2op(tp->tt)!=')'){
 						char ts_buf[64] = {0};
@@ -826,10 +862,14 @@ static inline size_t parse_local(struct a2_parse* parse_p){
 			}else if(tt2op(ntp->tt)=='='){
 				node_p(back)->next = parse_exp(parse_p);
 				back = node_p(back)->next;
+			}else{
+				node_p(back)->next = new_node(parse_p, parse_readtoken(parse_p), var_node);
+				back = node_p(back)->next;
 			}
 
 			tp = parse_attoken(parse_p);
-			if(tp && tt2op(tp->tt)==','){
+			ntp = parse_matchtoken(parse_p, 1);
+			if(tp && tt2op(tp->tt)==',' && ntp && tt2tk(ntp->tt)==tk_ide){
 				parse_readtoken(parse_p);
 				tp = parse_attoken(parse_p);
 			}else 
@@ -1084,6 +1124,7 @@ static inline size_t _parse_gsegment(struct a2_parse* parse_p){
 		dump_node(parse_p, root);
 		printf("----end------\n");
 		a2_irexec(parse_p->env_p, root);
+		printf("---exec-----\n");
 		if(!head)
 			head = back = root;
 		else{

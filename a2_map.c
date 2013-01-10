@@ -20,7 +20,7 @@ struct a2_map{
 };
 
 #define DEFAULT_MAP_LEN		32
-#define is_nil(v) ((v).type==A2_TSNIL)
+#define is_nil(v) ((v).type==_A2_TNULL)
 
 inline size_t calc_hash(byte* name, size_t len)
 {
@@ -117,7 +117,8 @@ int a2_map_add(struct a2_map* map_p, struct a2_kv* kv){
 	assert(map_p);
 	assert(kv);
 	assert(kv->key);
-	assert(kv->key->type==A2_TNUMBER || kv->key->type==A2_TSTRING);
+	assert(kv->key->type==A2_TNUMBER || kv->key->type==A2_TSTRING || 
+		kv->key->type==A2_TNIL || kv->key->type==A2_TBOOL);
 
 	hash = calc_hash( a2_obj_bytes(kv->key), a2_obj_size(kv->key));
 	if(map_p->cap >= map_p->size)

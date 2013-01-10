@@ -202,9 +202,11 @@ static inline void free_clssym(struct a2_ir* ir_p){
 	ir_p->cls_sym_chain = np;
 }
 
-// add const varable symbol
+// add constant varable symbol
 static inline int  add_csymbol(struct a2_ir* ir_p, struct a2_obj* k){
-	assert(k->type==A2_TNUMBER || k->type==A2_TSTRING);
+	assert(k->type==A2_TNUMBER || k->type==A2_TSTRING 
+		|| k->type==A2_TNIL || k->type==A2_TBOOL);
+
 	struct a2_obj* vp = a2_map_query(curr_csym, k);
 	if(!vp){  // not find
 		int idx = closure_push_cstack(curr_cls, k); 
@@ -216,6 +218,18 @@ static inline int  add_csymbol(struct a2_ir* ir_p, struct a2_obj* k){
 		return -1-idx;
 	}else
 		return -1 - (int)(vp->value.uinteger);
+}
+
+// add bool varable to constent symbol
+static inline int add_bool(struct a2_ir* ir_p, int t){
+	struct a2_obj k = a2_bool2obj(t);
+	return add_csymbol(ir_p, &k);
+}
+
+// add nil varable yo constent symbol
+static inline int add_nil(struct a2_ir* ir_p){
+	struct a2_obj k = a2_nil2obj();
+	return add_csymbol(ir_p, &k);
 }
 
 // add local varable symbol
@@ -297,6 +311,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 	return 0;
 }
 
+
 static void a2_ir_local(struct a2_ir* ir_p, size_t root){
 	assert(node_t(root)==local_node);
 	size_t node = node_p(root)->next;
@@ -307,11 +322,13 @@ static void a2_ir_local(struct a2_ir* ir_p, size_t root){
 		switch(node_t(node)){
 			case var_node:
 				b = node;
-				goto LOCAL_VAR;
+				k.type = A2_TSTRING;
+				k.value = node_p(b)->token->v;
+				add_lsymbol(ir_p, &k, b);
+				break;
 			case ass_node:{
 				assert(node_p(node_p(node)->childs[0])->type==var_node);
-				b = node_p(node)->childs[0];
-LOCAL_VAR:		
+				b = node_p(node)->childs[0];		
 				k.type = A2_TSTRING;
 				k.value = node_p(b)->token->v;
 				add_lsymbol(ir_p, &k, b);
@@ -399,6 +416,7 @@ static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
 static int a2_ir_exp(struct a2_ir* ir_p, size_t root){
 	int op, _b, l_idx, r_idx;
 	switch(node_p(root)->type){
+		// arithmetic operation
 		case add_node:
 			op = ADD;
 			goto OP_IR;
@@ -426,12 +444,15 @@ OP_IR:
 			set_arg(_b+1);
 			curr_clssym->is_recycle = 1;
 			return _b;
+		// varable 	
 		case var_node:
 			return a2_ir_var(ir_p, root);
+		// constant
 		case num_node:{
 			struct a2_obj k = a2_number2obj(node_p(root)->token->v.number);
 			return add_csymbol(ir_p, &k);
 		}
+		// string
 		case str_node:{
 			struct a2_obj k = {
 				A2_TSTRING, node_p(root)->token->v
@@ -439,13 +460,47 @@ OP_IR:
 			return add_csymbol(ir_p, &k);
 		}
 			break;
+		// bool 
+		case bool_node:
+			return add_bool(ir_p, tt2op(node_p(root)->token->tt));
+		// nil
+		case nil_node:
+			return add_nil(ir_p);
+		// assignment operation	
 		case ass_node:
 			return a2_ir_ass(ir_p, root);
+		 // logic operation
+		case or_node:
+			op = OR;
+			goto OP_IR;
+		case and_node:
+			op = AND;
+			goto OP_IR;
+		case gt_node:
+			op = BIG;
+			goto OP_IR;
+		case lt_node:
+			op = LITE;
+			goto OP_IR;
+		case gte_node:
+			op = LITEE;
+			goto OP_IR;
+		case lte_node:
+			op = BIGE;
+			goto OP_IR;
+		case equ_node:
+			op = EQU;
+			goto OP_IR;
+		case ne_node:
+			op = NEQU;
+			goto OP_IR;
 		default:
 			assert(0);
 	}
 	assert(0);
 }
+
+
 
 // parse varable
 static inline int a2_ir_var(struct a2_ir* ir_p, size_t root){
@@ -486,15 +541,30 @@ char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
 		"SETGLOBAL",  // set global variable 
 		"GETUPVALUE",	// get upvalue
 		"SETUPVALUE",	// set upvalue
+		"CLOSURE",	// closure
+		"CALL",		// call
+		"RETURN",		// return
+		"JMP",		// jump
+		"MOVE",		// move
+		"TEST",		// test
 		"LOAD",	 	// load const value to register
 		"ADD",	 	// +
 		"SUB",	 	// -
 		"MUL",		// *
-		"DIV" 		// /
+		"DIV", 		// /
+		"OR",			// |
+		"AND",		// &
+		"BIG",		// >
+		"LITE",		// <
+		"EQU",		// == 
+		"NEQU",		// !=
+		"BIGE",		// >=
+		"LITEE",		// <=
+		"NOT"		// !
 	};
 
 	int op = ir_gop(_ir);
-	assert(op>0 && op<ir_count);
+	assert(op>0 && op<(sizeof(_irs)/sizeof(char*)));
 
 	char* ops = _irs[op];
 	int a = ir_ga(_ir);

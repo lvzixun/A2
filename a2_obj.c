@@ -54,11 +54,27 @@ struct a2_obj a2_uinteger2obj(uint32 v){
 	return ret;
 }
 
+// bool varable to object
+struct a2_obj a2_bool2obj(int t){
+	struct a2_obj ret;
+	ret.type = A2_TBOOL;
+	ret.value.uinteger = (!(t==0));
+	return ret;
+}
+
+// nil varable to object
+struct a2_obj a2_nil2obj(){
+	struct a2_obj ret;
+	ret.type = A2_TNIL;
+	ret.value.point = NULL;
+	return ret;
+}
+
 void a2_obj_free(struct a2_obj* obj_p){
 	assert(obj_p && obj_p->type <=4);
 	if(obj_free_func[obj_p->type])
 		obj_free_func[obj_p->type](obj_p);
-	obj_p->type = A2_TSNIL;
+	obj_p->type = _A2_TNULL;
 }
 
 // get data size from a2_obj
@@ -69,6 +85,10 @@ size_t a2_obj_size(struct a2_obj* obj_p){
 			return   a2_string_len(a2_gcobj2string(obj_p->value.obj));
 		case A2_TNUMBER:
 			return sizeof(a2_number);
+		case A2_TNIL:
+			return 0;
+		case A2_TBOOL:
+			return sizeof(obj_p->value.uinteger);
 		default:
 			return 0;
 	}
@@ -81,6 +101,10 @@ byte* a2_obj_bytes(struct a2_obj* obj_p){
 			return  (byte*)(a2_gcobj2string(obj_p->value.obj));
 		case A2_TNUMBER:
 			return (byte*)(&(obj_p->value.number));
+		case A2_TNIL:
+			return NULL;
+		case A2_TBOOL:
+			return (byte*)(&(obj_p->value.uinteger));
 		default:
 			return NULL;
 	}
@@ -104,6 +128,11 @@ inline char* obj2str(struct a2_obj* obj, char* buf, size_t len){
 			return buf;
 		case A2_TSTRING:
 			return a2_gcobj2string(obj->value.obj);
+		case A2_TBOOL:
+			snprintf(buf, len, "%s", (obj->value.uinteger)?("true"):("false"));
+			return buf;
+		case A2_TNIL:
+			return "nil";
 		default:
 			assert(0);
 	}

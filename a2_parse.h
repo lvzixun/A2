@@ -48,7 +48,8 @@ enum node_type{
 
 	if_node,	// if
 	local_node, // local 
-	bool_node,
+	bool_node, // true / false
+	nil_node, // nil
 	args_node,	// ...
 	func_node, 	// def function
 	map_node,   // def map

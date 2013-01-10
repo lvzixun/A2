@@ -10,8 +10,8 @@ struct a2_closure;
 // ir code is included 4 byte, the 4byte like that:
 //  thanks for lua
 #define IR_SIZE  32
-#define MODE_SIZE 2
-#define OP_SIZE 4
+#define MODE_SIZE 1
+#define OP_SIZE 5
 #define A_SIZE  8
 #define B_SIZE  9
 #define C_SIZE  9
@@ -69,11 +69,26 @@ enum ir_op{
 	SETGLOBAL,  // set global variable 
 	GETUPVALUE,	// get upvalue
 	SETUPVALUE,	// set upvalue
+	CLOSURE,	// closure
+	CALL,		// call
+	RETURN,		// return
+	JMP,		// jump
+	MOVE,		// move
+	TEST,		// test
 	LOAD,	 	// load const value to register
 	ADD,	 	// +
 	SUB,	 	// -
 	MUL,		// *
 	DIV, 		// /
+	OR,			// |
+	AND,		// &
+	BIG,		// >
+	LITE,		// <
+	EQU,		// == 
+	NEQU,		// !=
+	BIGE,		// >=
+	LITEE,		// <=
+	NOT,		// !
 
 	ir_count	// op count
 };

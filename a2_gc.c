@@ -83,7 +83,7 @@ struct a2_gcobj* a2_closure2gcobj(struct a2_closure* cls){
 struct a2_gcobj* a2_nil2gcobj(){
 	struct a2_gcobj* ret = (struct a2_gcobj*)malloc(sizeof(*ret));
 	ret->next = NULL;
-	ret->type = A2_TSNIL;
+	ret->type = A2_TNIL;
 	return ret;
 }
 

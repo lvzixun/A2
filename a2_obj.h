@@ -16,8 +16,11 @@ struct a2_obj{
 };
 
 enum{
+	// invalid object
+	_A2_TNULL,
+	
 	// public type
-	A2_TSNIL,
+	A2_TNIL = 1,
 	A2_TSTRING,
 	A2_TNUMBER,
 	A2_TPOINT,
@@ -25,7 +28,7 @@ enum{
 	A2_TARRAY,
 	A2_TCLOSURE,
 	A2_TFUNCTION,
-
+	A2_TBOOL,
 
 	//private type
 	_A2_TUINTEGER
@@ -42,6 +45,9 @@ struct a2_obj  a2_string2obj(char* a2_s);
 struct a2_obj  a2_number2obj(a2_number num);
 struct a2_obj  a2_point2obj(void* p);
 struct a2_obj a2_uinteger2obj(uint32 v);
+struct a2_obj a2_bool2obj(int t);
+struct a2_obj a2_nil2obj();
+
 void a2_obj_free(struct a2_obj* obj_p);
 
 inline char* obj2str(struct a2_obj* obj, char* buf, size_t len);
