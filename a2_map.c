@@ -89,8 +89,6 @@ static void map_resize(struct a2_map* map_p){
 
 static struct a2_obj* _a2_map_query(struct a2_map* map_p, struct a2_obj* key, struct a2_obj** _key){
 	size_t hash_full, hash;
-	if(key->type != A2_TNUMBER && key->type!= A2_TSTRING)
-		return NULL;
 
 	hash_full = calc_hash( a2_obj_bytes(key), a2_obj_size(key));
 	hash = hash_full % map_p->size;
@@ -117,8 +115,6 @@ int a2_map_add(struct a2_map* map_p, struct a2_kv* kv){
 	assert(map_p);
 	assert(kv);
 	assert(kv->key);
-	assert(kv->key->type==A2_TNUMBER || kv->key->type==A2_TSTRING || 
-		kv->key->type==A2_TNIL || kv->key->type==A2_TBOOL);
 
 	hash = calc_hash( a2_obj_bytes(kv->key), a2_obj_size(kv->key));
 	if(map_p->cap >= map_p->size)

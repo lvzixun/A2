@@ -50,12 +50,13 @@ void a2_gc_free(struct a2_gc* gc_p){
 	free(gc_p);
 }
 
-void a2_gc_add(struct a2_gc* gc_p, struct a2_gcobj* gcobj){
+struct a2_gcobj* a2_gc_add(struct a2_gc* gc_p, struct a2_gcobj* gcobj){
 	assert(gc_p);
 	assert(gcobj);
 
 	gcobj->next = gc_p->chain;
 	gc_p->chain = gcobj;
+	return gcobj;
 }
 
 inline void a2_gcobj_setstring(struct a2_gcobj* gcobj, char* a2_s){
@@ -94,6 +95,10 @@ void a2_gcobj_nilfree(struct a2_gcobj* gcobj){
 
 inline char* a2_gcobj2string(struct a2_gcobj* gcobj){
 	return gcobj->value.str;
+}
+inline struct a2_closure* a2_gcobj2closure(struct a2_gcobj* gcobj){
+	assert(gcobj->type==A2_TCLOSURE);
+	return gcobj->value.cls;
 }
 
 // TODO: because gc , the gcobj only's mark.

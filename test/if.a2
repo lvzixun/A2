@@ -1,0 +1,10 @@
+local a, b
+a= b =1
+
+if (1>2){
+	local a 
+	if(3>4){
+		a = 5
+	}
+}else
+	b = 6

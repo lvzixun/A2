@@ -1,3 +1,11 @@
 
+local g1 ,g2
+a = function (){
+	local b= 1
+}
 
-local a=false, b=1, c = nil , d = true
+local b = function func(){
+	local c = 2
+}
+
+local g3 = 5

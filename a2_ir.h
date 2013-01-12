@@ -31,7 +31,7 @@ struct a2_closure;
 #define BX_MAX ((1<<(BX_SIZE-1))-1)
 
 #define is_limit(i,m) ((i)<0 && (-1-(i))>(m))
-#define is_Alimit(i) is_limit(i, A_MAX)
+#define is_Alimit(i)  (i<0)
 #define is_Blimit(i) is_limit(i, B_MAX)
 #define is_Climit(i) is_limit(i, C_MAX)
 #define is_BXlimit(i) is_limit(i, BX_MAX)
@@ -72,10 +72,11 @@ enum ir_op{
 	CLOSURE,	// closure
 	CALL,		// call
 	RETURN,		// return
-	JMP,		// jump
+	JUMP,		// jump
 	MOVE,		// move
 	TEST,		// test
 	LOAD,	 	// load const value to register
+	INC,		// +=
 	ADD,	 	// +
 	SUB,	 	// -
 	MUL,		// *

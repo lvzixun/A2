@@ -8,6 +8,7 @@ typedef union {
 		a2_number number;
 		void* point;
 		uint32 uinteger; 
+		size_t addr;
 }a2_value;
 
 struct a2_obj{
@@ -31,7 +32,8 @@ enum{
 	A2_TBOOL,
 
 	//private type
-	_A2_TUINTEGER
+	_A2_TUINTEGER,
+	_A2_TADDR
 };
 
 #define str_obj(obj_p)  (a2_gcobj2string((obj_p)->value.obj))
@@ -47,6 +49,7 @@ struct a2_obj  a2_point2obj(void* p);
 struct a2_obj a2_uinteger2obj(uint32 v);
 struct a2_obj a2_bool2obj(int t);
 struct a2_obj a2_nil2obj();
+struct a2_obj a2_addr2obj(size_t addr);
 
 void a2_obj_free(struct a2_obj* obj_p);
 

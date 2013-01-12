@@ -8,7 +8,7 @@ struct a2_closure;
 
 struct a2_gc* a2_gc_new();
 void a2_gc_free(struct a2_gc* gc_p);
-void a2_gc_add(struct a2_gc* gc_p, struct a2_gcobj* gcobj);
+struct a2_gcobj* a2_gc_add(struct a2_gc* gc_p, struct a2_gcobj* gcobj);
 
 // string 
 inline void a2_gcobj_setstring(struct a2_gcobj* gcobj, char* a2_s);
@@ -18,6 +18,7 @@ void a2_gcobj_stringfree(struct a2_gcobj* gcobj);
 
 // closure
 struct a2_gcobj* a2_closure2gcobj(struct a2_closure* cls);
+inline struct a2_closure* a2_gcobj2closure(struct a2_gcobj* gcobj);
 
 // nil 
 struct a2_gcobj* a2_nil2gcobj();

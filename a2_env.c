@@ -19,6 +19,7 @@ struct a2_env{
 	struct a2_obj _forge_obj;
 	struct a2_gcobj* _forge_gcobj;			
 };
+static struct a2_gcobj* _a2_env_addstrobj(struct a2_env* env_p, char* a2_s, int is_copy);
 
 struct a2_env* a2_env_new(){
 	struct a2_env* ret = (struct a2_env*)malloc(sizeof(*ret));
@@ -49,7 +50,11 @@ static inline struct a2_obj* _fill_str2obj(struct a2_env* env_p, char* a2_s){
 	return &(env_p->_forge_obj);
 }
 
-struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s){
+inline struct  a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s){
+	return _a2_env_addstrobj(env_p, a2_s, 1);
+}
+
+static struct a2_gcobj* _a2_env_addstrobj(struct a2_env* env_p, char* a2_s, int is_copy){
 	assert(a2_s);
 	assert(env_p);
 	
@@ -60,7 +65,8 @@ struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s){
 		struct a2_kv kv = {
 			&k, &v
 		};
-		a2_s = a2_string_new(a2_s);
+		if(is_copy)
+			a2_s = a2_string_new(a2_s);
 		k = a2_string2obj(a2_s);
 		v.value.point = k.value.obj;
 		a2_gc_add(env_p->gc_p, k.value.obj);		// add gc chain
@@ -68,6 +74,19 @@ struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s){
 		return k.value.obj;
 	}else
 		return  vp->value.point;
+}
+
+
+inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str){
+	char* a2_s = a2_string_new(str);
+	struct a2_gcobj* _gcp = _a2_env_addstrobj(env_p, a2_s, 0);
+	a2_value v;
+	v.obj = _gcp;
+	struct a2_obj ret = {
+		A2_TSTRING,
+		v
+	};
+	return ret;
 }
 
 inline void a2_irexec(struct a2_env* env_p, size_t root){

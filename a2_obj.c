@@ -1,5 +1,6 @@
 #include "a2_obj.h"
 #include "a2_string.h"
+#include "a2_closure.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -17,6 +18,7 @@ static _obj_free obj_free_func[] = {
 	NULL,  // closure
 	NULL,
 
+	NULL,
 	NULL
 };
 
@@ -70,6 +72,14 @@ struct a2_obj a2_nil2obj(){
 	return ret;
 }
 
+// addr to object
+struct a2_obj a2_addr2obj(size_t addr){
+	struct a2_obj ret;
+	ret.type = _A2_TADDR;
+	ret.value.addr = addr;
+	return ret;
+}
+
 void a2_obj_free(struct a2_obj* obj_p){
 	assert(obj_p && obj_p->type <=4);
 	if(obj_free_func[obj_p->type])
@@ -89,6 +99,8 @@ size_t a2_obj_size(struct a2_obj* obj_p){
 			return 0;
 		case A2_TBOOL:
 			return sizeof(obj_p->value.uinteger);
+		case _A2_TADDR:
+			return sizeof(obj_p->value.addr);
 		default:
 			return 0;
 	}
@@ -105,6 +117,8 @@ byte* a2_obj_bytes(struct a2_obj* obj_p){
 			return NULL;
 		case A2_TBOOL:
 			return (byte*)(&(obj_p->value.uinteger));
+		case _A2_TADDR:
+			return (byte*)(&(obj_p->value.addr));
 		default:
 			return NULL;
 	}
@@ -133,6 +147,9 @@ inline char* obj2str(struct a2_obj* obj, char* buf, size_t len){
 			return buf;
 		case A2_TNIL:
 			return "nil";
+		case _A2_TADDR:
+			snprintf(buf, len, "[%lu]", obj->value.addr);
+			return buf;
 		default:
 			assert(0);
 	}

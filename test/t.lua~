@@ -1,2 +1,9 @@
-a = (1>2)
+
+function func(a, b)
+    local c = 2
+end
+
+function func2(a, b)
+    local c = 3
+end
 

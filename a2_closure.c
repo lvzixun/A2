@@ -11,18 +11,23 @@
 #define DEF_IR_SIZE 128
 #define DEF_ARG_SIZE 32
 
+struct obj_stack{
+	struct a2_obj* stk_p;
+	int top;
+	int size;
+};
+
 struct a2_closure{
 	// intermediate representation chain
 	ir* ir_chain;
 	size_t len;
 	size_t size;
+	
+	// gcobj stack
+	struct obj_stack gc_stack;
 
 	// const varabel stack
-	struct {
-		struct a2_obj* stk_p;
-		int top;
-		int size;
-	}stack;
+	struct obj_stack c_stack;
 
 	// arg list
 	struct {
@@ -42,16 +47,20 @@ struct a2_closure{
 	}upvalue;
 };
 
+static inline void _obj_stack_init(struct obj_stack* os_p);
+static  inline void _obj_stack_destory(struct obj_stack* os_p);
+static inline int _obj_stack_add(struct obj_stack* os_p, struct a2_obj* obj_p);
+
 struct a2_closure* a2_closure_new(){
 	struct a2_closure* ret = (struct a2_closure*)malloc(sizeof(*ret));
 	// init ir chain
 	ret->ir_chain = (ir*)malloc(sizeof(ir)*DEF_IR_SIZE);
 	ret->size = DEF_IR_SIZE;
 	ret->len = 0;
-	// init stack
-	ret->stack.stk_p = (struct a2_obj*)malloc(sizeof(struct a2_obj)*DEF_STK_SIZE);
-	ret->stack.size = DEF_STK_SIZE;
-	ret->stack.top = 0;
+	// init constent stack
+	_obj_stack_init(&(ret->c_stack));
+	// init gc stack
+	_obj_stack_init(&(ret->gc_stack));
 	// init upvalue
 	ret->upvalue.upvalue_chain = (void*)malloc(sizeof(*(ret->upvalue.upvalue_chain))*DEF_UPVALUE_SIZE);
 	ret->upvalue.size = DEF_UPVALUE_SIZE;
@@ -64,42 +73,77 @@ void a2_closure_free(struct a2_closure* cls){
 	assert(cls);
 	free(cls->ir_chain);
 	//TODO: stack obj free
-	free(cls->stack.stk_p);
+	_obj_stack_destory(&(cls->c_stack));
+	_obj_stack_destory(&(cls->gc_stack));
 	// TODO: upvalue obj free
 	free(cls->upvalue.upvalue_chain);
 	free(cls);
 }
 
+static inline void _obj_stack_init(struct obj_stack* os_p){
+	os_p->stk_p = (struct a2_obj*)malloc(sizeof(struct a2_obj)*DEF_STK_SIZE);
+	os_p->size = DEF_STK_SIZE;
+	os_p->top =0;
+}
+
+static  inline void _obj_stack_destory(struct obj_stack* os_p){
+	free(os_p->stk_p);
+	os_p->size=0;
+	os_p->top = 0;
+}
+
+static inline int _obj_stack_add(struct obj_stack* os_p, struct a2_obj* obj_p){
+	if(os_p->top>=os_p->size){
+		os_p->size *= 2;
+		os_p->stk_p = (struct a2_obj*)realloc(os_p->stk_p, os_p->size*sizeof(struct a2_obj));
+	}
+	os_p->stk_p[os_p->top] = *obj_p;
+	return os_p->top++;
+}
+
 // IR OP
-inline void closure_add_ir(struct a2_closure* cls, ir i){
+inline size_t closure_add_ir(struct a2_closure* cls, ir i){
 	assert(cls);
 	// reszie
 	if(cls->len>=cls->size){
 		cls->size *=2;
 		cls->ir_chain = (ir*)realloc(cls->ir_chain, cls->size*sizeof(ir));
 	}
-	cls->ir_chain[cls->len++] = i;
+	cls->ir_chain[cls->len] = i;
+	return cls->len++;
+}
+
+// seek ir
+inline ir* closure_seek_ir(struct a2_closure* cls, size_t idx){
+	assert(idx<cls->len);
+	return &(cls->ir_chain[idx]);
+}
+
+inline size_t closure_curr_iraddr(struct a2_closure* cls){
+	return cls->len;
 }
 
 // stack op
 inline int closure_push_cstack(struct a2_closure* cls, struct a2_obj* obj){
 	assert(cls);
 	assert(obj);
-	// resize
-	if(cls->stack.top>=cls->stack.size){
-		cls->stack.size *=2;
-		cls->stack.stk_p = (struct a2_obj*)realloc(cls->stack.stk_p, 
-			cls->stack.size*sizeof(struct a2_obj));
-	}
-	int ret = cls->stack.top;
-	cls->stack.stk_p[(cls->stack.top)++] = *obj;
-	return ret;
+	if(cls->c_stack.top>=BX_MAX)
+		a2_error("the constent stack is overfllow.\n");
+	return _obj_stack_add(&(cls->c_stack), obj);
 }
 
 inline struct  a2_obj* closure_at_cstack(struct a2_closure* cls, int idx){
 	assert(cls);
-	assert(idx<0 && ((0-idx-1)<cls->stack.top));
-	return &(cls->stack.stk_p[0-idx-1]);
+	assert(idx<0 && ((0-idx-1)<cls->c_stack.top));
+	return &(cls->c_stack.stk_p[0-idx-1]);
+}
+
+inline int closure_push_gcstack(struct a2_closure* cls, struct a2_obj* obj){
+	assert(cls);
+	assert(obj);
+	if(cls->c_stack.top>=BX_MAX)
+		a2_error("the gc stack from closure is overfllow.\n");
+	return _obj_stack_add(&(cls->gc_stack), obj);
 }
 
 // upvalue op
@@ -122,13 +166,22 @@ inline int closure_push_upvalue(struct a2_closure* cls, struct a2_closure* cls_p
 
 // for test 
 void dump_closure(struct a2_closure* cls){
-	int i;
+	int i, j;
 	assert(cls);
 	char buf[512] = {0};
-	printf("\n\n----arg=%d upvalue=%d const=%d addr=%p-----\n", cls->arg.cap, cls->upvalue.len, cls->stack.top, cls);
+	
+	printf("\n\n----arg=%d upvalue=%d const=%d addr=%p-----\n", cls->arg.cap, cls->upvalue.len, cls->c_stack.top, cls);
 	for(i=0;i<cls->len; i++){
-		printf("%s\n", ir2string(cls, cls->ir_chain[i], buf, sizeof(buf)));
+		printf("[%d]   %s\n", i, ir2string(cls, cls->ir_chain[i], buf, sizeof(buf)));
+	}
+
+	
+	for(j=0; j<cls->gc_stack.top; j++){
+		if(cls->gc_stack.stk_p[j].type==A2_TCLOSURE)
+			dump_closure(a2_gcobj2closure(cls->gc_stack.stk_p[j].value.obj));
 	}
 }
+
+
 
 

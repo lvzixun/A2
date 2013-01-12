@@ -7,6 +7,7 @@
 #include "a2_ir.h"
 #include "a2_gc.h"
 #include "a2_closure.h"
+#include "a2_string.h"
 #include <stdio.h>
 
 #define node_p(i) 	  a2_nodep(ir_p->env_p, (i))
@@ -17,17 +18,25 @@
 #define ir_error(i, s)  do{a2_error("[ir error@line: %lu]: %s\n",node_p(i)->token->line,s);}while(0)
 #define curr_sym (ir_p->cls_sym_chain->sym.sym_chain[ir_p->cls_sym_chain->sym.cap-1])
 #define curr_csym (ir_p->cls_sym_chain->sym.sym_chain[0])
-#define curr_cls (ir_p->cls_sym_chain->cls)
 #define curr_clssym (ir_p->cls_sym_chain)
+#define curr_cls  a2_gcobj2closure(curr_clssym->cls_obj.value.obj)
+#define curr_ocls(co) a2_gcobj2closure((co).value.obj)
+
 #define add_arg  _add_arg(ir_p)
 #define curr_arg (curr_clssym->arg_cap)
 #define set_arg(i) _set_arg(ir_p,i)
 
+#define curr_fs		(&(curr_clssym->fs))
+#define add_fors(addr)	_for_stack_add(curr_fs, (addr))
+
+#define curr_fh  (&(curr_clssym->fh))
+#define add_forh(addr) _for_stack_add(curr_fh, (addr))
+
 #define top_arg (assert(curr_clssym->arg_cap), curr_clssym->arg_cap-1)
 #define del_arg  _del_arg(ir_p)
 
-#define sym_v(vt,i)	(((vt)<<(sizeof(uint32)-2))|(i))
-#define v2vt(v)  ((v)>>(sizeof(uint32)-2)) 
+#define sym_v(vt,i)	(((vt)<<(30))|(i))
+#define v2vt(v)  ((v)>>(30)) 
 #define v2i(v)	 (((v)<<2)>>2)
 #define DEF_SYM_SIZE 4
 
@@ -44,12 +53,19 @@ struct symbol{
 	size_t cap;
 };
 
+struct for_stack{
+	size_t* f_p;
+	size_t len;
+	size_t size;
+};
+
 struct cls_sym{
 	struct symbol  sym;
-	struct a2_closure* cls;
+	struct a2_obj cls_obj;
 	int arg_cap;
 	int max_arg;
-	byte is_recycle;
+	struct for_stack fs;
+	struct for_stack fh;
 	struct cls_sym* next;
 };
 
@@ -63,11 +79,15 @@ static inline int _add_arg(struct a2_ir* ir_p);
 static inline int _del_arg(struct a2_ir* ir_p);
 static inline int _set_arg(struct a2_ir* ir_p, int i);
 
+static inline void _for_stack_init(struct for_stack* fs);
+static inline void _for_stack_destroy(struct for_stack* fs);
+static inline void _for_stack_add(struct for_stack* fs, size_t addr);
+
 static inline void new_symbol(struct a2_ir* ir_p);
 static inline void free_symbol(struct a2_ir* ir_p);
 static inline void _a2_ir_exec(struct a2_ir* ir_p, struct cls_sym* cls_sp, size_t root);
 
-static struct cls_sym* cls_sym_new();
+static struct cls_sym* cls_sym_new(struct a2_ir* ir_p);
 static void cls_sym_free(struct cls_sym* p);
 
 static inline void  new_clssym(struct a2_ir* ir_p);
@@ -75,10 +95,17 @@ static inline void free_clssym(struct a2_ir* ir_p);
 
 static inline struct a2_obj node2obj(struct a2_ir* ir_p, size_t node);
 
+static inline void _a2_ir_segment(struct a2_ir* ir_p, size_t root);
+
 static int a2_ir_ass(struct a2_ir* ir_p, size_t root);
 static void a2_ir_local(struct a2_ir* ir_p, size_t root);
 static int a2_ir_exp(struct a2_ir* ir_p, size_t root);
 static inline int a2_ir_var(struct a2_ir* ir_p, size_t root);
+static void a2_ir_if(struct a2_ir* ir_p, size_t root);
+static void a2_ir_for(struct a2_ir* ir_p, size_t root);
+static inline void a2_ir_break(struct a2_ir* ir_p, size_t root);
+static inline void a2_ir_continue(struct a2_ir* ir_p, size_t root);
+static int a2_ir_function(struct a2_ir* ir_p, size_t root);
 
 struct a2_ir* a2_ir_open(struct a2_env* env){
 	assert(env);
@@ -101,10 +128,12 @@ void a2_ir_close(struct a2_ir* ir_p){
 	free(ir_p);
 }
 
-static struct cls_sym* cls_sym_new(){
+static struct cls_sym* cls_sym_new(struct a2_ir* ir_p){
 	struct cls_sym* ret = (struct cls_sym*)malloc(sizeof(*ret));
 	ret->next = NULL;
-	ret->cls = a2_closure_new();
+	ret->cls_obj.type = A2_TCLOSURE;
+	ret->cls_obj.value.obj = a2_closure2gcobj(a2_closure_new());
+	a2_gcadd(ir_p->env_p, ret->cls_obj.value.obj);
 
 	ret->sym.cap=0;
 	ret->sym.size=DEF_SYM_SIZE;
@@ -120,6 +149,8 @@ static void cls_sym_free(struct cls_sym* p){
 	for(i=0; i<p->sym.cap; i++){
 		a2_map_free(p->sym.sym_chain[i]);
 	}
+	_for_stack_destroy(&(p->fs));
+	_for_stack_destroy(&(p->fh));
 	free(p->sym.sym_chain);
 	// pass cls
 	free(p);
@@ -145,6 +176,24 @@ static inline int _set_arg(struct a2_ir* ir_p, int i){
 	return curr_clssym->arg_cap = i;
 }
 
+static inline void _for_stack_init(struct for_stack* fs){
+	fs->size = 8;
+	fs->len=0;
+	fs->f_p = (size_t*)malloc(sizeof(size_t)*fs->size);
+}
+
+static inline void _for_stack_destroy(struct for_stack* fs){
+	free(fs->f_p);
+}
+
+static inline void _for_stack_add(struct for_stack* fs, size_t addr){
+	if(fs->len>=fs->size){
+		fs->size *=2;
+		fs->f_p = (size_t*)realloc(fs->f_p, fs->size);
+	}
+	fs->f_p[fs->len++] = addr;
+}
+
 inline void a2_ir_exec(struct a2_ir* ir_p, size_t root){
 	_a2_ir_exec(ir_p, ir_p->cls_sym_chain, root);
 }
@@ -158,8 +207,26 @@ static inline void _a2_ir_exec(struct a2_ir* ir_p, struct cls_sym* cls_sp, size_
 		case local_node:	// local 
 			a2_ir_local(ir_p, root);
 			break;
-		case  ass_node:		// 
+		case  ass_node:{		// =
+			int _b = curr_arg;
 			a2_ir_ass(ir_p, root);
+			set_arg(_b);
+		}
+			break;
+		case if_node:	// if
+			a2_ir_if(ir_p, root);
+			break;
+		case for_node:	// for
+			a2_ir_for(ir_p, root);
+			break;
+		case break_node: // break
+			a2_ir_break(ir_p, root);
+			break;
+		case continue_node: // continue
+			a2_ir_continue(ir_p, root);
+			break;
+		case func_node: // function
+			a2_ir_function(ir_p, root);
 			break;
 		default:
 			ir_error(root, "the expression is  nonsense.");
@@ -184,13 +251,13 @@ static inline void free_symbol(struct a2_ir* ir_p){
 }
 
 
-static inline void  new_clssym(struct a2_ir* ir_p){
-	struct cls_sym* np = cls_sym_new();
-	// add closure to gc chain
-	a2_gcadd(ir_p->env_p,  a2_closure2gcobj(np->cls));
-	
+static inline void new_clssym(struct a2_ir* ir_p){
+	struct cls_sym* np = cls_sym_new(ir_p);
+
 	np->next = ir_p->cls_sym_chain;
 	ir_p->cls_sym_chain = np;
+	_for_stack_init(&(np->fs));
+	_for_stack_init(&(np->fh));
 	new_symbol(ir_p); // const symbol
 	new_symbol(ir_p); // local symbol
 }
@@ -205,7 +272,7 @@ static inline void free_clssym(struct a2_ir* ir_p){
 // add constant varable symbol
 static inline int  add_csymbol(struct a2_ir* ir_p, struct a2_obj* k){
 	assert(k->type==A2_TNUMBER || k->type==A2_TSTRING 
-		|| k->type==A2_TNIL || k->type==A2_TBOOL);
+		|| k->type==A2_TNIL || k->type==A2_TBOOL || k->type==_A2_TADDR);
 
 	struct a2_obj* vp = a2_map_query(curr_csym, k);
 	if(!vp){  // not find
@@ -236,14 +303,13 @@ static inline int add_nil(struct a2_ir* ir_p){
 static inline int add_lsymbol(struct a2_ir* ir_p, struct a2_obj* k, size_t root){
 	assert(k->type==A2_TSTRING);
 	struct a2_obj v = a2_uinteger2obj(sym_v(var_local, curr_clssym->arg_cap));
-	curr_clssym->arg_cap++;
 	struct a2_kv kv = {
 		k, &v
 	};
 	if(a2_map_add(curr_sym, &kv) == a2_fail){
 		ir_error(root, "the varable is volatile.");
 	}
-	return curr_clssym->arg_cap;
+	return curr_clssym->arg_cap++;
 }
 
 // add global varable symbol
@@ -269,7 +335,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 		vp = a2_map_query(curr_clssym->sym.sym_chain[i], k);
 		if(vp){
 			assert(vp->type==_A2_TUINTEGER);
-			*vt_p = v2vt(vp->value.uinteger);
+			*vt_p = v2vt(5);
 			return v2i(vp->value.uinteger)+1;
 		}
 	}
@@ -284,7 +350,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 				assert(vp->type==_A2_TUINTEGER);
 				if(v2vt(vp->value.uinteger)==var_local || v2vt(vp->value.uinteger)==var_upvalue){		// set upvalue
 					*vt_p = var_upvalue;
-					int idx = closure_push_upvalue(curr_cls, p->cls, v2i(vp->value.uinteger));
+					int idx = closure_push_upvalue(curr_cls, curr_ocls(p->cls_obj), v2i(vp->value.uinteger));
 					struct a2_obj v = a2_uinteger2obj(sym_v(var_upvalue, idx));
 					struct a2_kv kv = {
 						k, &v
@@ -311,10 +377,198 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 	return 0;
 }
 
+static inline void _a2_ir_segment(struct a2_ir* ir_p, size_t root){
+	for(;root;){
+		a2_ir_exec(ir_p, root);
+		root = node_p(root)->next;
+	}
+}
+
+static int a2_ir_function(struct a2_ir* ir_p, size_t root){
+	assert(node_t(root)==func_node);
+
+	size_t arg = node_p(root)->childs[0];
+	size_t seg = node_p(root)->childs[1];
+	assert(seg);
+
+	int _b = curr_arg;
+	// generate args
+	new_clssym(ir_p);
+	for(;arg;){
+		switch(node_t(arg)){
+			case var_node:{
+				struct a2_obj k = node2obj(ir_p, arg);
+				add_lsymbol(ir_p, &k, arg);
+			}
+			break;
+			case args_node:{
+				// multiple parameter
+				struct a2_obj _args = a2_env_addstr(ir_p->env_p, "_args");
+				assert(_args.type==A2_TSTRING);
+				add_lsymbol(ir_p, &_args, arg);
+			}
+			break;
+			default:
+				assert(0);
+		}
+		arg = node_p(arg)->next;
+	}
+
+	// generater segment
+	_a2_ir_segment(ir_p, seg);
+	struct a2_obj func_obj = curr_clssym->cls_obj;
+	closure_add_ir(curr_cls, ir_abx(RETURN,0,0));
+	free_clssym(ir_p);
+
+	// set gc stack
+	int cls_gcidx = closure_push_gcstack(curr_cls, &func_obj);
+	assert(cls_gcidx>=0);
+
+	closure_add_ir(curr_cls, ir_abx(CLOSURE, add_arg, cls_gcidx));
+	// global function
+	if(node_p(root)->token){
+		assert(tt2tk(node_p(root)->token->tt)==tk_ide);
+		int v = top_arg;
+		struct a2_obj func = {
+			A2_TSTRING,
+			node_p(root)->token->v
+		};
+		int k = add_gsymbol(ir_p, &func);
+		assert(k<0);
+		if(is_Blimit(k)){
+			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, k));
+			k = top_arg;
+		}
+
+		closure_add_ir(curr_cls, ir_abc(SETGLOBAL, _b, k, v));
+	}else{	// Anonymous function
+		assert(curr_arg==_b+1);
+	}
+	set_arg(_b+1);
+	return top_arg;
+}
+
+static inline void a2_ir_break(struct a2_ir* ir_p, size_t root){
+	assert(node_t(root)==break_node);
+	if(curr_fh->len==0)
+		ir_error(root, "the break is error.");
+	size_t addr = closure_add_ir(curr_cls, ir_abx(JUMP, 0, 0));
+	_for_stack_add(curr_fs, addr);
+}
+
+static inline void a2_ir_continue(struct a2_ir* ir_p, size_t root){
+	assert(node_t(root)==continue_node);
+	if(curr_fh->len==0)
+		ir_error(root, "th continue is error.");
+	size_t _addr = curr_fh->f_p[curr_fh->len-1];
+	int addr = -1-_addr;
+	closure_add_ir(curr_cls, ir_abx(JUMP, 0, addr));
+}
+
+
+static void a2_ir_for(struct a2_ir* ir_p, size_t root){
+	assert(node_t(root)==for_node);
+	assert(node_ct(root, 0)==var_node);
+	assert(node_ct(root, 2)==num_node);
+	
+	size_t _for_b = curr_fs->len;
+	int _b = curr_arg;
+	new_symbol(ir_p);
+	// add local index
+	struct a2_obj k = node2obj(ir_p, node_p(root)->childs[0]);
+	int idx = add_lsymbol(ir_p, &k, root);
+
+	//record the for begin addr
+	k = a2_addr2obj(closure_curr_iraddr(curr_cls));
+	int b_addr = add_csymbol(ir_p, &k);
+	assert(b_addr<0);
+	add_forh(-1-b_addr);
+
+	// generate logic ir
+	int logic = a2_ir_exp(ir_p, node_p(root)->childs[1]);
+	// add step number
+	k = node2obj(ir_p, node_p(root)->childs[2]);
+	int step = add_csymbol(ir_p, &k);
+
+	// set test ir
+	if(is_Alimit(logic)){
+		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, logic));
+		logic = top_arg;
+	}
+
+	size_t ti = closure_add_ir(curr_cls, ir_abx(TEST, logic, 0));
+
+	// generate segment ir
+	_a2_ir_segment(ir_p, node_p(root)->childs[3]);
+	closure_add_ir(curr_cls, ir_abx(INC, idx, step));
+	closure_add_ir(curr_cls, ir_abx(JUMP, 0, b_addr));
+	free_symbol(ir_p);
+	set_arg(_b);
+	size_t ir_end = closure_curr_iraddr(curr_cls);
+	struct a2_obj ao = a2_addr2obj(ir_end);
+	int addr = add_csymbol(ir_p, &ao);
+	
+	//write back ir
+	ir* p = closure_seek_ir(curr_cls, ti);
+	*p = ir_abx(TEST, logic, addr);
+	size_t i;
+	for(i= _for_b; i<curr_fs->len; i++){
+		p = closure_seek_ir(curr_cls, curr_fs->f_p[i]);
+		assert(ir_gop(*p)==JUMP);
+		*p = ir_abx(JUMP, 0, addr);
+	}
+	curr_fs->len = _for_b;	
+}
+
+static void a2_ir_if(struct a2_ir* ir_p, size_t root){
+	assert(node_t(root)==if_node);
+	size_t logic_node = node_p(root)->childs[0];
+	size_t _if_node = node_p(root)->childs[1];
+	size_t _else_node = node_p(root)->childs[2];
+
+	assert(logic_node);
+	assert(if_node);
+
+	int _b = curr_arg;
+	// generate logic ir
+	int logic = a2_ir_exp(ir_p, logic_node);
+	if(is_Alimit(logic)){ // is constent varable
+		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, logic));
+		logic = top_arg;
+	}
+	
+	// if logic is false will jump
+	size_t addr = closure_add_ir(curr_cls, ir_abx(TEST, logic, 0));
+	set_arg(_b);
+
+	new_symbol(ir_p);
+	while(_if_node){
+		a2_ir_exec(ir_p, _if_node);
+		_if_node = node_p(_if_node)->next;
+	}
+	free_symbol(ir_p);
+	set_arg(_b);
+
+	// back record addr
+	size_t else_addr = closure_curr_iraddr(curr_cls);
+	struct a2_obj addr_obj = a2_addr2obj(else_addr);
+	int _else_addr = add_csymbol(ir_p, &addr_obj);
+	ir* _test_ir = closure_seek_ir(curr_cls, addr);
+	*_test_ir = ir_abx(TEST, logic, _else_addr);
+
+	new_symbol(ir_p);
+	while(_else_node){
+		a2_ir_exec(ir_p, _else_node);
+		_else_node = node_p(_else_node)->next;
+	}
+	free_symbol(ir_p);
+	set_arg(_b);
+}
+
 
 static void a2_ir_local(struct a2_ir* ir_p, size_t root){
 	assert(node_t(root)==local_node);
-	size_t node = node_p(root)->next;
+	size_t node = node_p(root)->childs[0];
 	size_t n, b;
 	struct a2_obj k;
 	while(node){
@@ -342,6 +596,8 @@ static void a2_ir_local(struct a2_ir* ir_p, size_t root){
 	}
 }
 
+
+
 static inline struct a2_obj node2obj(struct a2_ir* ir_p, size_t node){
 	struct a2_obj ret;
 	switch(node_t(node)){
@@ -362,6 +618,7 @@ static inline struct a2_obj node2obj(struct a2_ir* ir_p, size_t node){
 
 static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
 	assert(node_t(root)==ass_node);
+	int _b = curr_arg;
 	int r_idx = a2_ir_exp(ir_p, node_p(root)->childs[1]);  // parse right exp
 
 	switch( node_t(node_p(root)->childs[0])){
@@ -374,31 +631,29 @@ static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
 					idx = add_gsymbol(ir_p, &k);
 				assert(idx<0);
 				closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, idx));	// set key to reg
-				if(curr_clssym->is_recycle){
-					closure_add_ir(curr_cls, ir_abc(SETGLOBAL, r_idx, top_arg, r_idx));
-					del_arg;
-				}else{
-					if(is_Climit(r_idx)){
-						int ki=top_arg;
-						closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, r_idx));
-						closure_add_ir(curr_cls, ir_abc(SETGLOBAL, ki, ki, top_arg));
-						del_arg;
-					}else{
-						closure_add_ir(curr_cls, ir_abc(SETGLOBAL, top_arg, top_arg, r_idx));
-					}
-					curr_clssym->is_recycle=1;
+				int k = top_arg;
+				int d = top_arg;
+				if(is_Climit(r_idx)){
+					closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, r_idx));
+					r_idx = top_arg;
+				}else if(curr_arg - _b>1){
+					d = r_idx;
 				}
-				return top_arg; 
+
+				closure_add_ir(curr_cls, ir_abc(SETGLOBAL, d, k, r_idx));
+				set_arg(_b+1);
+				return d; 
 			}else{
 				switch(vt){
 					case var_local:
 						assert(idx>0);
 						closure_add_ir(curr_cls, ir_abx(LOAD, idx-1, r_idx));
-						if(curr_clssym->is_recycle)
-							del_arg;
+						set_arg(_b);
 						return idx-1;
 					case var_upvalue:
 						closure_add_ir(curr_cls, ir_abx(SETUPVALUE, idx-1, r_idx));
+						if(curr_arg- _b >1)
+							set_arg(_b+1);
 						return r_idx;
 					default:
 						assert(0);
@@ -442,7 +697,6 @@ OP_IR:
 			}
 			closure_add_ir(curr_cls, ir_abc(op, _b, l_idx, r_idx));
 			set_arg(_b+1);
-			curr_clssym->is_recycle = 1;
 			return _b;
 		// varable 	
 		case var_node:
@@ -469,6 +723,9 @@ OP_IR:
 		// assignment operation	
 		case ass_node:
 			return a2_ir_ass(ir_p, root);
+		// function 
+		case func_node:
+			return a2_ir_function(ir_p, root);
 		 // logic operation
 		case or_node:
 			op = OR;
@@ -510,20 +767,16 @@ static inline int a2_ir_var(struct a2_ir* ir_p, size_t root){
 	if(!idx){
 		int k_idx = add_csymbol(ir_p, &k);
 		closure_add_ir(curr_cls, ir_abx(GETGLOBAL, add_arg, k_idx));
-		curr_clssym->is_recycle = 1;
 		return top_arg;
 	}else{
 		switch(vt){
 			case var_global:
 				closure_add_ir(curr_cls, ir_abx(GETGLOBAL, add_arg, idx));
-				curr_clssym->is_recycle = 1;
 				return top_arg;
 			case var_local:
-				curr_clssym->is_recycle = 0;
 				return idx-1;
 			case var_upvalue:
 				closure_add_ir(curr_cls, ir_abx(GETUPVALUE, add_arg, idx-1));
-				curr_clssym->is_recycle = 1;
 				return top_arg;
 			default:
 				assert(0);
@@ -548,6 +801,7 @@ char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
 		"MOVE",		// move
 		"TEST",		// test
 		"LOAD",	 	// load const value to register
+		"INC",		// +=
 		"ADD",	 	// +
 		"SUB",	 	// -
 		"MUL",		// *

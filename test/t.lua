@@ -1,1 +1,10 @@
-a = nil
+
+function func(a, b)
+    local c = 2
+end
+
+function func2(a, b)
+    local c = 3
+end
+
+local a = 4
