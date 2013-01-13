@@ -97,15 +97,23 @@ static inline struct a2_obj node2obj(struct a2_ir* ir_p, size_t node);
 
 static inline void _a2_ir_segment(struct a2_ir* ir_p, size_t root);
 
+
+typedef int (*rv_func)(struct a2_ir* ir_p, int vt, int idx, size_t right_root);
+static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, size_t right_root);
+static int _rv_mass(struct a2_ir* ir_p, int vt, int idx, size_t right_root);
 static int a2_ir_ass(struct a2_ir* ir_p, size_t root);
 static void a2_ir_local(struct a2_ir* ir_p, size_t root);
-static int a2_ir_exp(struct a2_ir* ir_p, size_t root);
+static int _a2_ir_exp(struct a2_ir* ir_p, size_t root, int des);
+static inline int a2_ir_exp(struct a2_ir* ir_p, size_t root);
 static inline int a2_ir_var(struct a2_ir* ir_p, size_t root);
 static void a2_ir_if(struct a2_ir* ir_p, size_t root);
 static void a2_ir_for(struct a2_ir* ir_p, size_t root);
 static inline void a2_ir_break(struct a2_ir* ir_p, size_t root);
 static inline void a2_ir_continue(struct a2_ir* ir_p, size_t root);
 static int a2_ir_function(struct a2_ir* ir_p, size_t root);
+static void a2_ir_return(struct a2_ir* ir_p, size_t root);
+static int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count);
+static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root);
 
 struct a2_ir* a2_ir_open(struct a2_env* env){
 	assert(env);
@@ -201,17 +209,15 @@ inline void a2_ir_exec(struct a2_ir* ir_p, size_t root){
 
 static inline void _a2_ir_exec(struct a2_ir* ir_p, struct cls_sym* cls_sp, size_t root){
 	assert(root);
-
+	int _b = curr_arg;
 	// generate intermediate representation
 	switch(node_t(root)){
 		case local_node:	// local 
 			a2_ir_local(ir_p, root);
 			break;
-		case  ass_node:{		// =
-			int _b = curr_arg;
+		case  ass_node:		// =
 			a2_ir_ass(ir_p, root);
 			set_arg(_b);
-		}
 			break;
 		case if_node:	// if
 			a2_ir_if(ir_p, root);
@@ -227,6 +233,14 @@ static inline void _a2_ir_exec(struct a2_ir* ir_p, struct cls_sym* cls_sp, size_
 			break;
 		case func_node: // function
 			a2_ir_function(ir_p, root);
+			set_arg(_b);
+			break;
+		case return_node: // return
+			a2_ir_return(ir_p, root); 
+			break;
+		case cfunc_node: // function call
+			a2_ir_funccall(ir_p, root, 1);
+			set_arg(_b);
 			break;
 		default:
 			ir_error(root, "the expression is  nonsense.");
@@ -394,6 +408,7 @@ static int a2_ir_function(struct a2_ir* ir_p, size_t root){
 	int _b = curr_arg;
 	// generate args
 	new_clssym(ir_p);
+	int params=0;
 	for(;arg;){
 		switch(node_t(arg)){
 			case var_node:{
@@ -406,14 +421,18 @@ static int a2_ir_function(struct a2_ir* ir_p, size_t root){
 				struct a2_obj _args = a2_env_addstr(ir_p->env_p, "_args");
 				assert(_args.type==A2_TSTRING);
 				add_lsymbol(ir_p, &_args, arg);
+				assert(params>0);
+				params = -1 -params;
+				goto ARG_FUNC;
 			}
-			break;
 			default:
 				assert(0);
 		}
+		params++;
+ARG_FUNC:
 		arg = node_p(arg)->next;
 	}
-
+	a2_closure_setparams(curr_cls, params);
 	// generater segment
 	_a2_ir_segment(ir_p, seg);
 	struct a2_obj func_obj = curr_clssym->cls_obj;
@@ -446,6 +465,83 @@ static int a2_ir_function(struct a2_ir* ir_p, size_t root){
 	}
 	set_arg(_b+1);
 	return top_arg;
+}
+
+static int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count){
+	assert(node_t(root)==cfunc_node);
+	assert(node_p(root)->childs[0]);
+	assert(ret_count>0 && ret_count<C_MAX);
+	int _b = curr_arg;
+
+	// generate function
+	int _func = a2_ir_exp(ir_p, node_p(root)->childs[0]);
+	assert(_func>=0);
+	if(_func<_b){
+		closure_add_ir(curr_cls, ir_abx(MOVE, _b, _func));
+		_func = _b;
+	}else if(_func - _b >0)
+		assert(0);
+	set_arg(_b+1);
+
+	// generate argument
+	size_t args = node_p(root)->childs[1];
+	int count = 0;
+	for( ;args; ){
+		int _arg = _a2_ir_exp(ir_p, args, add_arg);
+		if(_arg<0)
+			closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, _arg));
+		else if(_arg!=top_arg)
+			closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _arg));
+
+		args = node_p(args)->next;
+		count++;
+	}
+
+	if(count >=B_MAX)
+		ir_error(root, "you set argument is overfllow.");
+
+	closure_add_ir(curr_cls, ir_abc(CALL, _func, count, ret_count));
+	curr_clssym->max_arg += ret_count;
+	set_arg(_b+1);
+	return _b;
+}
+
+static void a2_ir_return(struct a2_ir* ir_p, size_t root){
+	assert(node_t(root)==return_node);
+	assert(node_p(root)->next==0);
+	size_t ret = node_p(root)->childs[0];
+	int _b = curr_arg;
+
+	// not return varable 
+	if(ret==0){
+		closure_add_ir(curr_cls, ir_abx(RETURN, 0, 0));
+	}else if(node_p(ret)->type == comma_node){  // return a, b, c ...
+		size_t rb = node_p(ret)->childs[0];
+		assert(node_p(ret)->next==0);
+		assert(rb);
+		for( ;rb; ){
+			int _cb = curr_arg;
+			int _rb = _a2_ir_exp(ir_p, rb, add_arg);
+			assert(curr_arg-_cb == 1);
+			if(_rb<0)
+				closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, _rb));
+			else if(top_arg!=_rb)
+				closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _rb));
+			rb = node_p(rb)->next;
+		}
+		assert(curr_arg-_b>0);
+		closure_add_ir(curr_cls, ir_abx(RETURN, _b, curr_arg-_b));
+	}else{
+		// pgenerate return one value
+		int _r = a2_ir_exp(ir_p, ret);
+		if(_r<0){ // if is constent varable
+			assert(curr_arg==_b);
+			closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, _r));
+			_r = top_arg;
+		}
+		closure_add_ir(curr_cls, ir_abx(RETURN, _r, 1));
+		set_arg(_b);
+	}
 }
 
 static inline void a2_ir_break(struct a2_ir* ir_p, size_t root){
@@ -568,10 +664,33 @@ static void a2_ir_if(struct a2_ir* ir_p, size_t root){
 
 static void a2_ir_local(struct a2_ir* ir_p, size_t root){
 	assert(node_t(root)==local_node);
-	size_t node = node_p(root)->childs[0];
+	size_t node, _node;
+	node = _node = node_p(root)->childs[0];
 	size_t n, b;
 	struct a2_obj k;
-	while(node){
+	int top=curr_arg, count=0, _count=0;
+	// set nil varable
+	for(;_node;){
+		n = node_p(_node)->next;
+		switch(node_t(_node)){
+			case var_node:
+				break;
+			case ass_node:
+				_count++;
+				break;
+			default:
+				assert(0);
+		}
+		_node = n;
+		count++;
+	}
+	assert(count);
+	if(count>_count){
+		closure_add_ir(curr_cls, ir_abx(LOADNIL, top, count));
+	}
+
+	// add local varable
+	for( ;node; ){
 		n = node_p(node)->next;
 		switch(node_t(node)){
 			case var_node:
@@ -616,20 +735,19 @@ static inline struct a2_obj node2obj(struct a2_ir* ir_p, size_t node){
 	return ret;
 }
 
-static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
-	assert(node_t(root)==ass_node);
+static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, size_t right_root){
 	int _b = curr_arg;
-	int r_idx = a2_ir_exp(ir_p, node_p(root)->childs[1]);  // parse right exp
-
-	switch( node_t(node_p(root)->childs[0])){
+	int r_idx;
+	switch(node_t(root)){
 		case var_node:{
-			struct a2_obj k = node2obj(ir_p, node_p(root)->childs[0]);
+			struct a2_obj k = node2obj(ir_p, root);
 			int vt;
 			int idx = get_symbol(ir_p, &k, &vt);
 			if(!idx || vt==var_global){	// not find it
 				if(!idx)
 					idx = add_gsymbol(ir_p, &k);
 				assert(idx<0);
+				r_idx = _rv_func(ir_p, var_global, idx, right_root);
 				closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, idx));	// set key to reg
 				int k = top_arg;
 				int d = top_arg;
@@ -645,12 +763,17 @@ static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
 				return d; 
 			}else{
 				switch(vt){
-					case var_local:
+					case var_local:{
 						assert(idx>0);
-						closure_add_ir(curr_cls, ir_abx(LOAD, idx-1, r_idx));
+						int _eb = curr_arg;
+						r_idx = _rv_func(ir_p, var_local, idx, right_root);  // parse right exp
+						if((r_idx<0 || curr_arg==_eb) && (r_idx!=idx-1) )
+							closure_add_ir(curr_cls, ir_abx(LOAD, idx-1, r_idx));
 						set_arg(_b);
+					}
 						return idx-1;
 					case var_upvalue:
+						r_idx = _rv_func(ir_p, var_upvalue, idx, right_root);
 						closure_add_ir(curr_cls, ir_abx(SETUPVALUE, idx-1, r_idx));
 						if(curr_arg- _b >1)
 							set_arg(_b+1);
@@ -664,11 +787,126 @@ static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
 		default:
 			assert(0);
 	}
+}
+
+int _rv_ass(struct a2_ir* ir_p, int vt, int idx, size_t right_root){
+	switch(vt){
+		case var_global:
+		case var_upvalue:
+			return a2_ir_exp(ir_p, right_root);
+		case var_local:
+			return _a2_ir_exp(ir_p, right_root, idx-1);
+		default:
+			assert(0);
+	}
+}
+
+static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
+	assert(node_t(root)==ass_node);
+//	int _b = curr_arg;
+	size_t ln = node_p(root)->childs[0];
+	size_t rn = node_p(root)->childs[1];
+	switch( node_t(ln)){
+		case var_node:
+			return a2_ir_wvar(ir_p, ln, _rv_ass, rn);
+		case comma_node:
+			return _a2_ir_mass(ir_p, root);
+		default:
+			assert(0);
+	}
 
 	assert(0);
 }
 
-static int a2_ir_exp(struct a2_ir* ir_p, size_t root){
+static inline int _comma_count(struct a2_ir* ir_p, size_t root){
+	assert(root);
+	assert(node_t(root)==comma_node);
+	int count=0;
+	root = node_p(root)->childs[0];
+	for( ;root; ){
+		count++;
+		root = node_p(root)->next;
+	}
+
+	assert(count>1);
+	return count;
+}
+
+static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root){
+	assert(node_t(root)==ass_node);
+	assert(node_ct(root, 0)==comma_node);
+	size_t ln = node_p(root)->childs[0];
+	size_t rn = node_p(root)->childs[1];
+
+	int _b = curr_arg;
+	int lcount = _comma_count(ir_p, ln);
+	int rcount=0;
+	int _vb=curr_arg;
+	switch(node_t(rn)){
+		case cfunc_node:
+			a2_ir_funccall(ir_p, rn, lcount);
+			rcount=lcount;
+			_vb = curr_arg;
+			break;
+		case comma_node:
+			rn = node_p(rn)->childs[0];
+			for( ;rn; ){
+				int _rb = curr_arg;
+				int _ra = _a2_ir_exp(ir_p, rn, add_arg);
+				if(_ra<0)
+					closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, _ra));
+				else if(_ra<_rb)
+					closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _ra));
+				set_arg(_rb+1);
+				rcount++;
+				rn = node_p(rn)->next;
+			}
+			break;
+		default:
+			assert(0);
+	}
+
+	ln = node_p(ln)->childs[0];
+	int _ra=-1;
+	int _rb = curr_arg;
+	for( ;ln && rcount; rcount--){
+		_ra = a2_ir_wvar(ir_p, ln, _rv_mass, _vb);
+		set_arg(_rb);
+		_vb++;
+		ln = node_p(ln)->next;
+	}
+
+	assert(_ra>=0 && _ra<=_rb);
+	if(_ra>_b){
+		closure_add_ir(curr_cls, ir_abx(MOVE, _b, _ra));
+		set_arg(_b+1);
+	}else{
+		set_arg(_b);
+		_b = _ra;
+	}
+	return _b;
+}
+
+static int _rv_mass(struct a2_ir* ir_p, int vt, int idx, size_t right_root){
+	int _vb = (int)right_root;
+	switch(vt){
+		case var_global:
+			return _vb;
+		case var_local:
+			closure_add_ir(curr_cls, ir_abx(MOVE, idx-1, _vb));
+			return idx-1;
+		case var_upvalue:
+			return _vb;
+		default:
+			assert(0);
+	}
+}
+
+static inline int a2_ir_exp(struct a2_ir* ir_p, size_t root){
+	return _a2_ir_exp(ir_p, root, -1);
+}
+
+static int _a2_ir_exp(struct a2_ir* ir_p, size_t root, int des){
 	int op, _b, l_idx, r_idx;
 	switch(node_p(root)->type){
 		// arithmetic operation
@@ -684,9 +922,10 @@ static int a2_ir_exp(struct a2_ir* ir_p, size_t root){
 		case div_node:
 			op = DIV;
 OP_IR:
+
 			_b = curr_arg;
-			l_idx = a2_ir_exp(ir_p, node_p(root)->childs[0]); // left op value
-			r_idx = a2_ir_exp(ir_p, node_p(root)->childs[1]); // right op value
+			l_idx = _a2_ir_exp(ir_p, node_p(root)->childs[0], des); // left op value
+			r_idx = _a2_ir_exp(ir_p, node_p(root)->childs[1], des); // right op value
 			if(is_Blimit(l_idx)){
 				closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, l_idx));
 				l_idx = top_arg;
@@ -695,9 +934,16 @@ OP_IR:
 				closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, r_idx));
 				r_idx = top_arg;
 			}
-			closure_add_ir(curr_cls, ir_abc(op, _b, l_idx, r_idx));
-			set_arg(_b+1);
-			return _b;
+			if(des<0){
+				closure_add_ir(curr_cls, ir_abc(op, _b, l_idx, r_idx));
+				set_arg(_b+1);
+				return _b;
+			}else{
+				closure_add_ir(curr_cls, ir_abc(op, des, l_idx, r_idx));
+				set_arg(_b);
+				return des;
+			}
+
 		// varable 	
 		case var_node:
 			return a2_ir_var(ir_p, root);
@@ -726,6 +972,9 @@ OP_IR:
 		// function 
 		case func_node:
 			return a2_ir_function(ir_p, root);
+		// call function
+		case cfunc_node:
+			return a2_ir_funccall(ir_p, root, 1);
 		 // logic operation
 		case or_node:
 			op = OR;
@@ -801,6 +1050,7 @@ char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
 		"MOVE",		// move
 		"TEST",		// test
 		"LOAD",	 	// load const value to register
+		"LOADNIL",	// reset regs is nil
 		"INC",		// +=
 		"ADD",	 	// +
 		"SUB",	 	// -

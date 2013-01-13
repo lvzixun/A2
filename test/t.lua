@@ -1,10 +1,3 @@
+local a, b, c, d, e, f, g, h
 
-function func(a, b)
-    local c = 2
-end
-
-function func2(a, b)
-    local c = 3
-end
-
-local a = 4
+a, b ,c = 1, 2, 3

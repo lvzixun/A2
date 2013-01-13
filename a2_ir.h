@@ -76,6 +76,7 @@ enum ir_op{
 	MOVE,		// move
 	TEST,		// test
 	LOAD,	 	// load const value to register
+	LOADNIL,	// reset regs is nil
 	INC,		// +=
 	ADD,	 	// +
 	SUB,	 	// -

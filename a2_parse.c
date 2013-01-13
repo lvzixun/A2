@@ -243,9 +243,11 @@ static size_t parse_lsegment(struct a2_parse* parse_p){
 				if(tt2op(cur_token.tt)=='}'){
 					parse_readtoken(parse_p);
 					return front;
-				}
+				}else 
+					goto LSE;
 				break;
 			default:
+LSE:
 				if(front == 0){
 					front = back = parse_segcontent(parse_p);
 				}else{
@@ -436,7 +438,7 @@ static inline  size_t parse_op(struct a2_parse* parse_p){
 #define MERGER(op) if(node_t(exp1)==num_node && node_t(exp2)==num_node){ \
 						node_p(exp1)->token->v.number = node_p(exp1)->token->v.number op node_p(exp2)->token->v.number;\
 						return new_node(parse_p, node_p(exp1)->token, num_node); \
-					}else if(!nt2nr(node_t(exp1)) || !nt2nr(node_t(exp2))){ \
+					}else if(!nt2na(node_t(exp1)) || !nt2na(node_t(exp2))){ \
 						char ts_buf[64] = {0}; \
 							a2_error("[parse error@line: %d]: unexpected symbol near token \' %s \'.\n", \
 							tp->line, a2_token2str(tp, ts_buf)); \
@@ -503,6 +505,11 @@ static  size_t _parse_operation(struct a2_parse* parse_p, parse_func pfunc){
 	parse_readtoken(parse_p);		// jump = 
 	exp2 = _parse_operation(parse_p, pfunc);
 	CHECK_EXP12;
+	if(node_t(exp1) ==comma_node && node_t(exp2)!=comma_node && node_t(exp2)!=cfunc_node )
+		parse_error("the multivariable expression is can not set left value.");
+	if(node_t(exp2) ==comma_node && node_t(exp1)!=comma_node)
+		parse_error("the multivariable expression is can not set right value.");
+
 	node_p(head)->childs[0] = exp1;
 	node_p(head)->childs[1] = exp2;
 	return head;
@@ -511,6 +518,7 @@ static  size_t _parse_operation(struct a2_parse* parse_p, parse_func pfunc){
 // root = ','
 static size_t parse_comma(struct a2_parse* parse_p){
 	size_t head=0, back=0;
+	size_t l;
 	back = head = parse_logic(parse_p);
 	if(!head) return 0;
 
@@ -522,7 +530,10 @@ static size_t parse_comma(struct a2_parse* parse_p){
 		if( tt2op(cur_token.tt)!=',' )
 			break;
 		parse_readtoken(parse_p);
-		_node_set(node_p(back)->next, parse_logic(parse_p));
+		l = parse_logic(parse_p);
+		if(!l)
+			parse_error("the char is not expect at near ','.");
+		_node_set(node_p(back)->next, l);
 		back = node_p(back)->next;
 	}  
 

@@ -96,6 +96,7 @@ void a2_gcobj_nilfree(struct a2_gcobj* gcobj){
 inline char* a2_gcobj2string(struct a2_gcobj* gcobj){
 	return gcobj->value.str;
 }
+
 inline struct a2_closure* a2_gcobj2closure(struct a2_gcobj* gcobj){
 	assert(gcobj->type==A2_TCLOSURE);
 	return gcobj->value.cls;

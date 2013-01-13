@@ -13,26 +13,26 @@ enum {
 	nr_read =1
 };
 
+enum {
+	na_nil = 0,
+	na_op = 1
+};
+
 #define nt_lmask  ((ne_left)<<8)
 #define nt2ne(nt)	(((nt)>>8)&(0x01))
 
 #define nt_rmask  ((nr_read)<<9)
-#define nt2nr(nt) (((nt)>>9)*(0x01))
+#define nt2nr(nt) (((nt)>>9)&(0x01))
+
+#define nt_amask  ((na_op)<<10)
+#define nt2na(nt) (((nt)>>10)&(0x01))
 
 
 enum node_type{
 
 	// string node
 	strcat_node,// ..
-
 	str_node,
-	num_node,
-
-	// arithmetic node
-	add_node,	// +
-	sub_node,	// -
-	mul_node,	// *
-	div_node,	// /
 
 	// logic node
 	and_node,	// &
@@ -60,12 +60,20 @@ enum node_type{
 	for_node,
 	foreach_node,
 
-	cfunc_node = (nt_rmask | 0x00),	//  call  func()
+	num_node = (nt_amask| 0x00),
+	// arithmetic node
+	add_node = (nt_amask| 0x01),	// +
+	sub_node = (nt_amask| 0x02),	// -
+	mul_node = (nt_amask| 0x03),	// *
+	div_node = (nt_amask| 0x4),		// /
 
-	var_node = (nt_rmask | nt_lmask | 0x00),  // variable node
-	ass_node = (nt_lmask | 0x01),   // =
-	cma_node = (nt_rmask | nt_lmask | 0x02),	// map['key'] or  array[idx]
-	chi_node = (nt_rmask | nt_lmask | 0x03), 	// .
+
+	cfunc_node = (nt_amask | nt_rmask | 0x00),	//  call  func()
+
+	var_node = (nt_amask | nt_rmask | nt_lmask | 0x00),  // variable node
+	ass_node = (nt_amask | nt_lmask | 0x01),   // =
+	cma_node = (nt_amask | nt_rmask | nt_lmask | 0x02),	// map['key'] or  array[idx]
+	chi_node = (nt_amask | nt_rmask | nt_lmask | 0x03), 	// .
 	comma_node = (nt_lmask | 0x04) // ,
 };
 

@@ -1,11 +1,9 @@
 
-local g1 ,g2
-a = function (){
-	local b= 1
+
+function func(a, b){
+	local c = 1
+	return a,2, 3
 }
 
-local b = function func(){
-	local c = 2
-}
 
-local g3 = 5
+local g1 = func(1, 2, 3)

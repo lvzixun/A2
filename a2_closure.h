@@ -8,6 +8,7 @@ struct a2_closure;
 
 struct a2_closure* a2_closure_new();
 void a2_closure_free(struct a2_closure* cls);
+inline void a2_closure_setparams(struct a2_closure* cls, int params);
 
 inline size_t closure_add_ir(struct a2_closure* cls, ir i);
 inline ir* closure_seek_ir(struct a2_closure* cls, size_t idx);

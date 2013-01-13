@@ -18,6 +18,7 @@ struct obj_stack{
 };
 
 struct a2_closure{
+	int params;
 	// intermediate representation chain
 	ir* ir_chain;
 	size_t len;
@@ -54,6 +55,7 @@ static inline int _obj_stack_add(struct obj_stack* os_p, struct a2_obj* obj_p);
 struct a2_closure* a2_closure_new(){
 	struct a2_closure* ret = (struct a2_closure*)malloc(sizeof(*ret));
 	// init ir chain
+	ret->params = 0;
 	ret->ir_chain = (ir*)malloc(sizeof(ir)*DEF_IR_SIZE);
 	ret->size = DEF_IR_SIZE;
 	ret->len = 0;
@@ -78,6 +80,11 @@ void a2_closure_free(struct a2_closure* cls){
 	// TODO: upvalue obj free
 	free(cls->upvalue.upvalue_chain);
 	free(cls);
+}
+
+inline void a2_closure_setparams(struct a2_closure* cls, int params){
+	assert(cls);
+	cls->params = params;
 }
 
 static inline void _obj_stack_init(struct obj_stack* os_p){
@@ -169,8 +176,11 @@ void dump_closure(struct a2_closure* cls){
 	int i, j;
 	assert(cls);
 	char buf[512] = {0};
-	
-	printf("\n\n----arg=%d upvalue=%d const=%d addr=%p-----\n", cls->arg.cap, cls->upvalue.len, cls->c_stack.top, cls);
+	char* __cp = NULL;
+
+	printf("\n\n----params=%d%s upvalue=%d const=%d addr=%p-----\n", 
+		(cls->params<0)?(__cp="+", -1-cls->params):(__cp="", cls->params), __cp, 
+		cls->upvalue.len, cls->c_stack.top, cls);
 	for(i=0;i<cls->len; i++){
 		printf("[%d]   %s\n", i, ir2string(cls, cls->ir_chain[i], buf, sizeof(buf)));
 	}
