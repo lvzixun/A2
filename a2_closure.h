@@ -16,7 +16,8 @@ inline size_t closure_curr_iraddr(struct a2_closure* cls);
 
 inline int closure_push_cstack(struct a2_closure* cls, struct a2_obj* obj);
 inline struct  a2_obj* closure_at_cstack(struct a2_closure* cls, int idx);
-inline int closure_push_gcstack(struct a2_closure* cls, struct a2_obj* obj);
+inline int closure_push_clsstack(struct a2_closure* cls, struct a2_obj* obj);
+inline int closure_push_ctnstack(struct a2_closure* cls, struct a2_obj* obj);
 
 // light cp
 inline int closure_push_upvalue(struct a2_closure* cls, struct a2_closure* cls_p, int arg_idx);

@@ -1,7 +1,10 @@
+local b, c, d, e
+
+function func()
+    local a = 2
+end
+
 
 local a= {1, 2, 3}
 
-function func()
-    local b = 4
-end
 

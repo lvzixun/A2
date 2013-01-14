@@ -4,6 +4,7 @@
 #include "a2_error.h"
 #include "a2_parse.h"
 #include "a2_map.h"
+#include "a2_array.h"
 #include "a2_ir.h"
 #include "a2_gc.h"
 #include "a2_closure.h"
@@ -114,6 +115,9 @@ static int a2_ir_function(struct a2_ir* ir_p, size_t root, int des);
 static void a2_ir_return(struct a2_ir* ir_p, size_t root);
 static int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count);
 static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root);
+static inline int a2_ir_array(struct a2_ir* ir_p, size_t root, int des);
+// return is count
+static inline int _a2_ir_comm(struct a2_ir* ir_p, size_t rb);
 
 struct a2_ir* a2_ir_open(struct a2_env* env){
 	assert(env);
@@ -441,7 +445,7 @@ ARG_FUNC:
 	free_clssym(ir_p);
 
 	// set gc stack
-	int cls_gcidx = closure_push_gcstack(curr_cls, &func_obj);
+	int cls_gcidx = closure_push_clsstack(curr_cls, &func_obj);
 	assert(cls_gcidx>=0);
 
 	closure_add_ir(curr_cls, ir_abx(CLOSURE, des, cls_gcidx));
@@ -487,18 +491,7 @@ static int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count){
 
 	// generate argument
 	size_t args = node_p(root)->childs[1];
-	int count = 0;
-	for( ;args; ){
-		int _arg = _a2_ir_exp(ir_p, args, add_arg);
-		if(_arg<0)
-			closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, _arg));
-		else if(_arg!=top_arg)
-			closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _arg));
-
-		args = node_p(args)->next;
-		count++;
-	}
-
+	int count = _a2_ir_comm(ir_p, args);
 	if(count >=B_MAX)
 		ir_error(root, "you set argument is overfllow.");
 
@@ -506,6 +499,23 @@ static int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count){
 	curr_clssym->max_arg += ret_count;
 	set_arg(_b+1);
 	return _b;
+}
+
+static inline int  _a2_ir_comm(struct a2_ir* ir_p, size_t rb){
+	int count = 0;
+	for( ;rb; ){
+		int _cb = curr_arg;
+		int _rb = a2_ir_exp(ir_p, rb);
+		printf("curr_arg = %d _cb = %d -rb = %d\n", curr_arg, _cb, _rb);
+		if(_rb<0)
+			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, _rb));
+		else if(_rb<_cb)
+			closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _rb));
+		assert(curr_arg-_cb==1);
+		rb = node_p(rb)->next;
+		count++;
+	}
+	return count;
 }
 
 static void a2_ir_return(struct a2_ir* ir_p, size_t root){
@@ -520,20 +530,9 @@ static void a2_ir_return(struct a2_ir* ir_p, size_t root){
 	}else if(node_p(ret)->type == comma_node){  // return a, b, c ...
 		size_t rb = node_p(ret)->childs[0];
 		assert(node_p(ret)->next==0);
-		assert(rb);
-		for( ;rb; ){
-			int _cb = curr_arg;
-			int _rb = _a2_ir_exp(ir_p, rb, add_arg);
-			printf("curr_arg = %d _cb = %d\n", curr_arg, _cb);
-			assert(curr_arg-_cb == 1);
-			if(_rb<0)
-				closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, _rb));
-			else if(top_arg!=_rb)
-				closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _rb));
-			rb = node_p(rb)->next;
-		}
+		int count = _a2_ir_comm(ir_p, rb);
 		assert(curr_arg-_b>0);
-		closure_add_ir(curr_cls, ir_abx(RETURN, _b, curr_arg-_b));
+		closure_add_ir(curr_cls, ir_abx(RETURN, _b, count));
 	}else{
 		// pgenerate return one value
 		int _r = a2_ir_exp(ir_p, ret);
@@ -857,17 +856,7 @@ static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root){
 			break;
 		case comma_node:
 			rn = node_p(rn)->childs[0];
-			for( ;rn; ){
-				int _rb = curr_arg;
-				int _ra = _a2_ir_exp(ir_p, rn, add_arg);
-				if(_ra<0)
-					closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, _ra));
-				else if(_ra<_rb)
-					closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _ra));
-				set_arg(_rb+1);
-				rcount++;
-				rn = node_p(rn)->next;
-			}
+			rcount = _a2_ir_comm(ir_p, rn);
 			break;
 		default:
 			assert(0);
@@ -979,6 +968,9 @@ OP_IR:
 		// call function
 		case cfunc_node:
 			return a2_ir_funccall(ir_p, root, 1);
+		// array
+		case array_node:
+			return a2_ir_array(ir_p, root, (des<0)?(add_arg):(des));
 		 // logic operation
 		case or_node:
 			op = OR;
@@ -1011,12 +1003,34 @@ OP_IR:
 }
 
 // parse array
-/*
-static inline int a2_ir_array(struct a2_ir* ir_p, size_t root){
+static inline int a2_ir_array(struct a2_ir* ir_p, size_t root, int des){
 	assert(node_t(root)==array_node);
+	assert(node_p(root)->childs[0]);
+	
+	// generate a2_obj, add array to gc chain
+	struct a2_gcobj* _ag = a2_array2gcobj(a2_array_new());
+	a2_gcadd(ir_p->env_p, _ag);
+	a2_value v;
+	v.obj = _ag;
+	struct a2_obj obj = {
+		A2_TARRAY,
+		v
+	};
 
+	int _b = curr_arg;
+	int adr = closure_push_ctnstack(curr_cls, &obj);
+	closure_add_ir(curr_cls, ir_abx(CONTAINER, des, adr));
+	size_t vn = node_p(root)->childs[0];
+
+	// generate value 
+	int _vb=curr_arg;
+	int count = _a2_ir_comm(ir_p, vn);
+	assert(curr_arg-_b==count);
+	closure_add_ir(curr_cls, ir_abc(SETLIST, des, _vb, count));
+	set_arg(_b);
+	return des;
 }
-*/
+
 
 // parse varable
 static inline int a2_ir_var(struct a2_ir* ir_p, size_t root, int des){
@@ -1053,6 +1067,8 @@ char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
 		"SETGLOBAL",  // set global variable 
 		"GETUPVALUE",	// get upvalue
 		"SETUPVALUE",	// set upvalue
+		"CONTAINER",  // load CONTAINER
+		"SETLIST",  // set list
 		"CLOSURE",	// closure
 		"CALL",		// call
 		"RETURN",		// return

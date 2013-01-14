@@ -24,8 +24,11 @@ struct a2_closure{
 	size_t len;
 	size_t size;
 	
-	// gcobj stack
-	struct obj_stack gc_stack;
+	// closure obj stack
+	struct obj_stack cls_stack;
+
+	// container obj stack 
+	struct obj_stack ctn_stack;
 
 	// const varabel stack
 	struct obj_stack c_stack;
@@ -61,8 +64,10 @@ struct a2_closure* a2_closure_new(){
 	ret->len = 0;
 	// init constent stack
 	_obj_stack_init(&(ret->c_stack));
-	// init gc stack
-	_obj_stack_init(&(ret->gc_stack));
+	// init cls stack
+	_obj_stack_init(&(ret->cls_stack));
+	// init container stack
+	_obj_stack_init(&(ret->cls_stack));
 	// init upvalue
 	ret->upvalue.upvalue_chain = (void*)malloc(sizeof(*(ret->upvalue.upvalue_chain))*DEF_UPVALUE_SIZE);
 	ret->upvalue.size = DEF_UPVALUE_SIZE;
@@ -76,7 +81,8 @@ void a2_closure_free(struct a2_closure* cls){
 	free(cls->ir_chain);
 	//TODO: stack obj free
 	_obj_stack_destory(&(cls->c_stack));
-	_obj_stack_destory(&(cls->gc_stack));
+	_obj_stack_destory(&(cls->cls_stack));
+	_obj_stack_destory(&(cls->ctn_stack));
 	// TODO: upvalue obj free
 	free(cls->upvalue.upvalue_chain);
 	free(cls);
@@ -145,12 +151,16 @@ inline struct  a2_obj* closure_at_cstack(struct a2_closure* cls, int idx){
 	return &(cls->c_stack.stk_p[0-idx-1]);
 }
 
-inline int closure_push_gcstack(struct a2_closure* cls, struct a2_obj* obj){
-	assert(cls);
-	assert(obj);
-	if(cls->c_stack.top>=BX_MAX)
+inline int closure_push_clsstack(struct a2_closure* cls, struct a2_obj* obj){
+	if(cls->cls_stack.top>=BX_MAX)
 		a2_error("the gc stack from closure is overfllow.\n");
-	return _obj_stack_add(&(cls->gc_stack), obj);
+	return _obj_stack_add(&(cls->cls_stack), obj);
+}
+
+inline int closure_push_ctnstack(struct a2_closure* cls, struct a2_obj* obj){
+	if(cls->ctn_stack.top>=BX_MAX)
+		a2_error("the gc stack from closure is overfllow.\n");
+	return _obj_stack_add(&(cls->ctn_stack), obj);
 }
 
 // upvalue op
@@ -186,9 +196,9 @@ void dump_closure(struct a2_closure* cls){
 	}
 
 	
-	for(j=0; j<cls->gc_stack.top; j++){
-		if(cls->gc_stack.stk_p[j].type==A2_TCLOSURE)
-			dump_closure(a2_gcobj2closure(cls->gc_stack.stk_p[j].value.obj));
+	for(j=0; j<cls->cls_stack.top; j++){
+		assert(cls->cls_stack.stk_p[j].type==A2_TCLOSURE);
+		dump_closure(a2_gcobj2closure(cls->cls_stack.stk_p[j].value.obj));
 	}
 }
 

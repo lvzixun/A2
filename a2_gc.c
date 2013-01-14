@@ -2,6 +2,8 @@
 #include "a2_obj.h"
 #include "a2_string.h"
 #include "a2_closure.h"
+#include "a2_array.h"
+#include "a2_map.h"
 #include <stdio.h>
 
 struct a2_gcobj{
@@ -9,6 +11,8 @@ struct a2_gcobj{
 	union{
 		char* str;
 		struct a2_closure* cls;
+		struct a2_array* array;
+		struct a2_map* map;
 		void* obj;
 	}value;
 	struct a2_gcobj* next;
@@ -80,6 +84,14 @@ struct a2_gcobj* a2_closure2gcobj(struct a2_closure* cls){
 	return ret;
 }
 
+struct a2_gcobj* a2_array2gcobj(struct a2_array* array){
+	assert(array);
+	struct a2_gcobj* ret = a2_nil2gcobj();
+	ret->type = A2_TARRAY;
+	ret->value.array = array;
+	return ret;
+}
+
 
 struct a2_gcobj* a2_nil2gcobj(){
 	struct a2_gcobj* ret = (struct a2_gcobj*)malloc(sizeof(*ret));
@@ -100,6 +112,11 @@ inline char* a2_gcobj2string(struct a2_gcobj* gcobj){
 inline struct a2_closure* a2_gcobj2closure(struct a2_gcobj* gcobj){
 	assert(gcobj->type==A2_TCLOSURE);
 	return gcobj->value.cls;
+}
+
+inline struct a2_array* a2_gcobj2array(struct a2_gcobj* gcobj){
+	assert(gcobj->type==A2_TARRAY);
+	return gcobj->value.array;
 }
 
 // TODO: because gc , the gcobj only's mark.

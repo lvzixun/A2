@@ -460,8 +460,11 @@ static size_t parse_array(struct a2_parse* parse_p){
 		size_t _v = parse_exp(parse_p);
 		if(!_v) unexpect_token(&cur_token);
 		
-		_node_set(node_p(back)->next, _v);
-		back = node_p(back)->next;
+		if(back == head)
+			node_p(back)->childs[0] = _v;
+		else
+			node_p(back)->next =  _v;
+		back = _v;
 		tp = parse_readtoken(parse_p);
 		if(!tp)  goto ARRAY_END;
 		if(tt2op(tp->tt)==',') continue;  // jump ','
@@ -526,7 +529,7 @@ static size_t parse_comma(struct a2_parse* parse_p){
 		l = parse_logic(parse_p);
 		if(!l)
 			parse_error("the char is not expect at near ','.");
-		_node_set(node_p(back)->next, l);
+		node_p(back)->next = l;
 		back = node_p(back)->next;
 	}  
 
@@ -842,27 +845,34 @@ BASE_DEF:
 
 // parse local 
 static inline size_t parse_local(struct a2_parse* parse_p){
-	size_t head=0;
+	size_t head, back, _node;
 	struct a2_token* tp=NULL;
-	head = new_node(parse_p, parse_readtoken(parse_p), local_node);
-	size_t* p = &(node_p(head)->childs[0]);
-
+	back = head = new_node(parse_p, parse_readtoken(parse_p), local_node);
+	
 	tp = parse_attoken(parse_p);
 	if(!tp || tt2tk(tp->tt)!=tk_ide) parse_error("you local is ungrammatical.");
-	while(!is_end){
+	for(; !is_end; ){
 		if(tt2tk(tp->tt)==tk_ide){
 			struct a2_token* ntp = parse_matchtoken(parse_p, 1);
 			if(!ntp){
-				*p = new_node(parse_p, parse_readtoken(parse_p), var_node);
-				p = &(node_p(*p)->next);
+				_node = new_node(parse_p, parse_readtoken(parse_p), var_node);
+				if(back==head)
+					node_p(back)->childs[0] = _node;
+				else
+					node_p(back)->next = _node;
+				back = _node;
 				break;
 			}else if(tt2op(ntp->tt)=='='){
-				*p = parse_exp(parse_p);
-				p = &(node_p(*p)->next);
+				_node = parse_exp(parse_p);
 			}else{
-				*p = new_node(parse_p, parse_readtoken(parse_p), var_node);
-				p = &(node_p(*p)->next);
+				_node = new_node(parse_p, parse_readtoken(parse_p), var_node);
 			}
+
+			if(back==head)
+				node_p(back)->childs[0] = _node;
+			else
+				node_p(back)->next = _node;
+			back = _node;
 
 			tp = parse_attoken(parse_p);
 			ntp = parse_matchtoken(parse_p, 1);

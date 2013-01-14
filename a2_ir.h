@@ -69,6 +69,8 @@ enum ir_op{
 	SETGLOBAL,  // set global variable 
 	GETUPVALUE,	// get upvalue
 	SETUPVALUE,	// set upvalue
+	CONTAINER,  // load container
+	SETLIST,	// set list
 	CLOSURE,	// closure
 	CALL,		// call
 	RETURN,		// return 
