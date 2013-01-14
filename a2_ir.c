@@ -110,13 +110,14 @@ static void a2_ir_if(struct a2_ir* ir_p, size_t root);
 static void a2_ir_for(struct a2_ir* ir_p, size_t root);
 static inline void a2_ir_break(struct a2_ir* ir_p, size_t root);
 static inline void a2_ir_continue(struct a2_ir* ir_p, size_t root);
-static int a2_ir_function(struct a2_ir* ir_p, size_t root);
+static int a2_ir_function(struct a2_ir* ir_p, size_t root, int des);
 static void a2_ir_return(struct a2_ir* ir_p, size_t root);
 static int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count);
 static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root);
 
 struct a2_ir* a2_ir_open(struct a2_env* env){
 	assert(env);
+	assert(ir_count<(1<<OP_SIZE));
 	struct a2_ir* ret = NULL;
 	ret = (struct a2_ir*)malloc(sizeof(*ret));
 	ret->env_p = env;
@@ -232,7 +233,7 @@ static inline void _a2_ir_exec(struct a2_ir* ir_p, struct cls_sym* cls_sp, size_
 			a2_ir_continue(ir_p, root);
 			break;
 		case func_node: // function
-			a2_ir_function(ir_p, root);
+			a2_ir_function(ir_p, root, add_arg);
 			set_arg(_b);
 			break;
 		case return_node: // return
@@ -398,7 +399,7 @@ static inline void _a2_ir_segment(struct a2_ir* ir_p, size_t root){
 	}
 }
 
-static int a2_ir_function(struct a2_ir* ir_p, size_t root){
+static int a2_ir_function(struct a2_ir* ir_p, size_t root, int des){
 	assert(node_t(root)==func_node);
 
 	size_t arg = node_p(root)->childs[0];
@@ -443,7 +444,7 @@ ARG_FUNC:
 	int cls_gcidx = closure_push_gcstack(curr_cls, &func_obj);
 	assert(cls_gcidx>=0);
 
-	closure_add_ir(curr_cls, ir_abx(CLOSURE, add_arg, cls_gcidx));
+	closure_add_ir(curr_cls, ir_abx(CLOSURE, des, cls_gcidx));
 	// global function
 	if(node_p(root)->token){
 		assert(tt2tk(node_p(root)->token->tt)==tk_ide);
@@ -461,10 +462,11 @@ ARG_FUNC:
 
 		closure_add_ir(curr_cls, ir_abc(SETGLOBAL, _b, k, v));
 	}else{	// Anonymous function
-		assert(curr_arg==_b+1);
+		assert(curr_arg<=_b+1);
 	}
-	set_arg(_b+1);
-	return top_arg;
+
+	set_arg(_b);
+	return des;
 }
 
 static int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count){
@@ -537,7 +539,7 @@ static void a2_ir_return(struct a2_ir* ir_p, size_t root){
 		int _r = a2_ir_exp(ir_p, ret);
 		if(_r<0){ // if is constent varable
 			assert(curr_arg==_b);
-			closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, _r));
+			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, _r));
 			_r = top_arg;
 		}
 		closure_add_ir(curr_cls, ir_abx(RETURN, _r, 1));
@@ -973,7 +975,7 @@ OP_IR:
 			return a2_ir_ass(ir_p, root);
 		// function 
 		case func_node:
-			return a2_ir_function(ir_p, root);
+			return a2_ir_function(ir_p, root, (des<0)?(add_arg):(des));
 		// call function
 		case cfunc_node:
 			return a2_ir_funccall(ir_p, root, 1);
@@ -1008,7 +1010,13 @@ OP_IR:
 	assert(0);
 }
 
+// parse array
+/*
+static inline int a2_ir_array(struct a2_ir* ir_p, size_t root){
+	assert(node_t(root)==array_node);
 
+}
+*/
 
 // parse varable
 static inline int a2_ir_var(struct a2_ir* ir_p, size_t root, int des){

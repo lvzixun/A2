@@ -1,3 +1,7 @@
-local a, b, c, d, e, f, g, h
 
-a, b ,c = 1, 2, 3
+local a= {1, 2, 3}
+
+local func = function ()
+    local b = 4
+end
+

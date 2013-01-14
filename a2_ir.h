@@ -71,7 +71,7 @@ enum ir_op{
 	SETUPVALUE,	// set upvalue
 	CLOSURE,	// closure
 	CALL,		// call
-	RETURN,		// return
+	RETURN,		// return 
 	JUMP,		// jump
 	MOVE,		// move
 	TEST,		// test

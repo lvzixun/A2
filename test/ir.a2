@@ -1,9 +1,1 @@
-
-
-function func(a, b){
-	local c = 1
-	return function (){
-		local d = 2 
-		return c, d
-	}
-}
+local a = [1,2,3]

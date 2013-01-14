@@ -394,36 +394,6 @@ MAP_END:
 	return 0;
 }
 
-static size_t parse_array(struct a2_parse* parse_p){
-	size_t head=0, back=0;
-	struct a2_token* tp = NULL;
-	tp = parse_readtoken(parse_p);
-	assert(tp && tt2op(tp->tt)=='['); // jump '['
-	back = head = new_node(parse_p, tp, array_node);
-	tp = parse_attoken(parse_p);
-	if(tp && tt2op(tp->tt)==']') {
-		parse_readtoken(parse_p);
-		return head;
-	}
-
-	for(; !is_end;){
-		if(tt2tk(cur_token.tt)==tk_end){   // jump end
-			parse_readtoken(parse_p);
-			continue;
-		}
-
-		_node_set(node_p(back)->next, parse_exp(parse_p));
-		back = node_p(back)->next;
-		tp = parse_readtoken(parse_p);
-		if(!tp)  goto ARRAY_END;
-		if(tt2op(tp->tt)==',') continue;  // jump ','
-		else if(tt2op(tp->tt)==']') return head;
-		else parse_error("you lost \' , \'.");
-	}
-ARRAY_END:
-	parse_error("you lost \' ] \'.");
-	return 0;
-}
 
 // root =  '='   include ,
 static inline  size_t parse_operation(struct a2_parse* parse_p){
@@ -435,29 +405,19 @@ static inline  size_t parse_op(struct a2_parse* parse_p){
 	return _parse_operation(parse_p, parse_logic);
 }
 
+#define unexpect_token(tp) do{	\
+								assert(tp);  \
+								 char ts_buf[64] = {0}; \
+								a2_error("[parse error@line: %d]: unexpected symbol near token \' %s \'.\n", \
+								(tp)->line, a2_token2str((tp), ts_buf)); \
+							}while(0)
+
 #define MERGER(op) if(node_t(exp1)==num_node && node_t(exp2)==num_node){ \
 						node_p(exp1)->token->v.number = node_p(exp1)->token->v.number op node_p(exp2)->token->v.number;\
 						return new_node(parse_p, node_p(exp1)->token, num_node); \
 					}else if(!nt2na(node_t(exp1)) || !nt2na(node_t(exp2))){ \
-						char ts_buf[64] = {0}; \
-							a2_error("[parse error@line: %d]: unexpected symbol near token \' %s \'.\n", \
-							tp->line, a2_token2str(tp, ts_buf)); \
+						unexpect_token(tp); \
 					} 
-/*
-#define MERGER_LOGIC(op) 	if(node_t(exp1)==bool_node && node_t(exp2)==bool_node){ \
-								assert(tt2tk(node_p(exp1)->token->tt) == tk_bool); \
-								assert(tt2tk(node_p(exp2)->token->tt) == tk_bool); \
-								uint32 _op = (tt2op(node_p(exp1)->token->tt) op tt2op(node_p(exp2)->token->tt)); \
-								node_p(exp1)->token->tt = kp2tt(tk_bool, _op); \
-								return new_node(parse_p, node_p(exp1)->token, bool_node); \
-							}
-
-#define MERGER_LIMIT(op)	if(node_t(exp1)==num_node && node_t(exp2)==num_node){ \
-								uint32 _op = (node_p(exp1)->token->v.number op node_p(exp2)->token->v.number);\
-								node_p(exp1)->token->tt = kp2tt(tk_bool, _op); \
-								return new_node(parse_p, node_p(exp1)->token, bool_node); \
-							}
-*/
 
 #define CHECK_EXP12 	if(!exp1 || !exp2) { \
 							char ts_buf[64] = {0}; \
@@ -479,6 +439,39 @@ static inline  size_t parse_op(struct a2_parse* parse_p){
 									break; \
 							} \
 						}
+
+static size_t parse_array(struct a2_parse* parse_p){
+	size_t head=0, back=0;
+	struct a2_token* tp = NULL;
+	tp = parse_readtoken(parse_p);
+	assert(tp && tt2op(tp->tt)=='['); // jump '['
+	back = head = new_node(parse_p, tp, array_node);
+	tp = parse_attoken(parse_p);
+	if(tp && tt2op(tp->tt)==']') {
+		parse_readtoken(parse_p);
+		return head;
+	}
+
+	for(; !is_end;){
+		if(tt2tk(cur_token.tt)==tk_end){   // jump end
+			parse_readtoken(parse_p);
+			continue;
+		}
+		size_t _v = parse_exp(parse_p);
+		if(!_v) unexpect_token(&cur_token);
+		
+		_node_set(node_p(back)->next, _v);
+		back = node_p(back)->next;
+		tp = parse_readtoken(parse_p);
+		if(!tp)  goto ARRAY_END;
+		if(tt2op(tp->tt)==',') continue;  // jump ','
+		else if(tt2op(tp->tt)==']') return head;
+		else parse_error("you lost \' , \'.");
+	}
+ARRAY_END:
+	parse_error("you lost \' ] \'.");
+	return 0;
+}
 
 static  size_t _parse_operation(struct a2_parse* parse_p, parse_func pfunc){
 	size_t head, exp2;
