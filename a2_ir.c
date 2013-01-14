@@ -105,7 +105,7 @@ static int a2_ir_ass(struct a2_ir* ir_p, size_t root);
 static void a2_ir_local(struct a2_ir* ir_p, size_t root);
 static int _a2_ir_exp(struct a2_ir* ir_p, size_t root, int des);
 static inline int a2_ir_exp(struct a2_ir* ir_p, size_t root);
-static inline int a2_ir_var(struct a2_ir* ir_p, size_t root);
+static inline int a2_ir_var(struct a2_ir* ir_p, size_t root, int des);
 static void a2_ir_if(struct a2_ir* ir_p, size_t root);
 static void a2_ir_for(struct a2_ir* ir_p, size_t root);
 static inline void a2_ir_break(struct a2_ir* ir_p, size_t root);
@@ -522,6 +522,7 @@ static void a2_ir_return(struct a2_ir* ir_p, size_t root){
 		for( ;rb; ){
 			int _cb = curr_arg;
 			int _rb = _a2_ir_exp(ir_p, rb, add_arg);
+			printf("curr_arg = %d _cb = %d\n", curr_arg, _cb);
 			assert(curr_arg-_cb == 1);
 			if(_rb<0)
 				closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, _rb));
@@ -767,8 +768,11 @@ static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, 
 						assert(idx>0);
 						int _eb = curr_arg;
 						r_idx = _rv_func(ir_p, var_local, idx, right_root);  // parse right exp
-						if((r_idx<0 || curr_arg==_eb) && (r_idx!=idx-1) )
+						assert(curr_arg<=_eb+1);
+						if(r_idx<0)
 							closure_add_ir(curr_cls, ir_abx(LOAD, idx-1, r_idx));
+						else if(r_idx!=idx-1)
+							closure_add_ir(curr_cls, ir_abx(MOVE, idx-1, r_idx));
 						set_arg(_b);
 					}
 						return idx-1;
@@ -846,7 +850,8 @@ static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root){
 		case cfunc_node:
 			a2_ir_funccall(ir_p, rn, lcount);
 			rcount=lcount;
-			_vb = curr_arg;
+			assert(curr_arg-_vb==1);
+			_vb = top_arg;
 			break;
 		case comma_node:
 			rn = node_p(rn)->childs[0];
@@ -891,10 +896,7 @@ static int _rv_mass(struct a2_ir* ir_p, int vt, int idx, size_t right_root){
 	int _vb = (int)right_root;
 	switch(vt){
 		case var_global:
-			return _vb;
 		case var_local:
-			closure_add_ir(curr_cls, ir_abx(MOVE, idx-1, _vb));
-			return idx-1;
 		case var_upvalue:
 			return _vb;
 		default:
@@ -946,7 +948,7 @@ OP_IR:
 
 		// varable 	
 		case var_node:
-			return a2_ir_var(ir_p, root);
+			return a2_ir_var(ir_p, root, (des<0)?(add_arg):(des));
 		// constant
 		case num_node:{
 			struct a2_obj k = a2_number2obj(node_p(root)->token->v.number);
@@ -1009,24 +1011,24 @@ OP_IR:
 
 
 // parse varable
-static inline int a2_ir_var(struct a2_ir* ir_p, size_t root){
+static inline int a2_ir_var(struct a2_ir* ir_p, size_t root, int des){
 	struct a2_obj k = node2obj(ir_p, root);
 	int vt;
 	int idx = get_symbol(ir_p, &k, &vt);
 	if(!idx){
 		int k_idx = add_csymbol(ir_p, &k);
-		closure_add_ir(curr_cls, ir_abx(GETGLOBAL, add_arg, k_idx));
-		return top_arg;
+		closure_add_ir(curr_cls, ir_abx(GETGLOBAL, des, k_idx));
+		return des;
 	}else{
 		switch(vt){
 			case var_global:
-				closure_add_ir(curr_cls, ir_abx(GETGLOBAL, add_arg, idx));
-				return top_arg;
+				closure_add_ir(curr_cls, ir_abx(GETGLOBAL, des, idx));
+				return des;
 			case var_local:
 				return idx-1;
 			case var_upvalue:
-				closure_add_ir(curr_cls, ir_abx(GETUPVALUE, add_arg, idx-1));
-				return top_arg;
+				closure_add_ir(curr_cls, ir_abx(GETUPVALUE, des, idx-1));
+				return des;
 			default:
 				assert(0);
 		}

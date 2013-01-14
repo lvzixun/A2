@@ -176,10 +176,10 @@ void dump_closure(struct a2_closure* cls){
 	int i, j;
 	assert(cls);
 	char buf[512] = {0};
-	char* __cp = NULL;
+	char* __cp = (cls->params<0)?("+"):("");
 
 	printf("\n\n----params=%d%s upvalue=%d const=%d addr=%p-----\n", 
-		(cls->params<0)?(__cp="+", -1-cls->params):(__cp="", cls->params), __cp, 
+		(cls->params<0)?(-1-cls->params):(cls->params), __cp, 
 		cls->upvalue.len, cls->c_stack.top, cls);
 	for(i=0;i<cls->len; i++){
 		printf("[%d]   %s\n", i, ir2string(cls, cls->ir_chain[i], buf, sizeof(buf)));

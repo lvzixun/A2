@@ -2,8 +2,8 @@
 
 function func(a, b){
 	local c = 1
-	return a,2, 3
+	return function (){
+		local d = 2 
+		return c, d
+	}
 }
-
-
-local g1 = func(1, 2, 3)
