@@ -67,7 +67,7 @@ struct a2_closure* a2_closure_new(){
 	// init cls stack
 	_obj_stack_init(&(ret->cls_stack));
 	// init container stack
-	_obj_stack_init(&(ret->cls_stack));
+	_obj_stack_init(&(ret->ctn_stack));
 	// init upvalue
 	ret->upvalue.upvalue_chain = (void*)malloc(sizeof(*(ret->upvalue.upvalue_chain))*DEF_UPVALUE_SIZE);
 	ret->upvalue.size = DEF_UPVALUE_SIZE;
@@ -101,6 +101,7 @@ static inline void _obj_stack_init(struct obj_stack* os_p){
 
 static  inline void _obj_stack_destory(struct obj_stack* os_p){
 	free(os_p->stk_p);
+	os_p->stk_p = NULL;
 	os_p->size=0;
 	os_p->top = 0;
 }

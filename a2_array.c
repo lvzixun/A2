@@ -1,5 +1,6 @@
 #include "a2_conf.h"
 #include "a2_obj.h"
+#include <stdio.h>
 
 #define DEF_ARRAY_SIZE	32
 
@@ -26,7 +27,6 @@ void a2_array_free(struct a2_array* array_p){
 	free(array_p->list);
 	free(array_p);
 }
-
 
 
 inline struct a2_obj* a2_array_add(struct a2_array* array_p, struct a2_obj* obj){

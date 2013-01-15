@@ -71,6 +71,8 @@ enum ir_op{
 	SETUPVALUE,	// set upvalue
 	CONTAINER,  // load container
 	SETLIST,	// set list
+	GETVALUE,	// get value
+	SETVALUE,	// set value
 	CLOSURE,	// closure
 	CALL,		// call
 	RETURN,		// return 

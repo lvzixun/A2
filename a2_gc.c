@@ -25,7 +25,7 @@ struct a2_gc{
 
 static void _gcobj_strMfree(struct a2_gcobj* gcobj);
 static void _gcobj_clsMfree(struct a2_gcobj* gcobj);
-
+static void _gcobj_arrayMfree(struct a2_gcobj* gcobj);
 
 struct a2_gc* a2_gc_new(){
 	struct a2_gc* ret = (struct a2_gc*)malloc(sizeof(*ret));
@@ -44,6 +44,9 @@ void a2_gc_free(struct a2_gc* gc_p){
 				break;
 			case A2_TCLOSURE:
 				_gcobj_clsMfree(gc_p->chain);
+				break;
+			case A2_TARRAY:
+				_gcobj_arrayMfree(gc_p->chain);
 				break;
 			default:
 				free(gc_p->chain);
@@ -136,5 +139,12 @@ static void _gcobj_clsMfree(struct a2_gcobj* gcobj){
 	assert(gcobj);
 	assert(gcobj->type==A2_TCLOSURE);
 	a2_closure_free(gcobj->value.cls);
+	free(gcobj);
+}
+
+static void _gcobj_arrayMfree(struct a2_gcobj* gcobj){
+	assert(gcobj);
+	assert(gcobj->type==A2_TARRAY);
+	a2_array_free(gcobj->value.array);
 	free(gcobj);
 }
