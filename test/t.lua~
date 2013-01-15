@@ -1,10 +1,5 @@
-local b, c, d, e
-
-function func()
-    local a = 2
-end
 
 
-local a= {1, 2, 3}
-
+local a 
+a = c+a
 

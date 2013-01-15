@@ -354,7 +354,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 		vp = a2_map_query(curr_clssym->sym.sym_chain[i], k);
 		if(vp){
 			assert(vp->type==_A2_TUINTEGER);
-			*vt_p = v2vt(5);
+			*vt_p = v2vt(vp->value.uinteger);
 			return v2i(vp->value.uinteger)+1;
 		}
 	}
@@ -506,7 +506,7 @@ static inline int  _a2_ir_comm(struct a2_ir* ir_p, size_t rb){
 	for( ;rb; ){
 		int _cb = curr_arg;
 		int _rb = a2_ir_exp(ir_p, rb);
-		printf("curr_arg = %d _cb = %d -rb = %d\n", curr_arg, _cb, _rb);
+	//	printf("curr_arg = %d _cb = %d -rb = %d\n", curr_arg, _cb, _rb);
 		if(_rb<0)
 			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, _rb));
 		else if(_rb<_cb)
@@ -917,8 +917,8 @@ static int _a2_ir_exp(struct a2_ir* ir_p, size_t root, int des){
 OP_IR:
 
 			_b = curr_arg;
-			l_idx = _a2_ir_exp(ir_p, node_p(root)->childs[0], des); // left op value
-			r_idx = _a2_ir_exp(ir_p, node_p(root)->childs[1], des); // right op value
+			l_idx = a2_ir_exp(ir_p, node_p(root)->childs[0]); // left op value
+			r_idx = a2_ir_exp(ir_p, node_p(root)->childs[1]); // right op value
 			if(is_Blimit(l_idx)){
 				closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, l_idx));
 				l_idx = top_arg;
