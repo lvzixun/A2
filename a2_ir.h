@@ -64,13 +64,13 @@ struct a2_closure;
 #define ir_gbx(i)		  _ir_sig(_ir_gbx(i), BX_SIZE)
 
 enum ir_op{
-	NIL,  // nil op
 	GETGLOBAL,  // get global variable
 	SETGLOBAL,  // set global variable 
 	GETUPVALUE,	// get upvalue
 	SETUPVALUE,	// set upvalue
 	CONTAINER,  // load container
 	SETLIST,	// set list
+	SETMAP,		// set map
 	GETVALUE,	// get value
 	SETVALUE,	// set value
 	CLOSURE,	// closure
@@ -82,6 +82,7 @@ enum ir_op{
 	LOAD,	 	// load const value to register
 	LOADNIL,	// reset regs is nil
 	INC,		// +=
+	CAT,		// ..
 	ADD,	 	// +
 	SUB,	 	// -
 	MUL,		// *

@@ -2,6 +2,7 @@
 #define _A2_GC_H_
 #include "a2_conf.h"
 
+struct a2_map;
 struct a2_array;
 struct a2_gc;
 struct a2_gcobj;
@@ -24,6 +25,10 @@ inline struct a2_closure* a2_gcobj2closure(struct a2_gcobj* gcobj);
 // array
 struct a2_gcobj* a2_array2gcobj(struct a2_array* array); 
 inline struct a2_array* a2_gcobj2array(struct a2_gcobj* gcobj);
+
+// map
+struct a2_gcobj* a2_map2gcobj(struct a2_map* map);
+inline struct a2_map* a2_gcobj2map(struct a2_gcobj* gcobj);
 
 // nil 
 struct a2_gcobj* a2_nil2gcobj();

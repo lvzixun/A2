@@ -369,8 +369,11 @@ static size_t parse_map(struct a2_parse* parse_p){
 		if(is_end || tt2op(parse_readtoken(parse_p)->tt)!='=') // jump '='
 			parse_error("you lost \' = \'.");
 		_node_set(node_p(nn)->childs[0], parse_exp(parse_p));
-		node_p(back)->next = nn;
-		back = node_p(back)->next;
+		if(back == head)
+			node_p(head)->childs[0] = nn;
+		else
+			node_p(back)->next = nn;
+		back = nn;
 
 MAP_PASS:		
 		tp = parse_readtoken(parse_p);

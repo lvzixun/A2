@@ -26,6 +26,7 @@ struct a2_gc{
 static void _gcobj_strMfree(struct a2_gcobj* gcobj);
 static void _gcobj_clsMfree(struct a2_gcobj* gcobj);
 static void _gcobj_arrayMfree(struct a2_gcobj* gcobj);
+static void _gcobj_mapMfree(struct a2_gcobj* gcobj);
 
 struct a2_gc* a2_gc_new(){
 	struct a2_gc* ret = (struct a2_gc*)malloc(sizeof(*ret));
@@ -47,6 +48,9 @@ void a2_gc_free(struct a2_gc* gc_p){
 				break;
 			case A2_TARRAY:
 				_gcobj_arrayMfree(gc_p->chain);
+				break;
+			case A2_TMAP:
+				_gcobj_mapMfree(gc_p->chain);
 				break;
 			default:
 				free(gc_p->chain);
@@ -95,6 +99,13 @@ struct a2_gcobj* a2_array2gcobj(struct a2_array* array){
 	return ret;
 }
 
+struct a2_gcobj* a2_map2gcobj(struct a2_map* map){
+	assert(map);
+	struct a2_gcobj* ret = a2_nil2gcobj();
+	ret->type = A2_TMAP;
+	ret->value.map = map;
+	return ret;
+}
 
 struct a2_gcobj* a2_nil2gcobj(){
 	struct a2_gcobj* ret = (struct a2_gcobj*)malloc(sizeof(*ret));
@@ -109,6 +120,7 @@ void a2_gcobj_nilfree(struct a2_gcobj* gcobj){
 }
 
 inline char* a2_gcobj2string(struct a2_gcobj* gcobj){
+	assert(gcobj && gcobj->type==A2_TSTRING);
 	return gcobj->value.str;
 }
 
@@ -120,6 +132,11 @@ inline struct a2_closure* a2_gcobj2closure(struct a2_gcobj* gcobj){
 inline struct a2_array* a2_gcobj2array(struct a2_gcobj* gcobj){
 	assert(gcobj->type==A2_TARRAY);
 	return gcobj->value.array;
+}
+
+inline struct a2_map* a2_gcobj2map(struct a2_gcobj* gcobj){
+	assert(gcobj->type==A2_TMAP);
+	return gcobj->value.map;
 }
 
 // TODO: because gc , the gcobj only's mark.
@@ -146,5 +163,12 @@ static void _gcobj_arrayMfree(struct a2_gcobj* gcobj){
 	assert(gcobj);
 	assert(gcobj->type==A2_TARRAY);
 	a2_array_free(gcobj->value.array);
+	free(gcobj);
+}
+
+static void _gcobj_mapMfree(struct a2_gcobj* gcobj){
+	assert(gcobj);
+	assert(gcobj->type==A2_TMAP);
+	a2_map_free(gcobj->value.map);
 	free(gcobj);
 }

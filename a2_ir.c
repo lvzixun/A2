@@ -46,7 +46,7 @@ enum var_type{
 	var_local,
 	var_global,
 	var_upvalue,
-	var_cma
+	var_hm
 };
 
 struct symbol{
@@ -117,9 +117,12 @@ static void a2_ir_return(struct a2_ir* ir_p, size_t root);
 static int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count);
 static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root);
 static inline int a2_ir_array(struct a2_ir* ir_p, size_t root, int des);
+static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des);
 
 typedef void (*_cma_func)(struct a2_ir* ir_p, int ctn, int key, int des);
-static inline int a2_ir_cma(struct a2_ir* ir_p, size_t root, int des, _cma_func cma_func);
+typedef int (*_ir_chm_func)(struct a2_ir* ir_p, size_t root, int ldes, int des, _cma_func cma_func);
+static int a2_ir_chi(struct a2_ir* ir_p, size_t root, int ldes, int des, _cma_func cma_func);
+static inline int a2_ir_cma(struct a2_ir* ir_p, size_t root, int ldes, int des, _cma_func cma_func);
 static void _cma_get(struct a2_ir* ir_p, int ctn, int key, int des);
 static void _cma_set(struct a2_ir* ir_p, int ctn, int key, int value);
 
@@ -128,7 +131,7 @@ static inline int _a2_ir_comm(struct a2_ir* ir_p, size_t rb);
 
 struct a2_ir* a2_ir_open(struct a2_env* env){
 	assert(env);
-	assert(ir_count<(1<<OP_SIZE));
+	assert(ir_count<=(1<<OP_SIZE));
 	struct a2_ir* ret = NULL;
 	ret = (struct a2_ir*)malloc(sizeof(*ret));
 	ret->env_p = env;
@@ -513,7 +516,6 @@ static inline int  _a2_ir_comm(struct a2_ir* ir_p, size_t rb){
 	for( ;rb; ){
 		int _cb = curr_arg;
 		int _rb = a2_ir_exp(ir_p, rb);
-	//	printf("curr_arg = %d _cb = %d -rb = %d\n", curr_arg, _cb, _rb);
 		if(_rb<0)
 			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, _rb));
 		else if(_rb<_cb)
@@ -747,6 +749,8 @@ static inline struct a2_obj node2obj(struct a2_ir* ir_p, size_t node){
 static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, size_t right_root){
 	int _b = curr_arg;
 	int r_idx;
+	_ir_chm_func chm_func = NULL;
+
 	switch(node_t(root)){
 		case var_node:{
 			struct a2_obj k = node2obj(ir_p, root);
@@ -757,19 +761,19 @@ static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, 
 					idx = add_gsymbol(ir_p, &k);
 				assert(idx<0);
 				r_idx = _rv_func(ir_p, var_global, idx, right_root);
-				closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, idx));	// set key to reg
-				int k = top_arg;
-				int d = top_arg;
+				if(is_Blimit(idx)){
+					closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, idx));	// set key to reg
+					idx = top_arg;
+				}
+
 				if(is_Climit(r_idx)){
 					closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, r_idx));
 					r_idx = top_arg;
-				}else if(curr_arg - _b>1){
-					d = r_idx;
 				}
 
-				closure_add_ir(curr_cls, ir_abc(SETGLOBAL, d, k, r_idx));
+				closure_add_ir(curr_cls, ir_abc(SETGLOBAL, _b, idx, r_idx));
 				set_arg(_b+1);
-				return d; 
+				return _b; 
 			}else{
 				switch(vt){
 					case var_local:{
@@ -787,8 +791,10 @@ static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, 
 					case var_upvalue:
 						r_idx = _rv_func(ir_p, var_upvalue, idx, right_root);
 						closure_add_ir(curr_cls, ir_abx(SETUPVALUE, idx-1, r_idx));
-						if(curr_arg- _b >1)
+						if(curr_arg- _b >1){
+							assert(_b==r_idx);
 							set_arg(_b+1);
+						}
 						return r_idx;
 					default:
 						assert(0);
@@ -796,9 +802,15 @@ static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, 
 			}
 		}
 			break;
-		case cma_node:{
-			int r_idx = _rv_func(ir_p, var_cma, -1, right_root);
-			int r_cma = a2_ir_cma(ir_p, root, r_idx, _cma_set);
+		case cma_node:
+			chm_func = a2_ir_cma;
+			goto HM_WVAR;
+		case chi_node:
+			chm_func = a2_ir_chi;
+HM_WVAR:		
+		{
+			int r_idx = _rv_func(ir_p, var_hm, -1, right_root);
+			int r_cma = chm_func(ir_p, root, add_arg, r_idx, _cma_set);
 			assert(r_idx==r_cma);
 			if(r_cma<_b){
 				set_arg(_b);
@@ -819,7 +831,7 @@ int _rv_ass(struct a2_ir* ir_p, int vt, int idx, size_t right_root){
 	switch(vt){
 		case var_global:
 		case var_upvalue:
-		case var_cma:
+		case var_hm:
 			return a2_ir_exp(ir_p, right_root);
 		case var_local:
 			return _a2_ir_exp(ir_p, right_root, idx-1);
@@ -834,6 +846,7 @@ static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
 	size_t ln = node_p(root)->childs[0];
 	size_t rn = node_p(root)->childs[1];
 	switch( node_t(ln)){
+		case chi_node:
 		case cma_node:
 		case var_node:
 			return a2_ir_wvar(ir_p, ln, _rv_ass, rn);
@@ -924,6 +937,8 @@ static inline int a2_ir_exp(struct a2_ir* ir_p, size_t root){
 
 static int _a2_ir_exp(struct a2_ir* ir_p, size_t root, int des){
 	int op, _b, l_idx, r_idx;
+	_ir_chm_func chm_func = NULL;
+
 	switch(node_p(root)->type){
 		// arithmetic operation
 		case add_node:
@@ -992,10 +1007,23 @@ OP_IR:
 			return a2_ir_funccall(ir_p, root, 1);
 		// a[k]
 		case cma_node:
-			return a2_ir_cma(ir_p, root, (des<0)?(add_arg):(des), _cma_get);
+			chm_func = a2_ir_cma;
+			goto CHM_EXP;
+		//a. b
+		case chi_node:
+			chm_func = a2_ir_chi;
+CHM_EXP:
+		{
+			int ldes , _des;
+			_des = ldes = (des<0)?(add_arg):(des);
+			return chm_func(ir_p, root, ldes, _des,  _cma_get);
+		}
 		// array
 		case array_node:
 			return a2_ir_array(ir_p, root, (des<0)?(add_arg):(des));
+		// map
+		case map_node:
+			return a2_ir_map(ir_p, root, (des<0)?(add_arg):(des));
 		 // logic operation
 		case or_node:
 			op = OR;
@@ -1027,6 +1055,65 @@ OP_IR:
 	assert(0);
 }
 
+// parse map
+static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des){
+	assert(node_t(root)==map_node);
+	size_t kv_node = node_p(root)->childs[0];
+
+	// generate a2_obj add map to gc chain
+	struct a2_gcobj* _mg = 	a2_map2gcobj(a2_map_new());
+	a2_gcadd(ir_p->env_p, _mg);
+	a2_value v;
+	v.obj = _mg;
+	struct a2_obj obj = {
+		A2_TMAP,
+		v
+	};
+
+	int _b = curr_arg, count=0;
+	int adr = closure_push_ctnstack(curr_cls, &obj);
+	closure_add_ir(curr_cls, ir_abx(CONTAINER, des, adr));
+	int _kv_idx = curr_arg;
+
+	for( ;kv_node; ){
+		size_t v = node_p(kv_node)->childs[0];
+		int _k, _v;
+		int _kvb = curr_arg;
+
+		// generate key
+		switch(node_t(kv_node)){
+			// constant
+			case num_node:
+			case var_node:
+			case str_node:{
+				struct a2_obj k = node2obj(ir_p, kv_node);
+				_k = add_csymbol(ir_p, &k);
+			}
+				break;
+			default:
+				assert(0);
+		} 
+
+		// set key
+		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, _k));
+		// set value
+		_v = a2_ir_exp(ir_p, v);
+		if(_v<0)
+			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, _v));
+		else if (_v<top_arg)
+			closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _v));
+		assert(curr_arg-_kvb==2);
+
+		kv_node = node_p(kv_node)->next;
+		count++;
+	}
+
+	assert(curr_arg-_kv_idx==count*2);
+	closure_add_ir(curr_cls, ir_abc(SETMAP, des, _kv_idx, count));
+	set_arg(_b);
+	return des;
+}
+
 // parse array
 static inline int a2_ir_array(struct a2_ir* ir_p, size_t root, int des){
 	assert(node_t(root)==array_node);
@@ -1056,8 +1143,37 @@ static inline int a2_ir_array(struct a2_ir* ir_p, size_t root, int des){
 	return des;
 }
 
+// parse get map value by key
+static int a2_ir_chi(struct a2_ir* ir_p, size_t root, int ldes, int des, _cma_func cma_func){
+	assert(node_t(root)==chi_node);
+	assert(node_p(root)->childs[0]);
+	assert(node_p(root)->childs[1]);
+	assert(ldes>=0);
+
+	size_t fn = node_p(root)->childs[0];
+	size_t cn = node_p(root)->childs[1];
+	int _b = curr_arg;
+	int f, c;
+	switch(node_t(fn)){
+		case chi_node:
+			f = a2_ir_chi(ir_p, fn, ldes, des, _cma_get);
+			break;
+		default:
+			f = _a2_ir_exp(ir_p, fn, ldes);
+	}
+
+	assert(node_t(cn)==var_node);
+	struct a2_obj k = node2obj(ir_p, cn);
+	c = add_gsymbol(ir_p, &k);
+	assert(c<0);
+
+	cma_func(ir_p, f, c, des);
+	set_arg(_b);
+	return des;
+}
+
 //parse get map and array  value
-static inline int a2_ir_cma(struct a2_ir* ir_p, size_t root, int des, _cma_func cma_func){
+static inline int a2_ir_cma(struct a2_ir* ir_p, size_t root, int ldes, int des, _cma_func cma_func){
 	assert(node_t(root)==cma_node);
 	assert(node_p(root)->childs[0]);
 	assert(node_p(root)->childs[1]);
@@ -1067,7 +1183,8 @@ static inline int a2_ir_cma(struct a2_ir* ir_p, size_t root, int des, _cma_func 
 	int _b = curr_arg;
 
 	// generate get container obj
-	int ctn_idx = a2_ir_exp(ir_p, ctn_node);
+	assert(ldes>=0);
+	int ctn_idx = _a2_ir_exp(ir_p, ctn_node, ldes);
 	assert(ctn_idx>=0 && curr_arg<=_b+1);
 
 	// generate get key 
@@ -1133,13 +1250,13 @@ static inline int a2_ir_var(struct a2_ir* ir_p, size_t root, int des){
 // for test 
 char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
 	static char* _irs[] = {
-		"NIL",
 		"GETGLOBAL",  // get global variable
 		"SETGLOBAL",  // set global variable 
 		"GETUPVALUE",	// get upvalue
 		"SETUPVALUE",	// set upvalue
 		"CONTAINER",  // load CONTAINER
 		"SETLIST",  // set list
+		"SETMAP", // set map
 		"GETVALUE", // get value
 		"SETVALUE", // set value
 		"CLOSURE",	// closure
@@ -1151,6 +1268,7 @@ char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
 		"LOAD",	 	// load const value to register
 		"LOADNIL",	// reset regs is nil
 		"INC",		// +=
+		"CAT",		// ..
 		"ADD",	 	// +
 		"SUB",	 	// -
 		"MUL",		// *
@@ -1167,7 +1285,7 @@ char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
 	};
 
 	int op = ir_gop(_ir);
-	assert(op>0 && op<(sizeof(_irs)/sizeof(char*)));
+	assert(op>=0 && op<(sizeof(_irs)/sizeof(char*)));
 
 	char* ops = _irs[op];
 	int a = ir_ga(_ir);

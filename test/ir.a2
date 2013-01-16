@@ -1,10 +1,6 @@
-
-
-local a , b, c
-a = [1, 2, 
-	function(){
-		local c =  a+3
-		return c, a, 4
-	},
-	func(5, 6), 
-	'str_kkk']
+local a 
+function func(){
+	local c = 4
+	local b = a = 3+c
+	local e = 6
+}
