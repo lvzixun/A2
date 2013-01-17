@@ -183,7 +183,7 @@ inline int closure_push_upvalue(struct a2_closure* cls, struct a2_closure* cls_p
 }
 
 // for test 
-void dump_closure(struct a2_closure* cls){
+void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls){
 	int i, j;
 	assert(cls);
 	char buf[512] = {0};
@@ -193,13 +193,13 @@ void dump_closure(struct a2_closure* cls){
 		(cls->params<0)?(-1-cls->params):(cls->params), __cp, 
 		cls->upvalue.len, cls->c_stack.top, cls);
 	for(i=0;i<cls->len; i++){
-		printf("[%d]   %s\n", i, ir2string(cls, cls->ir_chain[i], buf, sizeof(buf)));
+		printf("[%d]   %s\n", i, ir2string(ir_p, cls, cls->ir_chain[i], buf, sizeof(buf)));
 	}
 
 	
 	for(j=0; j<cls->cls_stack.top; j++){
 		assert(cls->cls_stack.stk_p[j].type==A2_TCLOSURE);
-		dump_closure(a2_gcobj2closure(cls->cls_stack.stk_p[j].value.obj));
+		dump_closure(ir_p, a2_gcobj2closure(cls->cls_stack.stk_p[j].value.obj));
 	}
 }
 

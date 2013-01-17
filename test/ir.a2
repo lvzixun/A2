@@ -1,6 +1,1 @@
-local a 
-function func(){
-	local c = 4
-	local b = a = 3+c
-	local e = 6
-}
+local a = -3

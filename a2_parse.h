@@ -18,6 +18,11 @@ enum {
 	na_op = 1
 };
 
+enum {
+	nf_nil = 0,
+	nf_count = 1
+};
+
 #define nt_lmask  ((ne_left)<<8)
 #define nt2ne(nt)	(((nt)>>8)&(0x01))
 
@@ -27,6 +32,8 @@ enum {
 #define nt_amask  ((na_op)<<10)
 #define nt2na(nt) (((nt)>>10)&(0x01))
 
+#define nt_fmask  ((nf_count)<<11)
+#define nt2nf(nt) (((nt)>>11)&(0x01))
 
 enum node_type{
 
@@ -60,20 +67,20 @@ enum node_type{
 	for_node,
 	foreach_node,
 
-	num_node = (nt_amask| 0x00),
+	num_node = (nt_fmask | nt_amask | 0x00),
 	// arithmetic node
-	add_node = (nt_amask| 0x01),	// +
-	sub_node = (nt_amask| 0x02),	// -
-	mul_node = (nt_amask| 0x03),	// *
-	div_node = (nt_amask| 0x4),		// /
+	add_node = (nt_fmask | nt_amask| 0x01),	// +
+	sub_node = (nt_fmask | nt_amask | 0x02),	// -
+	mul_node = (nt_fmask | nt_amask | 0x03),	// *
+	div_node = (nt_fmask | nt_amask | 0x4),		// /
 
 
-	cfunc_node = (nt_amask | nt_rmask | 0x00),	//  call  func()
+	cfunc_node = (nt_fmask | nt_amask | nt_rmask | 0x00),	//  call  func()
 
-	var_node = (nt_amask | nt_rmask | nt_lmask | 0x00),  // variable node
-	ass_node = (nt_amask | nt_lmask | 0x01),   // =
-	cma_node = (nt_amask | nt_rmask | nt_lmask | 0x02),	// map['key'] or  array[idx]
-	chi_node = (nt_amask | nt_rmask | nt_lmask | 0x03), 	// .
+	var_node = (nt_fmask | nt_amask | nt_rmask | nt_lmask | 0x00),  // variable node
+	ass_node = (nt_fmask | nt_amask | nt_lmask | 0x01),   // =
+	cma_node = (nt_fmask | nt_amask | nt_rmask | nt_lmask | 0x02),	// map['key'] or  array[idx]
+	chi_node = (nt_fmask | nt_amask | nt_rmask | nt_lmask | 0x03), 	// .
 	comma_node = (nt_lmask | 0x04) // ,
 };
 

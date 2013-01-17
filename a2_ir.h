@@ -10,14 +10,12 @@ struct a2_closure;
 // ir code is included 4 byte, the 4byte like that:
 //  thanks for lua
 #define IR_SIZE  32
-#define MODE_SIZE 1
-#define OP_SIZE 5
+#define OP_SIZE 6
 #define A_SIZE  8
 #define B_SIZE  9
 #define C_SIZE  9
 #define BX_SIZE (B_SIZE+C_SIZE)
 
-#define MODE_POS (IR_SIZE-MODE_SIZE)
 #define OP_POS (A_SIZE+BX_SIZE)
 #define A_POS (BX_SIZE)
 #define B_POS (C_SIZE)
@@ -35,7 +33,9 @@ struct a2_closure;
 #define is_Blimit(i) is_limit(i, B_MAX)
 #define is_Climit(i) is_limit(i, C_MAX)
 #define is_BXlimit(i) is_limit(i, BX_MAX)
+#define is_SXlimit(i) is_limit(i, SX_MAX)
 
+#define MODE_BYTESLEN ((((1<<OP_SIZE)+8)&(~0x07))/8)
 #define ABC_MODE 0
 #define ABX_MODE 1	
 
@@ -43,10 +43,16 @@ struct a2_closure;
 #define ir_gmaskx(c, p) 	  (ir_maskx(c)<<(p))
 #define ir_mask(x, c, p)  ((ir_maskx(c)&(x))<<(p))
 
-#define ir_abc(op,a,b,c)  ( ir_mask(ABC_MODE,MODE_SIZE,MODE_POS) | ir_mask(op,OP_SIZE,OP_POS) |  ir_mask(a,A_SIZE,A_POS) | ir_mask(b,B_SIZE,B_POS) | ir_mask(c,C_SIZE,C_POS) )
-#define ir_abx(op,a,bx)   ( ir_mask(ABX_MODE,MODE_SIZE,MODE_POS) | ir_mask(op, OP_SIZE,OP_POS) | ir_mask(a,A_SIZE,A_POS) | ir_mask(bx, BX_SIZE,BX_POS) ) 
+#define ir_abc(op,a,b,c)  (assert(op_modle(op)==ABC_MODE), ( \
+									  ir_mask(op,OP_SIZE,OP_POS) |  \
+									  ir_mask(a,A_SIZE,A_POS) | \
+									  ir_mask(b,B_SIZE,B_POS) | \
+									  ir_mask(c,C_SIZE,C_POS) ) )
+#define ir_abx(op,a,bx)   (assert(op_modle(op)==ABX_MODE), ( \
+									  ir_mask(op, OP_SIZE,OP_POS) | \
+									  ir_mask(a,A_SIZE,A_POS) | \
+									  ir_mask(bx, BX_SIZE,BX_POS) ) )
 
-#define ir_gmodle(i)	  ((ir_gmaskx(MODE_SIZE, MODE_POS) & (i))>>MODE_POS)
 #define ir_gop(i)		  ((ir_gmaskx(OP_SIZE, OP_POS) & (i))>>OP_POS)
 #define ir_ga(i)		  ((ir_gmaskx(A_SIZE, A_POS) & (i))>>A_POS)
  
@@ -64,37 +70,40 @@ struct a2_closure;
 #define ir_gbx(i)		  _ir_sig(_ir_gbx(i), BX_SIZE)
 
 enum ir_op{
-	GETGLOBAL,  // get global variable
-	SETGLOBAL,  // set global variable 
-	GETUPVALUE,	// get upvalue
-	SETUPVALUE,	// set upvalue
-	CONTAINER,  // load container
-	SETLIST,	// set list
-	SETMAP,		// set map
-	GETVALUE,	// get value
-	SETVALUE,	// set value
-	CLOSURE,	// closure
-	CALL,		// call
-	RETURN,		// return 
-	JUMP,		// jump
-	MOVE,		// move
-	TEST,		// test
-	LOAD,	 	// load const value to register
-	LOADNIL,	// reset regs is nil
-	INC,		// +=
-	CAT,		// ..
-	ADD,	 	// +
-	SUB,	 	// -
-	MUL,		// *
-	DIV, 		// /
-	OR,			// |
-	AND,		// &
-	BIG,		// >
-	LITE,		// <
-	EQU,		// == 
-	NEQU,		// !=
-	BIGE,		// >=
-	LITEE,		// <=
+	NIL, // nil
+	GETGLOBAL,  // get global variable,   modle is abx
+	SETGLOBAL,  // set global variable,  modle is abc
+	GETUPVALUE,	// get upvalue, modle is abx
+	SETUPVALUE,	// set upvalue, modle is abc
+	CONTAINER,  // load container, modle is abx
+	SETLIST,	// set list,  modle is abc
+	SETMAP,		// set map, modle is abc
+	GETVALUE,	// get value, modle is abc
+	SETVALUE,	// set value, modle is abc
+	CLOSURE,	// closure, modle is abx
+	CALL,		// call, modle is abc
+	RETURN,		// return, modle is abx
+	FORPREP,	// for prepare modle is abx
+	FORLOOP,	// for loop modle is abx 
+	JUMP,		// jump, modle is sx
+	MOVE,		// move, modle is abx
+	TEST,		// test, modle is abx
+	LOAD,	 	// load const value to register, modle is abx
+	LOADNIL,	// reset regs is nil, modle is abx
+	INC,		// +=, modle is abx
+	CAT,		// .., 
+	ADD,	 	// +, modle is abc
+	SUB,	 	// -, modle is abc
+	MUL,		// *, modle is abc
+	DIV, 		// /, modle is abc
+	OR,			// |, modle is abc
+	AND,		// &, modle is abc
+	BIG,		// >, modle is abc
+	LITE,		// <, modle is abc
+	EQU,		// == , modle is abc
+	NEQU,		// !=, modle is abc
+	BIGE,		// >=, modle is abc
+	LITEE,		// <=, modle is abc
 	NOT,		// !
 
 	ir_count	// op count
@@ -110,7 +119,7 @@ inline void a2_ir_exec(struct a2_ir* ir_p, size_t root);
 
 
 // for test
-char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size);
+char* ir2string(struct a2_ir* ir_p, struct a2_closure* cls, ir _ir, char* str, size_t size);
 void dump_ir(struct a2_ir* ir_p);
 
 #endif

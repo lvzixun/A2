@@ -1,4 +1,3 @@
-
-
-local a 
-a[1][2][3] = 4
+for i=1,10 do
+    continue 
+end

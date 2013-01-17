@@ -22,7 +22,7 @@ inline int closure_push_ctnstack(struct a2_closure* cls, struct a2_obj* obj);
 // light cp
 inline int closure_push_upvalue(struct a2_closure* cls, struct a2_closure* cls_p, int arg_idx);
 
-// dump
-void dump_closure(struct a2_closure* cls);
+// dump 
+void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls);
 
 #endif

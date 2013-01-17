@@ -21,7 +21,7 @@ struct a2_parse{
 
 #define DEFAULT_NODE_LEVEL	6
 #define _node_deep(l)	(1<<(l))
-#define node_p(i)	(assert(i), &(parse_p->node_buf[i-1]))
+#define node_p(i)	(assert(i), &(parse_p->node_buf[(i)-1]))
 #define node_t(i)    (node_p(i)->type)
 #define _node_set(n, f) do{size_t _n=(f); (n)=_n;}while(0)
 
@@ -814,9 +814,15 @@ BASE_DEF:
 					head = new_node(parse_p, parse_readtoken(parse_p), not_node);
 					_node_set(node_p(head)->childs[0], parse_base(parse_p));
 					return head;
-				case '-':
+				case '-':{
 					head = new_node(parse_p, parse_readtoken(parse_p), neg_node);
-					_node_set(node_p(head)->childs[0], parse_base(parse_p));
+					size_t n_node = parse_base(parse_p);
+					if(node_t(n_node)==num_node){
+						node_p(n_node)->token->v.number *= -1;
+						return new_node(parse_p, node_p(n_node)->token, num_node);
+					}
+					node_p(head)->childs[0] = n_node;
+				}
 					return head;
 				case '+':
 					parse_readtoken(parse_p);
@@ -1020,13 +1026,22 @@ static  size_t parse_for(struct a2_parse* parse_p){
 
 	head = new_node(parse_p, tp, for_node);
 	tp = parse_attoken(parse_p);
-	if(!tp || tt2tk(tp->tt)!=tk_ide) parse_error("the first operation is must variable at for loop.");
-	_node_set(node_p(head)->childs[0], new_node(parse_p, parse_readtoken(parse_p), var_node));
-	if(match_op(parse_p, ',')==a2_fail) parse_error("you lost \' , \'after for.");
-	_node_set(node_p(head)->childs[1], parse_logic(parse_p));
-	if(match_op(parse_p, ',')==a2_fail) parse_error("you lost \' , \'after for.");
+	if(!tp || tt2tk(tp->tt)!=tk_ide || tt2op(parse_matchtoken(parse_p, 1)->tt)!='=') 
+		parse_error("the first operation is must variable at for loop.");
+	_node_set(node_p(head)->childs[0], parse_exp(parse_p));
+	
+	if(match_op(parse_p, ',')==a2_fail) 
+		parse_error("you lost \' , \'after for.");
+	size_t count_node = parse_exp(parse_p);
+	if( !nt2nf(node_t(count_node)) )
+		parse_error("the for count is must number.");
+	node_p(head)->childs[1] = count_node;
+	
+	if(match_op(parse_p, ',')==a2_fail) 
+		parse_error("you lost \' , \'after for.");
 	tp = parse_attoken(parse_p);
-	if(!tp || tt2tk(tp->tt)!=tk_number) parse_error("the thrid operation is must step number at for loop.");
+	if(!tp || tt2tk(tp->tt)!=tk_number) 
+		parse_error("the thrid operation is must step number at for loop.");
 	_node_set(node_p(head)->childs[2], new_node(parse_p, parse_readtoken(parse_p), num_node));
 	if(match_op(parse_p, ')')==a2_fail) parse_error("you lost \' ) \' after for.");
 

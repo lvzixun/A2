@@ -10,6 +10,7 @@
 #include "a2_closure.h"
 #include "a2_string.h"
 #include <stdio.h>
+#include <string.h>
 
 #define node_p(i) 	  a2_nodep(ir_p->env_p, (i))
 #define node_t(i)	  (node_p(i)->type)
@@ -75,7 +76,13 @@ struct a2_ir{
 	struct a2_env* env_p;
 	struct cls_sym* cls_sym_chain;
 	struct a2_map* global_sym;
+
+	byte op_modle[ir_count];
 };
+
+#define op_modle(op) (assert(op>=0 && op<ir_count), ir_p->op_modle[op])
+
+static void _init_op_modle(struct a2_ir* ir_p);
 
 static inline int _add_arg(struct a2_ir* ir_p);
 static inline int _del_arg(struct a2_ir* ir_p);
@@ -135,6 +142,7 @@ struct a2_ir* a2_ir_open(struct a2_env* env){
 	struct a2_ir* ret = NULL;
 	ret = (struct a2_ir*)malloc(sizeof(*ret));
 	ret->env_p = env;
+	_init_op_modle(ret);
 	new_clssym(ret);
 	ret->global_sym = a2_map_new();
 	return ret;
@@ -149,6 +157,25 @@ void a2_ir_close(struct a2_ir* ir_p){
 	}
 	a2_map_free(ir_p->global_sym);
 	free(ir_p);
+}
+
+static void _init_op_modle(struct a2_ir* ir_p){
+	memset(ir_p->op_modle, ABC_MODE, sizeof(ir_p->op_modle));
+
+	ir_p->op_modle[GETGLOBAL] = ABX_MODE;
+	ir_p->op_modle[GETVALUE] = ABX_MODE;
+	ir_p->op_modle[GETUPVALUE] = ABX_MODE;
+	ir_p->op_modle[CONTAINER] = ABX_MODE;
+	ir_p->op_modle[CLOSURE] = ABX_MODE;
+	ir_p->op_modle[RETURN] = ABX_MODE;
+	ir_p->op_modle[FORLOOP] = ABX_MODE;
+	ir_p->op_modle[FORPREP] = ABX_MODE;
+	ir_p->op_modle[JUMP] = ABX_MODE;
+	ir_p->op_modle[MOVE] = ABX_MODE;
+	ir_p->op_modle[TEST] = ABX_MODE;
+	ir_p->op_modle[LOAD] = ABX_MODE;
+	ir_p->op_modle[LOADNIL] = ABX_MODE;
+	ir_p->op_modle[INC] = ABX_MODE;
 }
 
 static struct cls_sym* cls_sym_new(struct a2_ir* ir_p){
@@ -559,6 +586,7 @@ static inline void a2_ir_break(struct a2_ir* ir_p, size_t root){
 	assert(node_t(root)==break_node);
 	if(curr_fh->len==0)
 		ir_error(root, "the break is error.");
+	// set JUMP 0, 0  1 is break
 	size_t addr = closure_add_ir(curr_cls, ir_abx(JUMP, 0, 0));
 	_for_stack_add(curr_fs, addr);
 }
@@ -567,23 +595,46 @@ static inline void a2_ir_continue(struct a2_ir* ir_p, size_t root){
 	assert(node_t(root)==continue_node);
 	if(curr_fh->len==0)
 		ir_error(root, "th continue is error.");
-	size_t _addr = curr_fh->f_p[curr_fh->len-1];
-	int addr = -1-_addr;
-	closure_add_ir(curr_cls, ir_abx(JUMP, 0, addr));
+	// set JUMP 1, 0  1 is continue
+	size_t addr = closure_add_ir(curr_cls, ir_abx(JUMP, 1, 0));
+	_for_stack_add(curr_fs, addr);
 }
 
 
 static void a2_ir_for(struct a2_ir* ir_p, size_t root){
 	assert(node_t(root)==for_node);
-	assert(node_ct(root, 0)==var_node);
+	assert(node_ct(root, 0)==ass_node);
 	assert(node_ct(root, 2)==num_node);
 	
 	size_t _for_b = curr_fs->len;
 	int _b = curr_arg;
 	new_symbol(ir_p);
 	// add local index
-	struct a2_obj k = node2obj(ir_p, node_p(root)->childs[0]);
-	int idx = add_lsymbol(ir_p, &k, root);
+	struct a2_obj k = node2obj(ir_p, node_cp(root, 0)->childs[0]);
+	add_lsymbol(ir_p, &k, root);
+
+	// generate initial varable
+	int f_idx = a2_ir_ass(ir_p, node_p(root)->childs[0]);
+	assert(f_idx==_b);
+
+	// generate for count 
+	int c_idx = a2_ir_exp(ir_p, node_p(root)->childs[1]);
+	if(c_idx<0){
+		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, c_idx));
+		c_idx = top_arg;
+	}
+	else if(c_idx<_b+1){
+		closure_add_ir(curr_cls, ir_abx(MOVE, add_arg, c_idx));
+		c_idx = top_arg;
+	}
+	assert(c_idx==_b+1);
+
+	// generate for step
+	int s_idx = a2_ir_exp(ir_p, node_p(root)->childs[2]);
+	assert(s_idx<0);
+	closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, s_idx));
+	s_idx = top_arg;
+	assert(s_idx==_b+2);
 
 	//record the for begin addr
 	k = a2_addr2obj(closure_curr_iraddr(curr_cls));
@@ -591,38 +642,33 @@ static void a2_ir_for(struct a2_ir* ir_p, size_t root){
 	assert(b_addr<0);
 	add_forh(-1-b_addr);
 
-	// generate logic ir
-	int logic = a2_ir_exp(ir_p, node_p(root)->childs[1]);
-	// add step number
-	k = node2obj(ir_p, node_p(root)->childs[2]);
-	int step = add_csymbol(ir_p, &k);
-
-	// set test ir
-	if(is_Alimit(logic)){
-		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, logic));
-		logic = top_arg;
-	}
-
-	size_t ti = closure_add_ir(curr_cls, ir_abx(TEST, logic, 0));
+	// for
+	size_t ti = closure_add_ir(curr_cls, ir_abx(FORPREP, _b, 0));
 
 	// generate segment ir
 	_a2_ir_segment(ir_p, node_p(root)->childs[3]);
-	closure_add_ir(curr_cls, ir_abx(INC, idx, step));
-	closure_add_ir(curr_cls, ir_abx(JUMP, 0, b_addr));
+	closure_add_ir(curr_cls, ir_abx(FORLOOP, _b, b_addr));
 	free_symbol(ir_p);
 	set_arg(_b);
 	size_t ir_end = closure_curr_iraddr(curr_cls);
 	struct a2_obj ao = a2_addr2obj(ir_end);
 	int addr = add_csymbol(ir_p, &ao);
+	ao = a2_addr2obj(ir_end-1);
+	int _addr = add_csymbol(ir_p, &ao);
 	
 	//write back ir
 	ir* p = closure_seek_ir(curr_cls, ti);
-	*p = ir_abx(TEST, logic, addr);
+	*p = ir_abx(FORPREP, _b, addr);
 	size_t i;
 	for(i= _for_b; i<curr_fs->len; i++){
 		p = closure_seek_ir(curr_cls, curr_fs->f_p[i]);
 		assert(ir_gop(*p)==JUMP);
-		*p = ir_abx(JUMP, 0, addr);
+		if(ir_ga(*p)==0)  // break
+			*p = ir_abx(JUMP, 0, addr);
+		else if (ir_ga(*p)==1)  // continue
+			*p = ir_abx(JUMP, 1, _addr);
+		else
+			assert(0);
 	}
 	curr_fs->len = _for_b;	
 }
@@ -1248,20 +1294,23 @@ static inline int a2_ir_var(struct a2_ir* ir_p, size_t root, int des){
 
 
 // for test 
-char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
+char* ir2string(struct a2_ir* ir_p, struct a2_closure* cls, ir _ir, char* str, size_t size){
 	static char* _irs[] = {
-		"GETGLOBAL",  // get global variable
-		"SETGLOBAL",  // set global variable 
+		"NIL",
+		"GETGLOBAL",  	// get global variable
+		"SETGLOBAL",  	// set global variable 
 		"GETUPVALUE",	// get upvalue
 		"SETUPVALUE",	// set upvalue
-		"CONTAINER",  // load CONTAINER
+		"CONTAINER", 	// load CONTAINER
 		"SETLIST",  // set list
-		"SETMAP", // set map
+		"SETMAP", 	// set map
 		"GETVALUE", // get value
 		"SETVALUE", // set value
 		"CLOSURE",	// closure
 		"CALL",		// call
-		"RETURN",		// return
+		"RETURN",	// return
+		"FORPREP",	// for prepare modle is abx
+		"FORLOOP",	// for loop modle is abx 
 		"JMP",		// jump
 		"MOVE",		// move
 		"TEST",		// test
@@ -1273,14 +1322,14 @@ char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
 		"SUB",	 	// -
 		"MUL",		// *
 		"DIV", 		// /
-		"OR",			// |
+		"OR",		// |
 		"AND",		// &
 		"BIG",		// >
 		"LITE",		// <
 		"EQU",		// == 
 		"NEQU",		// !=
 		"BIGE",		// >=
-		"LITEE",		// <=
+		"LITEE",	// <=
 		"NOT"		// !
 	};
 
@@ -1289,7 +1338,7 @@ char* ir2string(struct a2_closure* cls, ir _ir, char* str, size_t size){
 
 	char* ops = _irs[op];
 	int a = ir_ga(_ir);
-	switch(ir_gmodle(_ir)){
+	switch(op_modle(op)){
 		case ABC_MODE:{
 			int b = ir_gb(_ir);
 			int c = ir_gc(_ir);
@@ -1328,7 +1377,7 @@ void dump_ir(struct a2_ir* ir_p){
 
 	// only current
 	printf("ir arg=%d\n", curr_clssym->arg_cap);
-	dump_closure(curr_cls);
+	dump_closure(ir_p, curr_cls);
 }
 
 
