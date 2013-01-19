@@ -84,7 +84,8 @@ enum ir_op{
 	CALL,		// call, modle is abc
 	RETURN,		// return, modle is abx
 	FORPREP,	// for prepare modle is abx
-	FORLOOP,	// for loop modle is abx 
+	FORLOOP,	// for loop modle is abx
+	FOREACH,	// foreach modle is abx 
 	JUMP,		// jump, modle is sx
 	MOVE,		// move, modle is abx
 	TEST,		// test, modle is abx
@@ -105,6 +106,7 @@ enum ir_op{
 	BIGE,		// >=, modle is abc
 	LITEE,		// <=, modle is abc
 	NOT,		// !
+	NEG,		//-a  modle is abx
 
 	ir_count	// op count
 };

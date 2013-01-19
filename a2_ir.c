@@ -111,20 +111,23 @@ typedef int (*rv_func)(struct a2_ir* ir_p, int vt, int idx, size_t right_root);
 static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, size_t right_root);
 static int _rv_mass(struct a2_ir* ir_p, int vt, int idx, size_t right_root);
 static int a2_ir_ass(struct a2_ir* ir_p, size_t root);
-static void a2_ir_local(struct a2_ir* ir_p, size_t root);
+static inline void a2_ir_local(struct a2_ir* ir_p, size_t root);
 static int _a2_ir_exp(struct a2_ir* ir_p, size_t root, int des);
 static inline int a2_ir_exp(struct a2_ir* ir_p, size_t root);
 static inline int a2_ir_var(struct a2_ir* ir_p, size_t root, int des);
-static void a2_ir_if(struct a2_ir* ir_p, size_t root);
-static void a2_ir_for(struct a2_ir* ir_p, size_t root);
+static inline void a2_ir_if(struct a2_ir* ir_p, size_t root);
+static inline void a2_ir_for(struct a2_ir* ir_p, size_t root);
+static inline void a2_ir_foreach(struct a2_ir* ir_p, size_t root);
 static inline void a2_ir_break(struct a2_ir* ir_p, size_t root);
 static inline void a2_ir_continue(struct a2_ir* ir_p, size_t root);
-static int a2_ir_function(struct a2_ir* ir_p, size_t root, int des);
-static void a2_ir_return(struct a2_ir* ir_p, size_t root);
-static int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count);
+static inline int a2_ir_function(struct a2_ir* ir_p, size_t root, int des);
+static inline void a2_ir_return(struct a2_ir* ir_p, size_t root);
+static inline int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count);
 static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root);
 static inline int a2_ir_array(struct a2_ir* ir_p, size_t root, int des);
 static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des);
+static inline int a2_ir_neg(struct a2_ir* ir_p, size_t root, int des);
+static inline int a2_ir_not(struct a2_ir* ir_p, size_t root, int des);
 
 typedef void (*_cma_func)(struct a2_ir* ir_p, int ctn, int key, int des);
 typedef int (*_ir_chm_func)(struct a2_ir* ir_p, size_t root, int ldes, int des, _cma_func cma_func);
@@ -163,7 +166,6 @@ static void _init_op_modle(struct a2_ir* ir_p){
 	memset(ir_p->op_modle, ABC_MODE, sizeof(ir_p->op_modle));
 
 	ir_p->op_modle[GETGLOBAL] = ABX_MODE;
-	ir_p->op_modle[GETVALUE] = ABX_MODE;
 	ir_p->op_modle[GETUPVALUE] = ABX_MODE;
 	ir_p->op_modle[CONTAINER] = ABX_MODE;
 	ir_p->op_modle[CLOSURE] = ABX_MODE;
@@ -176,6 +178,9 @@ static void _init_op_modle(struct a2_ir* ir_p){
 	ir_p->op_modle[LOAD] = ABX_MODE;
 	ir_p->op_modle[LOADNIL] = ABX_MODE;
 	ir_p->op_modle[INC] = ABX_MODE;
+	ir_p->op_modle[NEG] = ABX_MODE;
+	ir_p->op_modle[NOT] = ABX_MODE;
+	ir_p->op_modle[FOREACH] = ABX_MODE;
 }
 
 static struct cls_sym* cls_sym_new(struct a2_ir* ir_p){
@@ -266,6 +271,9 @@ static inline void _a2_ir_exec(struct a2_ir* ir_p, struct cls_sym* cls_sp, size_
 			break;
 		case for_node:	// for
 			a2_ir_for(ir_p, root);
+			break;
+		case foreach_node:	// foreach
+			a2_ir_foreach(ir_p, root);
 			break;
 		case break_node: // break
 			a2_ir_break(ir_p, root);
@@ -440,7 +448,7 @@ static inline void _a2_ir_segment(struct a2_ir* ir_p, size_t root){
 	}
 }
 
-static int a2_ir_function(struct a2_ir* ir_p, size_t root, int des){
+static inline int a2_ir_function(struct a2_ir* ir_p, size_t root, int des){
 	assert(node_t(root)==func_node);
 
 	size_t arg = node_p(root)->childs[0];
@@ -510,7 +518,7 @@ ARG_FUNC:
 	return des;
 }
 
-static int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count){
+static inline int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count){
 	assert(node_t(root)==cfunc_node);
 	assert(node_p(root)->childs[0]);
 	assert(ret_count>0 && ret_count<C_MAX);
@@ -601,7 +609,70 @@ static inline void a2_ir_continue(struct a2_ir* ir_p, size_t root){
 }
 
 
-static void a2_ir_for(struct a2_ir* ir_p, size_t root){
+static inline void a2_ir_foreach(struct a2_ir* ir_p, size_t root){
+	assert(node_t(root)==foreach_node);
+	assert(node_ct(root, 0));
+	assert(node_ct(root, 1));
+	assert(node_ct(root, 2));
+	assert(node_ct(root, 3));
+
+	size_t _for_b = curr_fs->len;
+	int _b = curr_arg;
+	new_symbol(ir_p);
+	size_t k_node = node_p(root)->childs[0];
+	size_t v_node = node_p(root)->childs[1];
+	size_t c_node = node_p(root)->childs[2];
+	size_t s_node = node_p(root)->childs[3];
+
+	// prepare key , value , container 
+	struct a2_obj l_obj = node2obj(ir_p, k_node);
+	int _k = add_lsymbol(ir_p, &l_obj, root);
+	assert(_k==_b);
+
+	l_obj = node2obj(ir_p, v_node);
+	int _v = add_lsymbol(ir_p, &l_obj, root);
+	assert(_v==_b+1);
+
+	int _c = _a2_ir_exp(ir_p, c_node, add_arg);
+	assert(_c>=0);
+	if( _c<(_b+2) )
+		closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _c));
+
+	// generate foreach ir
+	size_t fb = closure_add_ir(curr_cls, ir_abx(FOREACH, _b, 0));
+	l_obj = a2_addr2obj(fb);
+	int b_addr = add_csymbol(ir_p, &l_obj);
+	assert(b_addr<0);
+	add_forh(-1-b_addr);
+
+	// generate foreach segment
+	_a2_ir_segment(ir_p, s_node);
+	closure_add_ir(curr_cls, ir_abx(JUMP, 0, b_addr));
+
+	free_symbol(ir_p);
+	set_arg(_b);
+	size_t ir_end = closure_curr_iraddr(curr_cls);
+	struct a2_obj ao = a2_addr2obj(ir_end);
+	int addr = add_csymbol(ir_p, &ao);
+
+	//write back ir
+	ir* p = closure_seek_ir(curr_cls, fb);
+	*p = ir_abx(FOREACH, _b, addr);
+	size_t i;
+	for(i= _for_b; i<curr_fs->len; i++){
+		p = closure_seek_ir(curr_cls, curr_fs->f_p[i]);
+		assert(ir_gop(*p)==JUMP);
+		if(ir_ga(*p)==0)  // break
+			*p = ir_abx(JUMP, 0, addr);
+		else if (ir_ga(*p)==1)  // continue
+			*p = ir_abx(JUMP, 1, b_addr);
+		else
+			assert(0);
+	}
+	curr_fs->len = _for_b;	
+}
+
+static inline void a2_ir_for(struct a2_ir* ir_p, size_t root){
 	assert(node_t(root)==for_node);
 	assert(node_ct(root, 0)==ass_node);
 	assert(node_ct(root, 2)==num_node);
@@ -673,7 +744,7 @@ static void a2_ir_for(struct a2_ir* ir_p, size_t root){
 	curr_fs->len = _for_b;	
 }
 
-static void a2_ir_if(struct a2_ir* ir_p, size_t root){
+static inline void a2_ir_if(struct a2_ir* ir_p, size_t root){
 	assert(node_t(root)==if_node);
 	size_t logic_node = node_p(root)->childs[0];
 	size_t _if_node = node_p(root)->childs[1];
@@ -719,7 +790,7 @@ static void a2_ir_if(struct a2_ir* ir_p, size_t root){
 }
 
 
-static void a2_ir_local(struct a2_ir* ir_p, size_t root){
+static inline  void a2_ir_local(struct a2_ir* ir_p, size_t root){
 	assert(node_t(root)==local_node);
 	size_t node, _node;
 	node = _node = node_p(root)->childs[0];
@@ -998,6 +1069,8 @@ static int _a2_ir_exp(struct a2_ir* ir_p, size_t root, int des){
 			goto OP_IR;
 		case div_node:
 			op = DIV;
+		case strcat_node:
+			op = CAT;
 OP_IR:
 			_b = curr_arg;
 			l_idx = a2_ir_exp(ir_p, node_p(root)->childs[0]); // left op value
@@ -1019,7 +1092,9 @@ OP_IR:
 				set_arg(_b);
 				return des;
 			}
-
+		// neg -a
+		case neg_node:
+			return a2_ir_neg(ir_p, root, (des<0)?(add_arg):(des));
 		// varable 	
 		case var_node:
 			return a2_ir_var(ir_p, root, (des<0)?(add_arg):(des));
@@ -1071,6 +1146,8 @@ CHM_EXP:
 		case map_node:
 			return a2_ir_map(ir_p, root, (des<0)?(add_arg):(des));
 		 // logic operation
+		case not_node:
+			return a2_ir_not(ir_p, root, (des<0)?(add_arg):(des));
 		case or_node:
 			op = OR;
 			goto OP_IR;
@@ -1100,6 +1177,29 @@ CHM_EXP:
 	}
 	assert(0);
 }
+
+// parse not
+static inline int a2_ir_not(struct a2_ir* ir_p, size_t root, int des){
+	assert(node_t(root)==not_node);
+	assert(node_p(root)->childs[0]);
+	assert(des>=0);
+
+	int not_v = _a2_ir_exp(ir_p, node_p(root)->childs[0], des);
+	closure_add_ir(curr_cls, ir_abx(NOT, des, not_v));
+	return des;
+}
+
+// parse neg
+static inline int a2_ir_neg(struct a2_ir* ir_p, size_t root, int des){
+	assert(node_t(root)==neg_node);
+	assert(node_p(root)->childs[0]);
+	assert(des>=0);
+
+	int neg_v = _a2_ir_exp(ir_p, node_p(root)->childs[0], des);
+	closure_add_ir(curr_cls, ir_abx(NEG, des, neg_v));
+	return des;
+}
+
 
 // parse map
 static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des){
@@ -1310,7 +1410,8 @@ char* ir2string(struct a2_ir* ir_p, struct a2_closure* cls, ir _ir, char* str, s
 		"CALL",		// call
 		"RETURN",	// return
 		"FORPREP",	// for prepare modle is abx
-		"FORLOOP",	// for loop modle is abx 
+		"FORLOOP",	// for loop modle is abx
+		"FOREACH",  // foreach modle is abx 
 		"JMP",		// jump
 		"MOVE",		// move
 		"TEST",		// test
@@ -1330,7 +1431,8 @@ char* ir2string(struct a2_ir* ir_p, struct a2_closure* cls, ir _ir, char* str, s
 		"NEQU",		// !=
 		"BIGE",		// >=
 		"LITEE",	// <=
-		"NOT"		// !
+		"NOT",		// !
+		"NEG"
 	};
 
 	int op = ir_gop(_ir);

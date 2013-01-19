@@ -490,6 +490,9 @@ static  size_t _parse_operation(struct a2_parse* parse_p, parse_func pfunc){
 		case '=':{
 			// check left vaule
 			size_t texp1 = exp1;
+			if(node_t(texp1)==comma_node)
+				texp1 = node_p(exp1)->childs[0];
+			
 			for(;texp1;texp1=node_p(texp1)->next){
 				if( nt2ne(node_p(texp1)->type)!=ne_left )
 					parse_error("the expression is can not left value");
@@ -1060,18 +1063,31 @@ static  size_t parse_foreach(struct a2_parse* parse_p){
 	if(match_op(parse_p, '(')) 	parse_error("you lost \' ( \' after for.");
 
 	head = new_node(parse_p, tp, foreach_node);
-	_node_set(node_p(head)->childs[0], parse_expression(parse_p));
+	size_t k = parse_deep(parse_p);
+	if(node_t(k)!=var_node)
+		parse_error("the key is must variable at foreach.");
+	if(match_op(parse_p, ','))
+		parse_error("you lost \', \' at foreach.");
+	size_t v = parse_deep(parse_p);
+	if(node_t(v)!=var_node)
+		parse_error("the value is must variable at foreach.");
+
+	node_p(head)->childs[0] = k;
+	node_p(head)->childs[1] = v;
 
 	tp = parse_readtoken(parse_p);
 	if(!tp || a2_ktisin(parse_p->env_p, tp)==a2_fail)
 		parse_error("you lost \' in \'.");
-	_node_set(node_p(head)->childs[1], parse_exp(parse_p));
+	size_t c_node = parse_exp(parse_p);
+	if(node_t(c_node)!=map_node && node_t(c_node)!=array_node && nt2nr(node_t(c_node))!=nr_read)
+		parse_error("the variable is unexpected after in at foreach.");
+	node_p(head)->childs[2]=c_node;
 
 	if(match_op(parse_p, ')')) 	parse_error("you lost \' ) \' after for.");
 
 	tp = parse_attoken(parse_p);
 	if(!tp || tt2op(tp->tt)!='{') parse_error("you lost \' { \' after for expression.");
-    _node_set(node_p(head)->childs[2], parse_lsegment(parse_p));
+    _node_set(node_p(head)->childs[3], parse_lsegment(parse_p));
 
 	return head;
 }

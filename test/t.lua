@@ -1,3 +1,5 @@
-for i=1,10 do
-    continue 
+
+
+for i,v in ipairs(table_name) do
+	print(i,v)
 end

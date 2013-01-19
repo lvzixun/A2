@@ -23,6 +23,11 @@ enum {
 	nf_count = 1
 };
 
+enum {
+	nb_nil = 0,
+	nb_
+};
+
 #define nt_lmask  ((ne_left)<<8)
 #define nt2ne(nt)	(((nt)>>8)&(0x01))
 
