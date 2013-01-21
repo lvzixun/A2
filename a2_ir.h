@@ -118,7 +118,7 @@ struct a2_ir* a2_ir_open(struct a2_env* env);
 void a2_ir_close(struct a2_ir* ir_p);
 void a2_ir_clear(struct a2_ir* ir_p);
 inline void a2_ir_exec(struct a2_ir* ir_p, size_t root);
-
+inline struct a2_closure* a2_ir_exend(struct a2_ir* ir_p);
 
 // for test
 char* ir2string(struct a2_ir* ir_p, struct a2_closure* cls, ir _ir, char* str, size_t size);

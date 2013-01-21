@@ -15,6 +15,9 @@ struct a2_env{
 	struct a2_parse* parse_p;
 	struct a2_ir* ir_p;
 
+	// global table
+	struct a2_map* g_var;
+
 	// private forge a2_obj
 	struct a2_obj _forge_obj;
 	struct a2_gcobj* _forge_gcobj;			
@@ -24,6 +27,7 @@ static struct a2_gcobj* _a2_env_addstrobj(struct a2_env* env_p, char* a2_s, int 
 struct a2_env* a2_env_new(){
 	struct a2_env* ret = (struct a2_env*)malloc(sizeof(*ret));
 	ret->g_str = a2_map_new();
+	ret->g_var = a2_map_new();
 	ret->lex_p = a2_lex_open(ret);
 	ret->parse_p = a2_parse_open(ret);
 	ret->gc_p = a2_gc_new();
@@ -35,6 +39,7 @@ struct a2_env* a2_env_new(){
 void a2_env_free(struct a2_env* env_p){
 	assert(env_p);
 	a2_map_free(env_p->g_str);
+	a2_map_free(env_p->g_var);
 	a2_lex_close(env_p->lex_p);
 	a2_parse_close(env_p->parse_p);
 	a2_gc_free(env_p->gc_p);
@@ -89,8 +94,16 @@ inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str){
 	return ret;
 }
 
+inline struct a2_obj* a2_getgloval(struct a2_env* env_p, struct a2_obj* k){
+	return a2_map_query(env_p->g_var, k);
+}
+
 inline void a2_irexec(struct a2_env* env_p, size_t root){
 	a2_ir_exec(env_p->ir_p, root);
+}
+
+inline struct a2_closure* a2_irexend(struct a2_env* env_p){
+	return a2_ir_exend(env_p->ir_p);
 }
 
 inline struct a2_node* a2_nodep(struct a2_env* env_p, size_t idx){

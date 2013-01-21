@@ -38,7 +38,7 @@ static inline struct a2_token* parse_matchtoken(struct a2_parse* parse_p, size_t
 
 
 typedef size_t(*parse_func)(struct a2_parse*);
-static void parse_gsegment(struct a2_parse* parse_p);
+static struct a2_closure* parse_gsegment(struct a2_parse* parse_p);
 static size_t parse_lsegment(struct a2_parse* parse_p);
 static   size_t _parse_expression(struct a2_parse* parse_p, parse_func pfunc);
 static inline size_t parse_expression(struct a2_parse* parse_p);
@@ -88,7 +88,7 @@ void a2_parse_clear(struct a2_parse* parse_p){
 }
 
 // parse token chain
-void a2_parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t len){
+struct a2_closure* a2_parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t len){
 	assert(parse_p);
 	assert(token_chain);
 	assert(len);
@@ -97,7 +97,7 @@ void a2_parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t
 	parse_p->token_chain = token_chain;
 	parse_p->t_idx = 0;
 
-	parse_gsegment(parse_p);
+	return parse_gsegment(parse_p);
 }
 
 
@@ -212,7 +212,7 @@ ERROR_TOKEN:{
 }
 
 // parse global segment
-static void parse_gsegment(struct a2_parse* parse_p){
+static struct a2_closure* parse_gsegment(struct a2_parse* parse_p){
 	for( ; !is_end; ){
 		if(tt2tk(cur_token.tt)==tk_end){
 			parse_readtoken(parse_p);
@@ -220,11 +220,16 @@ static void parse_gsegment(struct a2_parse* parse_p){
 		}
 		size_t root = parse_segcontent(parse_p);
 		// TODO: IR generation
-		a2_irexec(parse_p->env_p, root);
+		printf("----parse----\n");
+		dump_node(parse_p, root);
+		printf("----end------\n");
 		// for test 
+		a2_irexec(parse_p->env_p, root);
+		printf("---exec-----\n");
 		// clear node buf
 		clear_node(parse_p);
 	}
+	return a2_irexend(parse_p->env_p);
 }
 
 // parse local segment
@@ -917,6 +922,8 @@ static  size_t parse_function(struct a2_parse* parse_p){
 		parse_error("the function's grammar is error, you lost \'(\' after \'function\'.");
 	_node_set(node_p(head)->childs[0], parse_args(parse_p));
 	_node_set(node_p(head)->childs[1], parse_lsegment(parse_p));
+	if(!(node_p(head)->childs[1]))
+		parse_error("the function segment is null.");
 	return head;
 }
 
@@ -1164,11 +1171,6 @@ static inline size_t _parse_gsegment(struct a2_parse* parse_p){
 		}
 
 		size_t root = parse_segcontent(parse_p);
-		printf("----parse----\n");
-		dump_node(parse_p, root);
-		printf("----end------\n");
-		a2_irexec(parse_p->env_p, root);
-		printf("---exec-----\n");
 		if(!head)
 			head = back = root;
 		else{
@@ -1188,6 +1190,7 @@ size_t parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t 
 	parse_p->token_chain = token_chain;
 	parse_p->t_idx = 0;
 
-	return _parse_gsegment(parse_p);
+ 	_parse_gsegment(parse_p);
+ 	return 0;
 }
 

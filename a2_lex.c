@@ -199,7 +199,7 @@ static void _init_lex(struct a2_lex* lex_p){
 	while(_key[i]){
 		size_t idx = _lex_hash(_key[i]);
 		lex_p->lex_str2hash[i] = (byte)idx;
-		a2_assert(!lex_p->lex_map[idx]);
+		assert(!lex_p->lex_map[idx]);
 		lex_p->lex_map[idx] = _key[i];
 		i++;
 	}

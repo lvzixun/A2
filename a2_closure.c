@@ -21,6 +21,7 @@ struct a2_closure{
 	int params;
 	// intermediate representation chain
 	ir* ir_chain;
+	size_t* lines;
 	size_t len;
 	size_t size;
 	
@@ -36,7 +37,6 @@ struct a2_closure{
 	// arg list
 	struct {
 		struct a2_obj* arg_p;
-		int cap;
 		int size;
 	}arg;
 
@@ -60,8 +60,11 @@ struct a2_closure* a2_closure_new(){
 	// init ir chain
 	ret->params = 0;
 	ret->ir_chain = (ir*)malloc(sizeof(ir)*DEF_IR_SIZE);
+	ret->lines = (size_t*)malloc(sizeof(size_t)*DEF_IR_SIZE);
 	ret->size = DEF_IR_SIZE;
 	ret->len = 0;
+	ret->arg.arg_p = NULL;
+	ret->arg.size = 0;
 	// init constent stack
 	_obj_stack_init(&(ret->c_stack));
 	// init cls stack
@@ -85,12 +88,50 @@ void a2_closure_free(struct a2_closure* cls){
 	_obj_stack_destory(&(cls->ctn_stack));
 	// TODO: upvalue obj free
 	free(cls->upvalue.upvalue_chain);
+	free(cls->arg.arg_p);
+	free(cls->lines);
 	free(cls);
+}
+
+size_t a2_closure_line(struct a2_closure* cls, size_t pc){
+	assert(pc<cls->len);
+	return cls->lines[pc];	
+}
+
+inline void a2_closure_setarg(struct a2_closure* cls, int args){
+	assert(cls->arg.arg_p==NULL && cls->arg.size==0);
+	cls->arg.size = args;
+	cls->arg.arg_p = (struct a2_obj*)malloc(sizeof(struct a2_obj)*args);
 }
 
 inline void a2_closure_setparams(struct a2_closure* cls, int params){
 	assert(cls);
 	cls->params = params;
+}
+
+inline ir a2_closure_ir(struct a2_closure* cls, size_t idx){
+	assert(idx<cls->len);
+	return cls->ir_chain[idx];
+}
+
+inline struct a2_obj* a2_closure_arg(struct a2_closure* cls, int idx){
+	assert(idx>=0 && idx<cls->arg.size);
+	return &(cls->arg.arg_p[idx]);
+}
+
+inline struct a2_obj* a2_closure_const(struct a2_closure* cls, int idx){
+	assert(idx<0 && (-1-idx)<cls->c_stack.top);
+	return &(cls->c_stack.stk_p[-1-idx]);
+}
+
+inline struct a2_obj* a2_closure_container(struct a2_closure* cls, int idx){
+	assert(idx>=0 && idx<cls->ctn_stack.top);
+	return &(cls->ctn_stack.stk_p[idx]);
+}
+
+inline struct a2_obj* a2_closure_cls(struct a2_closure* cls, int idx){
+	assert(idx>=0 && idx<cls->cls_stack.top);
+	return &(cls->cls_stack.stk_p[idx]);
 }
 
 static inline void _obj_stack_init(struct obj_stack* os_p){
@@ -116,13 +157,15 @@ static inline int _obj_stack_add(struct obj_stack* os_p, struct a2_obj* obj_p){
 }
 
 // IR OP
-inline size_t closure_add_ir(struct a2_closure* cls, ir i){
+inline size_t closure_add_ir(struct a2_closure* cls, ir i, size_t line){
 	assert(cls);
 	// reszie
 	if(cls->len>=cls->size){
 		cls->size *=2;
 		cls->ir_chain = (ir*)realloc(cls->ir_chain, cls->size*sizeof(ir));
+		cls->lines = (size_t*)realloc(cls->lines, cls->size*sizeof(size_t));
 	}
+	cls->lines[cls->len] = line;
 	cls->ir_chain[cls->len] = i;
 	return cls->len++;
 }
@@ -193,7 +236,7 @@ void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls){
 		(cls->params<0)?(-1-cls->params):(cls->params), __cp, 
 		cls->upvalue.len, cls->c_stack.top, cls);
 	for(i=0;i<cls->len; i++){
-		printf("[%d]   %s\n", i, ir2string(ir_p, cls, cls->ir_chain[i], buf, sizeof(buf)));
+		printf("<%lu>   [%d]   %s\n", cls->lines[i],  i, ir2string(ir_p, cls, cls->ir_chain[i], buf, sizeof(buf)));
 	}
 
 	

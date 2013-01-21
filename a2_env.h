@@ -9,11 +9,13 @@ struct a2_token;
 struct a2_env* a2_env_new();
 void a2_env_free(struct a2_env* env_p);
 
+inline struct a2_obj* a2_getgloval(struct a2_env* env_p, struct a2_obj* k);
 inline struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s);
 inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str);
 
 // ir operation function
 inline void a2_irexec(struct a2_env* env_p, size_t root);
+inline struct a2_closure* a2_irexend(struct a2_env* env_p);
 // parse operation function
 inline struct a2_node* a2_nodep(struct a2_env* env_p, size_t idx);
 // add gc object

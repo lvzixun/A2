@@ -7,6 +7,7 @@
 #undef malloc
 #undef free
 #undef calloc
+#undef realloc
 
 typedef unsigned char byte;
 typedef byte uchar;
@@ -16,10 +17,22 @@ typedef uint32_t uint32;
 typedef uint16_t uint16;
 typedef double	 a2_number;
 
-#define a2_assert assert
-#define malloc a2_malloc
-#define free   a2_free
-#define calloc a2_calloc
+#define _DEBUG_
+
+#ifdef _DEBUG_
+	#define malloc(size) a2_malloc(size, __FILE__, __LINE__)
+	#define free(p)   a2_free(p)
+	#define realloc  a2_realloc
+	#define calloc(c, size) a2_calloc(c, size, __FILE__, __LINE__)
+#else
+	#undef assert
+	#define assert(...)
+	#define malloc a2_malloc
+	#define free  a2_free
+	#define realloc a2_realloc
+	#define calloc a2_calloc
+#endif
+
 #define atonum(s) (a2_number)atof(s)
 
 #define a2_true 0
@@ -27,8 +40,9 @@ typedef double	 a2_number;
 
 #define check_null(p, r) do{if((p)==NULL) return (r);}while(0)
 
-void* a2_malloc(size_t size);
+void* a2_realloc(void* p, size_t size);
+void* a2_malloc(size_t size,  char* file, int line);
 void  a2_free(void* p);
-void* a2_calloc(size_t count, size_t size);
+void* a2_calloc(size_t count, size_t size, char* file, int line);
 void mem_print();
 #endif
