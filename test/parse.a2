@@ -25,30 +25,31 @@ array = [1, 2, [3, 4],
 	}
 ]
 
-for(i=0, i<100, i = i+1){
+for(i=0, 100, 1){
 	print('index = '..i)
 }
 
 if(1>2 & 2>1){
-	a
-}else if(4>5){
-	b
-}else if(7==8)
-	c
+	a = 3
+}else if(4>5)
+	b = 4
+else if(7==8)
+	c = 5
 else if(6<=7)
-	d
+	d = 6
 else if(8>=6)
-	f
+	f = 7
 else if(a==b)
-	g
+	g = 8
 else if(true)
-	h
+	h = 9
 else if(false)
-	i
+	i = 10
 else
-	j
+	j = 11
 
-foreach(k, v in table)
-	h
+foreach(k, v in table){
+	h = 12
+}
 	
 main()

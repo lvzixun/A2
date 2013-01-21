@@ -1108,7 +1108,12 @@ static  size_t parse_if(struct a2_parse* parse_p){
 		_node_set(node_p(head)->childs[1], parse_segcontent(parse_p));
 
 	if(!node_p(head)->childs[1]) parse_error("the if must set segment.");
+	// match tj_end
+	_tp = parse_attoken(parse_p);
+	if(_tp && tt2tk(_tp->tt)==tk_end) parse_readtoken(parse_p);
+
 	_node_set(node_p(head)->childs[2], parse_elif(parse_p));
+
 	return head;
 }
 

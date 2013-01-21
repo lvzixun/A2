@@ -20,6 +20,8 @@
 #define ir_error(i, s)  do{a2_error("[ir error@line: %lu]: %s\n",node_p(i)->token->line,s);}while(0)
 #define curr_sym (ir_p->cls_sym_chain->sym.sym_chain[ir_p->cls_sym_chain->sym.cap-1])
 #define curr_csym (ir_p->cls_sym_chain->sym.sym_chain[0])
+#define curr_gsym  (ir_p->cls_sym_chain->sym.sym_chain[1])
+
 #define curr_clssym (ir_p->cls_sym_chain)
 #define curr_cls  a2_gcobj2closure(curr_clssym->cls_obj.value.obj)
 #define curr_ocls(co) a2_gcobj2closure((co).value.obj)
@@ -75,7 +77,6 @@ struct cls_sym{
 struct a2_ir{
 	struct a2_env* env_p;
 	struct cls_sym* cls_sym_chain;
-	struct a2_map* global_sym;
 
 	byte op_modle[ir_count];
 };
@@ -147,7 +148,6 @@ struct a2_ir* a2_ir_open(struct a2_env* env){
 	ret->env_p = env;
 	_init_op_modle(ret);
 	new_clssym(ret);
-	ret->global_sym = a2_map_new();
 	return ret;
 }
 
@@ -158,7 +158,7 @@ void a2_ir_close(struct a2_ir* ir_p){
 		cls_sym_free(ir_p->cls_sym_chain);
 		ir_p->cls_sym_chain = np;
 	}
-	a2_map_free(ir_p->global_sym);
+
 	free(ir_p);
 }
 
@@ -244,7 +244,7 @@ static inline void _for_stack_destroy(struct for_stack* fs){
 static inline void _for_stack_add(struct for_stack* fs, size_t addr){
 	if(fs->len>=fs->size){
 		fs->size *=2;
-		fs->f_p = (size_t*)realloc(fs->f_p, fs->size);
+		fs->f_p = (size_t*)realloc(fs->f_p, fs->size*sizeof(size_t));
 	}
 	fs->f_p[fs->len++] = addr;
 }
@@ -302,7 +302,7 @@ static inline void new_symbol(struct a2_ir* ir_p){
 	if(cls_sp->sym.cap>=cls_sp->sym.size){
 		cls_sp->sym.size *=2;
 		cls_sp->sym.sym_chain = (struct a2_map**)realloc(cls_sp->sym.sym_chain,
-			 cls_sp->sym.size);
+			 cls_sp->sym.size*sizeof(struct a2_map*));
 	}
 	cls_sp->sym.sym_chain[(cls_sp->sym.cap)++] = a2_map_new();
 }
@@ -323,6 +323,7 @@ static inline void new_clssym(struct a2_ir* ir_p){
 	_for_stack_init(&(np->fs));
 	_for_stack_init(&(np->fh));
 	new_symbol(ir_p); // const symbol
+	new_symbol(ir_p); // global symbol
 	new_symbol(ir_p); // local symbol
 }
 
@@ -380,11 +381,12 @@ static inline int add_lsymbol(struct a2_ir* ir_p, struct a2_obj* k, size_t root)
 static inline int add_gsymbol(struct a2_ir* ir_p, struct a2_obj* k){
 	assert(k->type==A2_TSTRING);
 	int idx = add_csymbol(ir_p, k);
-	struct a2_obj v = a2_uinteger2obj(sym_v(var_global, idx));
+	assert(idx<0);
+	struct a2_obj v = a2_uinteger2obj(sym_v(var_global, -1-idx));
 	struct a2_kv kv = {
 		k, &v
 	};
-	assert(a2_map_add(ir_p->global_sym, &kv)==a2_true);
+	assert(a2_map_add(curr_gsym, &kv)==a2_true);
 	return idx;
 }
 
@@ -395,7 +397,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 	int i;
 	struct a2_obj* vp = NULL;
 	// loop sym at cur_cls
-	for(i=curr_clssym->sym.cap-1; i>=1; i--){
+	for(i=curr_clssym->sym.cap-1; i>=2; i--){
 		vp = a2_map_query(curr_clssym->sym.sym_chain[i], k);
 		if(vp){
 			assert(vp->type==_A2_TUINTEGER);
@@ -408,7 +410,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 	struct cls_sym* p = curr_clssym->next;
 	while(p){
 		struct cls_sym* np = p->next;
-		for(i=p->sym.cap-1; i>=1; i--){
+		for(i=p->sym.cap-1; i>=2; i--){
 			vp = a2_map_query(p->sym.sym_chain[i], k);
 			if(vp){
 				assert(vp->type==_A2_TUINTEGER);
@@ -430,11 +432,11 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 	}
 
 	//  not find varable at up cls_sym , so find it at global sym
-	vp = a2_map_query(ir_p->global_sym, k);
+	vp = a2_map_query(curr_gsym, k);
 	if(vp){
 		*vt_p = var_global;
 		assert(vp->type==_A2_TUINTEGER);
-		return vp->value.uinteger;
+		return -1-(vp->value.uinteger);
 	}
 
 	// not find it

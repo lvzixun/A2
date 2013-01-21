@@ -1,8 +1,12 @@
+function func(){
+	function _func(a, b){
+		return function kk(){
+			return 1
+		}
+	}
 
-foreach(k, v in map){
-	local a = 3
-	continue
-	local b = 4
-	break
-	local c = 5
+	_func(1, 2)
+	return function r_func(b, c, d){
+		return a+b+c+d
+	}
 }
