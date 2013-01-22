@@ -85,13 +85,13 @@ enum ir_op{
 	RETURN,		// return, modle is abx
 	FORPREP,	// for prepare modle is abx
 	FORLOOP,	// for loop modle is abx
-	FOREACH,	// foreach modle is abx 
+	FOREACHPREP,// foreach  prep modle is abx 
+	FOREACHLOOP,// foreach loop modle is abx
 	JUMP,		// jump, modle is sx
 	MOVE,		// move, modle is abx
 	TEST,		// test, modle is abx
 	LOAD,	 	// load const value to register, modle is abx
 	LOADNIL,	// reset regs is nil, modle is abx
-	INC,		// +=, modle is abx
 	CAT,		// .., 
 	ADD,	 	// +, modle is abc
 	SUB,	 	// -, modle is abc

@@ -28,6 +28,14 @@ void a2_array_free(struct a2_array* array_p){
 	free(array_p);
 }
 
+inline struct a2_obj* a2_array_next(struct a2_array* array_p, struct a2_obj* k){
+	assert(k && k->type==A2_TNUMBER);
+	if( (size_t)(k->value.number)>=array_p->len )
+		return NULL;
+	struct a2_obj* v = &(array_p->list[(size_t)(k->value.number)]);
+	k->value.number = (a2_number)((size_t)(k->value.number) + 1);
+	return v; 
+}
 
 inline struct a2_obj* a2_array_add(struct a2_array* array_p, struct a2_obj* obj){
 	assert(obj);
@@ -41,3 +49,12 @@ inline struct a2_obj* a2_array_add(struct a2_array* array_p, struct a2_obj* obj)
 	return obj;
 }
 
+
+struct a2_obj* a2_array_get(struct a2_array* array_p, struct a2_obj* k){
+	assert(k->type==A2_TNUMBER);
+	size_t idx=(size_t)(k->value.number);  
+	if(idx<array_p->len)
+		return NULL;
+	
+	return &(array_p->list[idx]);
+}

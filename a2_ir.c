@@ -193,10 +193,10 @@ static void _init_op_modle(struct a2_ir* ir_p){
 	ir_p->op_modle[TEST] = ABX_MODE;
 	ir_p->op_modle[LOAD] = ABX_MODE;
 	ir_p->op_modle[LOADNIL] = ABX_MODE;
-	ir_p->op_modle[INC] = ABX_MODE;
 	ir_p->op_modle[NEG] = ABX_MODE;
 	ir_p->op_modle[NOT] = ABX_MODE;
-	ir_p->op_modle[FOREACH] = ABX_MODE;
+	ir_p->op_modle[FOREACHPREP] = ABX_MODE;
+	ir_p->op_modle[FOREACHLOOP] = ABX_MODE;
 }
 
 static struct cls_sym* cls_sym_new(struct a2_ir* ir_p){
@@ -665,25 +665,27 @@ static inline void a2_ir_foreach(struct a2_ir* ir_p, size_t root){
 		closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _c), node_line(root));
 
 	// generate foreach ir
-	size_t fb = closure_add_ir(curr_cls, ir_abx(FOREACH, _b, 0), node_line(root));
-	l_obj = a2_addr2obj(fb);
+	size_t fb = closure_add_ir(curr_cls, ir_abx(FOREACHPREP, _b, 0), node_line(root));
+	l_obj = a2_addr2obj(closure_curr_iraddr(curr_cls));
 	int b_addr = add_csymbol(ir_p, &l_obj);
 	assert(b_addr<0);
 	add_forh(-1-b_addr);
 
 	// generate foreach segment
 	_a2_ir_segment(ir_p, s_node);
-	closure_add_ir(curr_cls, ir_abx(JUMP, 0, b_addr), curr_line);
+	closure_add_ir(curr_cls, ir_abx(FOREACHLOOP, _b, b_addr), curr_line);
 
 	free_symbol(ir_p);
 	set_arg(_b);
 	size_t ir_end = closure_curr_iraddr(curr_cls);
 	struct a2_obj ao = a2_addr2obj(ir_end);
 	int addr = add_csymbol(ir_p, &ao);
+	ao = a2_addr2obj(ir_end-1);
+	int _addr = add_csymbol(ir_p, &ao);
 
 	//write back ir
 	ir* p = closure_seek_ir(curr_cls, fb);
-	*p = ir_abx(FOREACH, _b, addr);
+	*p = ir_abx(FOREACHPREP, _b, addr);
 	size_t i;
 	for(i= _for_b; i<curr_fs->len; i++){
 		p = closure_seek_ir(curr_cls, curr_fs->f_p[i]);
@@ -691,7 +693,7 @@ static inline void a2_ir_foreach(struct a2_ir* ir_p, size_t root){
 		if(ir_ga(*p)==0)  // break
 			*p = ir_abx(JUMP, 0, addr);
 		else if (ir_ga(*p)==1)  // continue
-			*p = ir_abx(JUMP, 1, b_addr);
+			*p = ir_abx(JUMP, 1, _addr);
 		else
 			assert(0);
 	}
@@ -733,14 +735,14 @@ static inline void a2_ir_for(struct a2_ir* ir_p, size_t root){
 	s_idx = top_arg;
 	assert(s_idx==_b+2);
 
+	// for
+	size_t ti = closure_add_ir(curr_cls, ir_abx(FORPREP, _b, 0), node_line(root));
+
 	//record the for begin addr
 	k = a2_addr2obj(closure_curr_iraddr(curr_cls));
 	int b_addr = add_csymbol(ir_p, &k);
 	assert(b_addr<0);
 	add_forh(-1-b_addr);
-
-	// for
-	size_t ti = closure_add_ir(curr_cls, ir_abx(FORPREP, _b, 0), node_line(root));
 
 	// generate segment ir
 	_a2_ir_segment(ir_p, node_p(root)->childs[3]);
@@ -1437,13 +1439,13 @@ char* ir2string(struct a2_ir* ir_p, struct a2_closure* cls, ir _ir, char* str, s
 		"RETURN",	// return
 		"FORPREP",	// for prepare modle is abx
 		"FORLOOP",	// for loop modle is abx
-		"FOREACH",  // foreach modle is abx 
+		"FOREACHPREP",// foreach  prep modle is abx 
+		"FOREACHLOOP",// foreach loop modle is abx
 		"JMP",		// jump
 		"MOVE",		// move
 		"TEST",		// test
 		"LOAD",	 	// load const value to register
 		"LOADNIL",	// reset regs is nil
-		"INC",		// +=
 		"CAT",		// ..
 		"ADD",	 	// +
 		"SUB",	 	// -

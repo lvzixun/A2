@@ -87,7 +87,7 @@ static void map_resize(struct a2_map* map_p){
 	map_p->slot_p = new_slot;
 }
 
-static struct a2_obj* _a2_map_query(struct a2_map* map_p, struct a2_obj* key, struct a2_obj** _key){
+static struct a2_obj* _a2_map_query(struct a2_map* map_p, struct a2_obj* key, struct a2_obj** _key, size_t* slot){
 	size_t hash_full, hash;
 
 	hash_full = calc_hash( a2_obj_bytes(key), a2_obj_size(key));
@@ -96,7 +96,9 @@ static struct a2_obj* _a2_map_query(struct a2_map* map_p, struct a2_obj* key, st
 	for(; !is_nil(map_p->slot_p[hash].key);){
 		if( map_p->slot_p[hash].hash==hash_full && a2_obj_cmp(&map_p->slot_p[hash].key, key)==a2_true){
 			*_key = &(map_p->slot_p[hash].key);
-			return &map_p->slot_p[hash].value;
+			if(slot)
+				*slot = hash;
+			return &(map_p->slot_p[hash].value);
 		}
 		if(map_p->slot_p[hash].next==0)
 			return NULL;
@@ -105,9 +107,36 @@ static struct a2_obj* _a2_map_query(struct a2_map* map_p, struct a2_obj* key, st
 	return NULL;
 }
 
+static inline struct a2_obj* _map_dump(struct a2_map* map_p, size_t begin, struct a2_obj* key){
+	size_t i;
+	for(i=begin; i<map_p->size; i++){
+		if(!is_nil(map_p->slot_p[i].key)){
+			*key = map_p->slot_p[i].key;
+			return &(map_p->slot_p[i].value);
+		}
+	}
+	return NULL;
+}
+
+inline struct a2_obj* a2_map_next(struct a2_map* map_p, struct a2_obj* key){
+	assert(map_p && key);
+	// begin 
+	if(key->type==A2_TNIL)
+		return _map_dump(map_p, 0, key);
+	else{
+		struct a2_obj* kp = NULL;
+		size_t slot = 0;
+		if(_a2_map_query(map_p, key, &kp, &slot)){
+			return _map_dump(map_p, slot+1, key);
+		}else
+			return NULL;
+	}
+
+}
+
 inline struct a2_obj* a2_map_query(struct a2_map* map_p, struct a2_obj* key){
 	struct a2_obj* kp = NULL;
-	return _a2_map_query(map_p, key, &kp);
+	return _a2_map_query(map_p, key, &kp, NULL);
 }
 
 int a2_map_add(struct a2_map* map_p, struct a2_kv* kv){
@@ -153,7 +182,7 @@ int a2_map_del(struct a2_map* map_p, struct a2_obj* key){
 	assert(map_p);
 	assert(key);
 	struct a2_obj* kp = NULL;
-	struct a2_obj* vp = _a2_map_query(map_p, key, &kp);
+	struct a2_obj* vp = _a2_map_query(map_p, key, &kp, NULL);
 	if(vp==NULL)
 		return a2_fail;
 	else{

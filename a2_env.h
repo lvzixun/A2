@@ -9,7 +9,9 @@ struct a2_token;
 struct a2_env* a2_env_new();
 void a2_env_free(struct a2_env* env_p);
 
-inline struct a2_obj* a2_getgloval(struct a2_env* env_p, struct a2_obj* k);
+inline struct a2_obj* a2_getglobal(struct a2_env* env_p, struct a2_obj* k);
+inline struct a2_obj* a2_setglobal(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v);
+
 inline struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s);
 inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str);
 

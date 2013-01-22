@@ -94,8 +94,21 @@ inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str){
 	return ret;
 }
 
-inline struct a2_obj* a2_getgloval(struct a2_env* env_p, struct a2_obj* k){
+inline struct a2_obj* a2_getglobal(struct a2_env* env_p, struct a2_obj* k){
 	return a2_map_query(env_p->g_var, k);
+}
+
+inline struct a2_obj* a2_setglobal(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v){
+	struct a2_obj* ret = a2_map_query(env_p->g_var, k);
+	if(ret==NULL){
+		struct a2_kv kv = {
+			k, v
+		};
+		assert(a2_map_add(env_p->g_var, &kv)==a2_true);
+		return v;
+	}
+	*ret = *v;
+	return v;
 }
 
 inline void a2_irexec(struct a2_env* env_p, size_t root){
