@@ -19,7 +19,8 @@
 
 struct vm_callinfo{
 	struct a2_closure* cls;
-
+	int retbegin;
+	int retnumber;
 	size_t pc;
 
 	struct vm_callinfo* next; 
@@ -52,6 +53,10 @@ static inline void _vm_move(struct a2_vm* vm_p);
 static inline void _vm_test(struct a2_vm* vm_p);
 static inline void _vm_not(struct a2_vm* vm_p);
 static inline void _vm_neg(struct a2_vm* vm_p);
+static inline void _vm_get_upvalue(struct a2_vm* vm_p);
+static inline void _vm_set_upvalue(struct a2_vm* vm_p);
+static inline void _vm_call(struct a2_vm* vm_p);
+static inline int _vm_return(struct a2_vm* vm_p);
 
 struct a2_vm* a2_vm_new(struct a2_env* env_p){
 	struct a2_vm* vm_p = (struct a2_vm*)malloc(sizeof(*vm_p));
@@ -64,12 +69,14 @@ void a2_vm_free(struct a2_vm* vm_p){
 	free(vm_p);
 }
 
-static inline void callinfo_new(struct a2_vm* vm_p, struct a2_closure* cls){
+static inline void callinfo_new(struct a2_vm* vm_p, struct a2_closure* cls, int retbegin, int retnumber){
 	assert(vm_p && cls);
 	struct vm_callinfo* ci = (struct vm_callinfo*)malloc(sizeof(*ci));
 	ci->cls = cls;
 	ci->pc=0;
 	ci->front = NULL;
+	ci->retbegin = retbegin;
+	ci->retnumber = retnumber;
 	ci->next = vm_p->call_chain;
 	if(vm_p->call_chain)
 		vm_p->call_chain->front = ci;
@@ -87,7 +94,7 @@ static inline void callinfo_free(struct a2_vm* vm_p){
 
 void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 	assert(vm_p && cls);
-	callinfo_new(vm_p, cls);
+	callinfo_new(vm_p, cls, 0, 0);
 	a2_vm_run(vm_p);
 }
 
@@ -149,6 +156,12 @@ static void a2_vm_run(struct a2_vm* vm_p){
 				break;
 			case SETGLOBAL:
 				_vm_setglobal(vm_p);
+				break;
+			case GETUPVALUE:
+				_vm_get_upvalue(vm_p);
+				break;
+			case SETUPVALUE:
+				_vm_setvalue(vm_p);
 				break;
 			case CONTAINER:
 				_vm_container(vm_p);
@@ -224,6 +237,13 @@ static void a2_vm_run(struct a2_vm* vm_p){
 				break;
 			case NEG:
 				_vm_neg(vm_p);
+				break;
+			case CALL:
+				_vm_call(vm_p);
+				break;
+			case RETURN:
+				if(_vm_return(vm_p))
+					break;
 				break;
 			default:
 				assert(0);
@@ -545,6 +565,90 @@ static inline void _vm_neg(struct a2_vm* vm_p){
 	curr_pc++;
 }
 
+// getupvalue
+static inline void _vm_get_upvalue(struct a2_vm* vm_p){
+	struct a2_obj* _uv = a2_closure_upvalue(curr_cls, ir_gbx(curr_ir));
+	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
 
+	*_d = *_uv;
+	curr_pc++;
+}
 
+// set upvalue
+static inline void _vm_set_upvalue(struct a2_vm* vm_p){
+	struct a2_obj* _v = _getvalue(vm_p, ir_gbx(curr_ir));
+	struct a2_obj* _ud = a2_closure_upvalue(curr_cls, ir_ga(curr_ir));
+	
+	*_ud = *_v;
+	curr_pc++;
+}
+
+// call
+static inline void _vm_call(struct a2_vm* vm_p){
+	struct a2_obj* _func = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _obj = NULL;
+
+	if(_func->type!=A2_TFUNCTION)
+		vm_error("the varable is not function.");
+
+	int i, j, params = a2_closure_params(a2_gcobj2closure(_func->value.obj));
+	//TODO not allow ...
+	assert(params>=0);
+
+	// set params
+	for(i=ir_ga(curr_ir)+1, j=0; 
+		i<=ir_ga(curr_ir)+ir_gb(curr_ir) && j<params; 
+		j++, i++){
+		_obj = a2_closure_arg(a2_gcobj2closure(_func->value.obj), j);
+		*_obj = *a2_closure_arg(curr_cls, i);
+	}
+
+	// set clear params
+	for( ;j<params; j++){
+		_obj = a2_closure_arg(curr_cls, j);
+		_obj->type = A2_TNIL;
+	}
+
+	// new call info 
+	callinfo_new(vm_p, a2_gcobj2closure(_func->value.obj), ir_ga(curr_ir), ir_gc(curr_ir));
+	a2_vm_run(vm_p);
+	curr_pc++;
+}
+
+// return
+static inline int _vm_return(struct a2_vm* vm_p){
+	// the closure is end
+	if(curr_ci->next==NULL){
+		callinfo_free(vm_p);
+		return 1;
+	}
+
+	struct a2_obj* _obj = NULL;
+	struct vm_callinfo* call_ci = curr_ci->next;
+	struct a2_closure* call_cls = call_ci->cls;
+	int i, j;
+
+	// clear return args
+	for(i=call_ci->retbegin; i<call_ci->retbegin+call_ci->retnumber; i++){
+		_obj = a2_closure_arg(call_ci->cls, i);
+		_obj->type = A2_TNIL;
+	}
+
+	// set return
+	for(i=ir_ga(curr_ir), j=call_ci->retbegin; 
+		i<ir_ga(curr_ir)+ir_gbx(curr_ir) && j<call_ci->retbegin+call_ci->retnumber;
+		 j++, i++){
+		_obj = a2_closure_arg(call_cls, j);
+		*_obj = *a2_closure_arg(curr_cls, i);
+	}
+
+	// set clear
+	for( ; j<call_ci->retbegin+call_ci->retnumber; j++){
+		_obj = a2_closure_arg(call_ci->cls, j);
+		_obj->type = A2_TNIL;
+	}
+
+	callinfo_free(vm_p);
+	return 0;
+}
 

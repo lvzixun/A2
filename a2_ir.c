@@ -182,6 +182,7 @@ static void _init_op_modle(struct a2_ir* ir_p){
 	memset(ir_p->op_modle, ABC_MODE, sizeof(ir_p->op_modle));
 
 	ir_p->op_modle[GETGLOBAL] = ABX_MODE;
+	ir_p->op_modle[SETUPVALUE] = ABX_MODE;
 	ir_p->op_modle[GETUPVALUE] = ABX_MODE;
 	ir_p->op_modle[CONTAINER] = ABX_MODE;
 	ir_p->op_modle[CLOSURE] = ABX_MODE;

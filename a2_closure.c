@@ -109,6 +109,11 @@ inline void a2_closure_setparams(struct a2_closure* cls, int params){
 	cls->params = params;
 }
 
+inline int a2_closure_params(struct a2_closure* cls){
+	assert(cls);
+	return cls->params;
+}
+
 inline ir a2_closure_ir(struct a2_closure* cls, size_t idx){
 	assert(idx<cls->len);
 	return cls->ir_chain[idx];
@@ -117,6 +122,12 @@ inline ir a2_closure_ir(struct a2_closure* cls, size_t idx){
 inline struct a2_obj* a2_closure_arg(struct a2_closure* cls, int idx){
 	assert(idx>=0 && idx<cls->arg.size);
 	return &(cls->arg.arg_p[idx]);
+}
+
+inline struct a2_obj* a2_closure_upvalue(struct a2_closure* cls, int idx){
+	assert(idx>=0 && idx<cls->upvalue.len);
+	return  a2_closure_arg(cls->upvalue.upvalue_chain[idx].cls_p, 
+							cls->upvalue.upvalue_chain[idx].arg_idx);
 }
 
 inline struct a2_obj* a2_closure_const(struct a2_closure* cls, int idx){

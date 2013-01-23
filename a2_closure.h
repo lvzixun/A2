@@ -9,8 +9,11 @@ struct a2_closure;
 struct a2_closure* a2_closure_new();
 void a2_closure_free(struct a2_closure* cls);
 inline void a2_closure_setparams(struct a2_closure* cls, int params);
+inline int a2_closure_params(struct a2_closure* cls);
+
 inline void a2_closure_setarg(struct a2_closure* cls, int args);
 inline ir a2_closure_ir(struct a2_closure* cls, size_t idx);
+inline struct a2_obj* a2_closure_upvalue(struct a2_closure* cls, int idx);
 size_t a2_closure_line(struct a2_closure* cls, size_t pc);
 
 inline size_t closure_add_ir(struct a2_closure* cls, ir i, size_t line);
