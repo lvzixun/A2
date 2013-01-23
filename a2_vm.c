@@ -524,6 +524,7 @@ static inline void _vm_jump(struct a2_vm* vm_p){
 static inline void _vm_move(struct a2_vm* vm_p){
 	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
 	*_d = *a2_closure_arg(curr_cls, ir_gbx(curr_ir));
+	curr_pc++;
 }
 
 // test
@@ -609,10 +610,9 @@ static inline void _vm_call(struct a2_vm* vm_p){
 		_obj->type = A2_TNIL;
 	}
 
-	// new call info 
+	// new call info
+	curr_pc++; 
 	callinfo_new(vm_p, a2_gcobj2closure(_func->value.obj), ir_ga(curr_ir), ir_gc(curr_ir));
-	a2_vm_run(vm_p);
-	curr_pc++;
 }
 
 // return
