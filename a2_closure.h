@@ -6,6 +6,18 @@
 struct a2_obj;
 struct a2_closure;
 
+struct obj_stack{
+	struct a2_obj* stk_p;
+	int top;
+	int size;
+};
+
+// stack function
+inline void obj_stack_init(struct obj_stack* os_p);
+inline void obj_stack_destory(struct obj_stack* os_p);
+inline int  obj_stack_add(struct obj_stack* os_p, struct a2_obj* obj_p);
+
+// closure function 
 struct a2_closure* a2_closure_new();
 void a2_closure_free(struct a2_closure* cls);
 inline void a2_closure_setparams(struct a2_closure* cls, int params);

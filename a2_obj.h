@@ -2,10 +2,12 @@
 #define _A2_OBJ_H_
 #include "a2_conf.h"
 #include "a2_gc.h"
+#include "a2.h"
 
 typedef union {
 		struct a2_gcobj* obj;
 		a2_number number;
+		a2_cfunction cfunction;
 		void* point;
 		uint32 uinteger; 
 		size_t addr;
@@ -29,6 +31,7 @@ enum{
 	A2_TARRAY,
 	A2_TCLOSURE,
 	A2_TFUNCTION,
+	A2_TCFUNCTION,
 	A2_TBOOL,
 
 	//private type

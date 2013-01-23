@@ -17,6 +17,8 @@ typedef uint32_t uint32;
 typedef uint16_t uint16;
 typedef double	 a2_number;
 
+#define A2_API	 extern
+
 #define _DEBUG_
 
 #ifdef _DEBUG_

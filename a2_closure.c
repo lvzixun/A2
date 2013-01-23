@@ -2,6 +2,7 @@
 #include "a2_obj.h"
 #include "a2_ir.h"
 #include "a2_error.h"
+#include "a2_closure.h"
 #include <stdio.h>
 
 #define DEF_STK_SIZE 32
@@ -11,11 +12,6 @@
 #define DEF_IR_SIZE 128
 #define DEF_ARG_SIZE 32
 
-struct obj_stack{
-	struct a2_obj* stk_p;
-	int top;
-	int size;
-};
 
 struct a2_closure{
 	int params;
@@ -51,10 +47,6 @@ struct a2_closure{
 	}upvalue;
 };
 
-static inline void _obj_stack_init(struct obj_stack* os_p);
-static  inline void _obj_stack_destory(struct obj_stack* os_p);
-static inline int _obj_stack_add(struct obj_stack* os_p, struct a2_obj* obj_p);
-
 struct a2_closure* a2_closure_new(){
 	struct a2_closure* ret = (struct a2_closure*)malloc(sizeof(*ret));
 	// init ir chain
@@ -66,11 +58,11 @@ struct a2_closure* a2_closure_new(){
 	ret->arg.arg_p = NULL;
 	ret->arg.size = 0;
 	// init constent stack
-	_obj_stack_init(&(ret->c_stack));
+	obj_stack_init(&(ret->c_stack));
 	// init cls stack
-	_obj_stack_init(&(ret->cls_stack));
+	obj_stack_init(&(ret->cls_stack));
 	// init container stack
-	_obj_stack_init(&(ret->ctn_stack));
+	obj_stack_init(&(ret->ctn_stack));
 	// init upvalue
 	ret->upvalue.upvalue_chain = (void*)malloc(sizeof(*(ret->upvalue.upvalue_chain))*DEF_UPVALUE_SIZE);
 	ret->upvalue.size = DEF_UPVALUE_SIZE;
@@ -83,9 +75,9 @@ void a2_closure_free(struct a2_closure* cls){
 	assert(cls);
 	free(cls->ir_chain);
 	//TODO: stack obj free
-	_obj_stack_destory(&(cls->c_stack));
-	_obj_stack_destory(&(cls->cls_stack));
-	_obj_stack_destory(&(cls->ctn_stack));
+	obj_stack_destory(&(cls->c_stack));
+	obj_stack_destory(&(cls->cls_stack));
+	obj_stack_destory(&(cls->ctn_stack));
 	// TODO: upvalue obj free
 	free(cls->upvalue.upvalue_chain);
 	free(cls->arg.arg_p);
@@ -145,20 +137,20 @@ inline struct a2_obj* a2_closure_cls(struct a2_closure* cls, int idx){
 	return &(cls->cls_stack.stk_p[idx]);
 }
 
-static inline void _obj_stack_init(struct obj_stack* os_p){
+inline void obj_stack_init(struct obj_stack* os_p){
 	os_p->stk_p = (struct a2_obj*)malloc(sizeof(struct a2_obj)*DEF_STK_SIZE);
 	os_p->size = DEF_STK_SIZE;
 	os_p->top =0;
 }
 
-static  inline void _obj_stack_destory(struct obj_stack* os_p){
+inline void obj_stack_destory(struct obj_stack* os_p){
 	free(os_p->stk_p);
 	os_p->stk_p = NULL;
 	os_p->size=0;
 	os_p->top = 0;
 }
 
-static inline int _obj_stack_add(struct obj_stack* os_p, struct a2_obj* obj_p){
+inline int obj_stack_add(struct obj_stack* os_p, struct a2_obj* obj_p){
 	if(os_p->top>=os_p->size){
 		os_p->size *= 2;
 		os_p->stk_p = (struct a2_obj*)realloc(os_p->stk_p, os_p->size*sizeof(struct a2_obj));
@@ -197,7 +189,7 @@ inline int closure_push_cstack(struct a2_closure* cls, struct a2_obj* obj){
 	assert(obj);
 	if(cls->c_stack.top>=BX_MAX)
 		a2_error("the constent stack is overfllow.\n");
-	return _obj_stack_add(&(cls->c_stack), obj);
+	return obj_stack_add(&(cls->c_stack), obj);
 }
 
 inline struct  a2_obj* closure_at_cstack(struct a2_closure* cls, int idx){
@@ -209,13 +201,13 @@ inline struct  a2_obj* closure_at_cstack(struct a2_closure* cls, int idx){
 inline int closure_push_clsstack(struct a2_closure* cls, struct a2_obj* obj){
 	if(cls->cls_stack.top>=BX_MAX)
 		a2_error("the gc stack from closure is overfllow.\n");
-	return _obj_stack_add(&(cls->cls_stack), obj);
+	return obj_stack_add(&(cls->cls_stack), obj);
 }
 
 inline int closure_push_ctnstack(struct a2_closure* cls, struct a2_obj* obj){
 	if(cls->ctn_stack.top>=BX_MAX)
 		a2_error("the gc stack from closure is overfllow.\n");
-	return _obj_stack_add(&(cls->ctn_stack), obj);
+	return obj_stack_add(&(cls->ctn_stack), obj);
 }
 
 // upvalue op

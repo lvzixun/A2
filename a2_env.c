@@ -7,16 +7,23 @@
 #include "a2_io.h"
 #include "a2_parse.h"
 #include "a2_ir.h"
+#include "a2_closure.h"
 
 struct a2_env{
-	struct a2_map* g_str;			// global string map
 	struct a2_lex* lex_p;
 	struct a2_gc*  gc_p;
 	struct a2_parse* parse_p;
 	struct a2_ir* ir_p;
 
+	// global string map
+	struct a2_map* g_str;			
 	// global table
 	struct a2_map* g_var;
+
+	// c <->a2 stack
+	struct obj_stack cstack;
+	// stack bottom
+	int bottom;
 
 	// private forge a2_obj
 	struct a2_obj _forge_obj;
@@ -28,6 +35,8 @@ struct a2_env* a2_env_new(){
 	struct a2_env* ret = (struct a2_env*)malloc(sizeof(*ret));
 	ret->g_str = a2_map_new();
 	ret->g_var = a2_map_new();
+	ret->bottom = 0;
+	obj_stack_init(&ret->cstack);
 	ret->lex_p = a2_lex_open(ret);
 	ret->parse_p = a2_parse_open(ret);
 	ret->gc_p = a2_gc_new();
@@ -40,6 +49,7 @@ void a2_env_free(struct a2_env* env_p){
 	assert(env_p);
 	a2_map_free(env_p->g_str);
 	a2_map_free(env_p->g_var);
+	obj_stack_destory(&env_p->cstack);
 	a2_lex_close(env_p->lex_p);
 	a2_parse_close(env_p->parse_p);
 	a2_gc_free(env_p->gc_p);
@@ -81,7 +91,6 @@ static struct a2_gcobj* _a2_env_addstrobj(struct a2_env* env_p, char* a2_s, int 
 		return  vp->value.point;
 }
 
-
 inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str){
 	char* a2_s = a2_string_new(str);
 	struct a2_gcobj* _gcp = _a2_env_addstrobj(env_p, a2_s, 0);
@@ -93,6 +102,34 @@ inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str){
 	};
 	return ret;
 }
+
+inline void a2_pushstack(struct a2_env* env_p, struct a2_obj* v){
+	obj_stack_add(&env_p->cstack, v);
+}
+
+inline void a2_setbottom(struct a2_env* env_p, int bottom){
+	assert(bottom>=0 && bottom<=env_p->cstack.top);
+	env_p->bottom = bottom;
+}
+
+inline void a2_settop(struct a2_env* env_p, int top){
+	assert(top>=0 && top>=env_p->bottom);
+	env_p->cstack.top = top;
+}
+
+inline int a2_getbottom(struct a2_env* env_p){
+	return env_p->bottom;
+}
+
+inline int a2_gettop(struct a2_env* env_p){
+	return env_p->cstack.top;
+}
+
+inline struct a2_obj* a2_getcstack(struct a2_env* env_p, int idx){
+	assert(idx>=0 && (idx+env_p->bottom)<env_p->cstack.top);
+	return &(env_p->cstack.stk_p[idx+env_p->bottom]);
+}
+
 
 inline struct a2_obj* a2_getglobal(struct a2_env* env_p, struct a2_obj* k){
 	return a2_map_query(env_p->g_var, k);
@@ -170,6 +207,9 @@ inline int a2_ktisin(struct a2_env* env_p, struct a2_token* token){
 inline int a2_ktislocal(struct a2_env* env_p, struct a2_token* token){
 	return a2_tokenislocal(env_p->lex_p, token);
 }
+
+
+
 
 // for test 
 inline struct a2_lex* a2_envlex(struct a2_env* env_p){

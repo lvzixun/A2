@@ -4,14 +4,25 @@
 
 struct a2_env;
 struct a2_token;
+struct a2_obj;
 
 // new / free
 struct a2_env* a2_env_new();
 void a2_env_free(struct a2_env* env_p);
 
+// c <-> a2 stack
+inline void a2_pushstack(struct a2_env* env_p, struct a2_obj* v);
+inline void a2_setbottom(struct a2_env* env_p, int bottom);
+inline int a2_getbottom(struct a2_env* env_p);
+inline int a2_gettop(struct a2_env* env_p);
+inline void a2_settop(struct a2_env* env_p, int top);
+inline struct a2_obj* a2_getcstack(struct a2_env* env_p, int idx);
+
+// global map 
 inline struct a2_obj* a2_getglobal(struct a2_env* env_p, struct a2_obj* k);
 inline struct a2_obj* a2_setglobal(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v);
 
+// global string
 inline struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s);
 inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str);
 
