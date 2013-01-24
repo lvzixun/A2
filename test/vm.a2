@@ -1,6 +1,24 @@
 
+local a=[5, 4, 3, 2, 1]
+local tmp
 
-local a = 4
+function dump(array){
+	foreach(k, v in array){
+		print(v)
+	}
+}
+
+for(i=0, 5, 1){
+	local min = a[i]
+	for(j=i, 5, 1){
+		if(min>a[j]){
+			tmp = a[j]
+			a[j] = a[i]
+			a[i] = tmp
+			min = a[j]
+		}
+	}
+}
 
 
-print(-a)
+dump(a)

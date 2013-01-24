@@ -58,6 +58,8 @@ static inline void _vm_set_upvalue(struct a2_vm* vm_p);
 static inline void _vm_call(struct a2_vm* vm_p);
 static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func);
 static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func);
+static inline void _vm_foreachloop(struct a2_vm* vm_p);
+static inline void _vm_foreachprep(struct a2_vm* vm_p);
 
 static inline int _vm_return(struct a2_vm* vm_p, int* ret);
 static inline int __vm_return_function(struct a2_vm* vm_p);
@@ -186,6 +188,12 @@ static int a2_vm_run(struct a2_vm* vm_p){
 				break;
 			case CLOSURE:
 				_vm_closure(vm_p);
+				break;
+			case FOREACHLOOP:
+				_vm_foreachloop(vm_p);
+				break;
+			case FOREACHPREP:
+				_vm_foreachprep(vm_p);
 				break;
 			case FORPREP:
 				_vm_forprep(vm_p);
@@ -458,7 +466,7 @@ static inline void _vm_foreachprep(struct a2_vm* vm_p){
 	struct a2_obj* _c = a2_closure_arg(curr_cls, ir_ga(curr_ir)+2);
 	struct a2_obj* __v = NULL;
 
-	if(_c->type!=A2_TMAP || _c->type!=A2_TARRAY)
+	if(_c->type!=A2_TMAP && _c->type!=A2_TARRAY)
 		vm_error("the varable is not container.");
 
 	// set init varable
@@ -495,7 +503,7 @@ static inline void _vm_foreachloop(struct a2_vm* vm_p){
 	struct a2_obj* _c = a2_closure_arg(curr_cls, ir_ga(curr_ir)+2);
 	struct a2_obj* __v = NULL;
 
-	if(_c->type!=A2_TMAP || _c->type!=A2_TARRAY)
+	if(_c->type!=A2_TMAP && _c->type!=A2_TARRAY)
 		vm_error("the varable is not container.");
 
 	// dump next
