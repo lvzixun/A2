@@ -513,7 +513,7 @@ ARG_FUNC:
 	_a2_ir_segment(ir_p, seg);
 	struct a2_obj func_obj = curr_clssym->cls_obj;
 	closure_add_ir(curr_cls, ir_abx(RETURN,0,0), curr_line);
-	a2_closure_setarg(curr_cls, curr_clssym->arg_cap);
+	a2_closure_setarg(curr_cls, curr_clssym->max_arg);
 	free_clssym(ir_p);
 
 	// set gc stack
@@ -802,6 +802,8 @@ static inline void a2_ir_if(struct a2_ir* ir_p, size_t root){
 	free_symbol(ir_p);
 	set_arg(_b);
 
+	size_t end_addr = closure_add_ir(curr_cls, ir_abx(JUMP, 0, 0),curr_line);
+
 	// back record addr
 	size_t else_addr = closure_curr_iraddr(curr_cls);
 	struct a2_obj addr_obj = a2_addr2obj(else_addr);
@@ -815,6 +817,13 @@ static inline void a2_ir_if(struct a2_ir* ir_p, size_t root){
 		_else_node = node_p(_else_node)->next;
 	}
 	free_symbol(ir_p);
+	
+	size_t ea = closure_curr_iraddr(curr_cls);
+	addr_obj = a2_addr2obj(ea);
+	int _ea = add_csymbol(ir_p, &addr_obj);
+	ir* _jump_ir = closure_seek_ir(curr_cls, end_addr);
+	*_jump_ir = ir_abx(JUMP, 0, _ea);
+
 	set_arg(_b);
 }
 
@@ -1098,6 +1107,7 @@ static int _a2_ir_exp(struct a2_ir* ir_p, size_t root, int des){
 			goto OP_IR;
 		case div_node:
 			op = DIV;
+			goto OP_IR;
 		case strcat_node:
 			op = CAT;
 OP_IR:

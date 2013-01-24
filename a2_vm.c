@@ -167,7 +167,7 @@ static int a2_vm_run(struct a2_vm* vm_p){
 				_vm_get_upvalue(vm_p);
 				break;
 			case SETUPVALUE:
-				_vm_setvalue(vm_p);
+				_vm_set_upvalue(vm_p);
 				break;
 			case CONTAINER:
 				_vm_container(vm_p);
@@ -286,13 +286,14 @@ static inline struct a2_obj* _getvalue(struct a2_vm* vm_p, int idx){
 static inline void _vm_getglobal(struct a2_vm* vm_p){
 	int bx = ir_gbx(curr_ir);
 	struct a2_obj* _dobj = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	struct a2_obj* _obj = a2_get_envglobal(vm_p->env_p, _getvalue(vm_p, bx));
+	struct a2_obj* _k = _getvalue(vm_p, bx);
+	struct a2_obj* _obj = a2_get_envglobal(vm_p->env_p, _k);
 
 	if(_obj==NULL){
 		char _buf[64] = {0};
 		a2_error("[vm error@%lu]: the global \'%s\' is not find.\n", 
 			curr_line, 
-			obj2str(_obj, _buf, sizeof(_buf)));
+			obj2str(_k, _buf, sizeof(_buf)));
 	}
 	*_dobj = *_obj;
 	curr_pc++;
@@ -427,7 +428,7 @@ static inline void _vm_forprep(struct a2_vm* vm_p){
 	if(_step->type!=A2_TNUMBER)
 		vm_error("the for's step is must number.");
 
-	if(_i->value.number<_count->value.number)  // for end
+	if(_i->value.number>=_count->value.number)  // for end
 		jump(ir_gbx(curr_ir));
 	else	// for continue
 		curr_pc++;
@@ -595,7 +596,7 @@ static inline void _vm_set_upvalue(struct a2_vm* vm_p){
 static inline void _vm_call(struct a2_vm* vm_p){
 	struct a2_obj* _func = a2_closure_arg(curr_cls, ir_ga(curr_ir));
 	switch(_func->type){
-		case A2_TFUNCTION:
+		case A2_TCLOSURE:
 			__vm_call_function(vm_p, _func);
 			break;
 		case A2_TCFUNCTION:
@@ -649,7 +650,7 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 
 // call a2 function
 static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func){
-	assert(_func->type==A2_TFUNCTION);
+	assert(_func->type==A2_TCLOSURE);
 	struct a2_obj* _obj = NULL;
 	int i, j, params = a2_closure_params(a2_gcobj2closure(_func->value.obj));
 
@@ -671,8 +672,10 @@ static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func){
 	}
 	
 	// new call info
+	int b = ir_ga(curr_ir), n=ir_gc(curr_ir);
+
 	curr_pc++; 
-	callinfo_new(vm_p, a2_gcobj2closure(_func->value.obj), ir_ga(curr_ir), ir_gc(curr_ir));
+	callinfo_new(vm_p, a2_gcobj2closure(_func->value.obj), b, n);
 }
 
 // return
@@ -717,20 +720,20 @@ static inline int __vm_return_function(struct a2_vm* vm_p){
 	int i, j, ret;
 
 	// set return
-	for(i=ir_ga(curr_ir), j=call_ci->retbegin; 
-		i<ir_ga(curr_ir)+ir_gbx(curr_ir) && j<call_ci->retbegin+call_ci->retnumber;
+	for(i=ir_ga(curr_ir), j=curr_ci->retbegin; 
+		i<ir_ga(curr_ir)+ir_gbx(curr_ir) && j<curr_ci->retbegin+curr_ci->retnumber;
 		 j++, i++){
 		_obj = a2_closure_arg(call_cls, j);
 		*_obj = *a2_closure_arg(curr_cls, i);
 	}
 
 	// set clear
-	for( ; j<call_ci->retbegin+call_ci->retnumber; j++){
+	for( ; j<curr_ci->retbegin+curr_ci->retnumber; j++){
 		_obj = a2_closure_arg(call_ci->cls, j);
 		_obj->type = A2_TNIL;
 	}
 
-	ret = call_ci->retnumber;
+	ret = curr_ci->retnumber;
 	callinfo_free(vm_p);
 	return ret;
 }

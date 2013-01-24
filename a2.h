@@ -13,9 +13,8 @@ struct a2_state;
 #define 	TMAP 5
 #define 	TARRAY 6
 #define 	TCLOSURE 7
-#define 	TFUNCTION 8
-#define 	TCFUNCTION 9
-#define 	TBOOL 10
+#define 	TCFUNCTION 8
+#define 	TBOOL 9
 
 typedef int (*a2_cfunction)(struct a2_state*);
 A2_API struct a2_state* a2_open();

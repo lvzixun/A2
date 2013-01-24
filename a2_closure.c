@@ -235,9 +235,9 @@ void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls){
 	char buf[512] = {0};
 	char* __cp = (cls->params<0)?("+"):("");
 
-	printf("\n\n----params=%d%s upvalue=%d const=%d addr=%p-----\n", 
+	printf("\n\n----params=%d%s upvalue=%d const=%d arg=%d addr=%p-----\n", 
 		(cls->params<0)?(-1-cls->params):(cls->params), __cp, 
-		cls->upvalue.len, cls->c_stack.top, cls);
+		cls->upvalue.len, cls->c_stack.top, cls->arg.size, cls);
 	for(i=0;i<cls->len; i++){
 		printf("<%lu>   [%d]   %s\n", cls->lines[i],  i, ir2string(ir_p, cls, cls->ir_chain[i], buf, sizeof(buf)));
 	}

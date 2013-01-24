@@ -1,2 +1,6 @@
 
-print('Hello, my goddess!')
+
+local a = 4
+
+
+print(-a)

@@ -53,7 +53,7 @@ inline struct a2_obj* a2_array_add(struct a2_array* array_p, struct a2_obj* obj)
 struct a2_obj* a2_array_get(struct a2_array* array_p, struct a2_obj* k){
 	assert(k->type==A2_TNUMBER);
 	size_t idx=(size_t)(k->value.number);  
-	if(idx<array_p->len)
+	if(idx>=array_p->len)
 		return NULL;
 	
 	return &(array_p->list[idx]);
