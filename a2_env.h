@@ -2,13 +2,19 @@
 #define _A2_ENV_H_
 #include "a2_conf.h"
 
+struct a2_state;
+struct a2_io;
 struct a2_env;
 struct a2_token;
 struct a2_obj;
 
 // new / free
-struct a2_env* a2_env_new();
+struct a2_env* a2_env_new(struct a2_state* state);
 void a2_env_free(struct a2_env* env_p);
+
+// load
+void a2_env_load(struct a2_env* env_p, struct a2_io* stream);
+inline struct a2_state* a2_env2state(struct a2_env* env_p);
 
 // c <-> a2 stack
 inline void a2_pushstack(struct a2_env* env_p, struct a2_obj* v);
@@ -19,8 +25,8 @@ inline void a2_settop(struct a2_env* env_p, int top);
 inline struct a2_obj* a2_getcstack(struct a2_env* env_p, int idx);
 
 // global map 
-inline struct a2_obj* a2_getglobal(struct a2_env* env_p, struct a2_obj* k);
-inline struct a2_obj* a2_setglobal(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v);
+inline struct a2_obj* a2_get_envglobal(struct a2_env* env_p, struct a2_obj* k);
+inline struct a2_obj* a2_set_envglobal(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v);
 
 // global string
 inline struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s);

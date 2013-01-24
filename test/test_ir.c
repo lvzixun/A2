@@ -10,7 +10,7 @@
 
 int main(int argc, char const *argv[])
 {
-	struct a2_env* env = a2_env_new();
+	struct a2_env* env = a2_env_new(NULL);
 	
 	struct a2_lex* lex = a2_envlex(env);
 	struct a2_parse* parse = a2_envparse(env);

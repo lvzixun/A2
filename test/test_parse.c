@@ -17,7 +17,7 @@ static void dump_token(struct a2_token* tc, size_t len){
 
 int main(int argc, char const *argv[])
 {
-	struct a2_env* env = a2_env_new();
+	struct a2_env* env = a2_env_new(NULL);
 	struct a2_lex* lex_p = a2_envlex(env);
 	struct a2_parse* parse_p = a2_envparse(env);
 	struct a2_io *io_p = a2_io_open("parse.a2");

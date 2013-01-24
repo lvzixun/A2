@@ -72,6 +72,15 @@ struct a2_obj a2_nil2obj(){
 	return ret;
 }
 
+// cfunction to object
+struct a2_obj a2_cfunction2obj(a2_cfunction func){
+	assert(func);
+	struct a2_obj ret;
+	ret.type = A2_TCFUNCTION;
+	ret.value.cfunction = func;
+	return ret;
+}
+
 // addr to object
 struct a2_obj a2_addr2obj(size_t addr){
 	struct a2_obj ret;

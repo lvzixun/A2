@@ -249,7 +249,7 @@ static int a2_vm_run(struct a2_vm* vm_p){
 				break;
 			case RETURN:
 				if(_vm_return(vm_p, &ret))
-					break;
+					return ret;
 				break;
 			default:
 				assert(0);
@@ -285,10 +285,10 @@ static inline struct a2_obj* _getvalue(struct a2_vm* vm_p, int idx){
 //get global varable
 static inline void _vm_getglobal(struct a2_vm* vm_p){
 	int bx = ir_gbx(curr_ir);
-	struct a2_obj* _obj = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	struct a2_obj* _dobj = a2_getglobal(vm_p->env_p, _getvalue(vm_p, bx));
+	struct a2_obj* _dobj = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _obj = a2_get_envglobal(vm_p->env_p, _getvalue(vm_p, bx));
 
-	if(_dobj==NULL){
+	if(_obj==NULL){
 		char _buf[64] = {0};
 		a2_error("[vm error@%lu]: the global \'%s\' is not find.\n", 
 			curr_line, 
@@ -305,7 +305,7 @@ static inline void _vm_setglobal(struct a2_vm* vm_p){
 	struct a2_obj* _v = _getvalue(vm_p, ir_gc(curr_ir));
 	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
 	
-	*_d = *a2_setglobal(vm_p->env_p, _k, _v);
+	*_d = *a2_set_envglobal(vm_p->env_p, _k, _v);
 	curr_pc++;	
 }
 
@@ -602,7 +602,7 @@ static inline void _vm_call(struct a2_vm* vm_p){
 			__vm_call_cfunction(vm_p, _func);
 			break;
 		default:
-			vm_error("the varable is not function.");
+			vm_error("the varable is not function type.");
 	}
 }
 
@@ -626,7 +626,7 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 
 	// call c function
 	callinfo_new(vm_p, NULL, 0, 0);
-	int ret = _func->value.cfunction(NULL);
+	int ret = _func->value.cfunction(a2_env2state(vm_p->env_p));
 	callinfo_free(vm_p);
 
 	// set return value

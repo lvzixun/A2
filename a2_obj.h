@@ -53,6 +53,7 @@ struct a2_obj a2_uinteger2obj(uint32 v);
 struct a2_obj a2_bool2obj(int t);
 struct a2_obj a2_nil2obj();
 struct a2_obj a2_addr2obj(size_t addr);
+struct a2_obj a2_cfunction2obj(a2_cfunction func);
 
 void a2_obj_free(struct a2_obj* obj_p);
 

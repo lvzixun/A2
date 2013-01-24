@@ -8,13 +8,19 @@
 #include "a2_parse.h"
 #include "a2_ir.h"
 #include "a2_closure.h"
+#include "a2_vm.h"
+#include "a2.h"
 
 struct a2_env{
 	struct a2_lex* lex_p;
 	struct a2_gc*  gc_p;
 	struct a2_parse* parse_p;
 	struct a2_ir* ir_p;
-
+	struct a2_vm* vm_p;
+	
+	// state
+	struct a2_state* state;
+	
 	// global string map
 	struct a2_map* g_str;			
 	// global table
@@ -31,15 +37,17 @@ struct a2_env{
 };
 static struct a2_gcobj* _a2_env_addstrobj(struct a2_env* env_p, char* a2_s, int is_copy);
 
-struct a2_env* a2_env_new(){
+struct a2_env* a2_env_new(struct a2_state* state){
 	struct a2_env* ret = (struct a2_env*)malloc(sizeof(*ret));
 	ret->g_str = a2_map_new();
 	ret->g_var = a2_map_new();
+	ret->state = state;
 	ret->bottom = 0;
 	obj_stack_init(&ret->cstack);
 	ret->lex_p = a2_lex_open(ret);
 	ret->parse_p = a2_parse_open(ret);
 	ret->gc_p = a2_gc_new();
+	ret->vm_p = a2_vm_new(ret);
 	ret->ir_p = a2_ir_open(ret);
 	ret->_forge_gcobj = a2_nil2gcobj();
 	return ret;
@@ -54,8 +62,27 @@ void a2_env_free(struct a2_env* env_p){
 	a2_parse_close(env_p->parse_p);
 	a2_gc_free(env_p->gc_p);
 	a2_ir_close(env_p->ir_p);
+	a2_vm_free(env_p->vm_p);
 	a2_gcobj_nilfree(env_p->_forge_gcobj);
 	free(env_p);
+}
+
+
+void a2_env_load(struct a2_env* env_p, struct a2_io* stream){
+	size_t len = 0;
+	struct a2_token* tk = a2_lex_read(env_p->lex_p, stream, &len);
+	struct a2_closure* cls = a2_parse_run(env_p->parse_p, tk, len);
+	
+	dump_closure(env_p->ir_p, cls);
+	
+	a2_vm_load(env_p->vm_p, cls);
+
+	a2_lex_clear(env_p->lex_p);
+	a2_parse_clear(env_p->parse_p);
+}
+
+inline struct a2_state* a2_env2state(struct a2_env* env_p){
+	return env_p->state;
 }
 
 static inline struct a2_obj* _fill_str2obj(struct a2_env* env_p, char* a2_s){
@@ -131,21 +158,12 @@ inline struct a2_obj* a2_getcstack(struct a2_env* env_p, int idx){
 }
 
 
-inline struct a2_obj* a2_getglobal(struct a2_env* env_p, struct a2_obj* k){
+inline struct a2_obj* a2_get_envglobal(struct a2_env* env_p, struct a2_obj* k){
 	return a2_map_query(env_p->g_var, k);
 }
 
-inline struct a2_obj* a2_setglobal(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v){
-	struct a2_obj* ret = a2_map_query(env_p->g_var, k);
-	if(ret==NULL){
-		struct a2_kv kv = {
-			k, v
-		};
-		assert(a2_map_add(env_p->g_var, &kv)==a2_true);
-		return v;
-	}
-	*ret = *v;
-	return v;
+inline struct a2_obj* a2_set_envglobal(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v){
+	return a2_map_set(env_p->g_var, k, v);
 }
 
 inline void a2_irexec(struct a2_env* env_p, size_t root){

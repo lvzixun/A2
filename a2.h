@@ -4,9 +4,45 @@
 
 struct a2_state;
 
+// type
+
+#define 	TNIL 1
+#define 	TSTRING 2
+#define 	TNUMBER 3
+#define 	TPOINT 4
+#define 	TMAP 5
+#define 	TARRAY 6
+#define 	TCLOSURE 7
+#define 	TFUNCTION 8
+#define 	TCFUNCTION 9
+#define 	TBOOL 10
+
 typedef int (*a2_cfunction)(struct a2_state*);
 A2_API struct a2_state* a2_open();
 A2_API void a2_close(struct a2_state* state);	
+A2_API void a2_loadfile(struct a2_state* state, const char* file);
 
+// a2 <-> c stack
+A2_API inline int a2_top(struct a2_state* state);
+A2_API inline void a2_topset(struct  a2_state* state, int idx);
+
+A2_API inline int a2_type(struct a2_state* state, int idx);
+
+A2_API inline int a2_tobool(struct a2_state* state, int idx);
+A2_API inline void a2_pushbool(struct a2_state* state, int b);
+A2_API inline  void a2_pushnumber(struct a2_state* state, a2_number number);
+A2_API inline a2_number a2_tonumber(struct a2_state* state, int idx);
+A2_API inline void a2_pushstring(struct a2_state* state, char* str);
+A2_API inline char* a2_tostring(struct a2_state* state, int idx);
+A2_API inline void a2_pushfunction(struct a2_state* state, a2_cfunction func);
+A2_API inline a2_cfunction a2_tocfunction(struct a2_state* state, int idx);
+A2_API inline void a2_pushvalue(struct a2_state* state, int idx);
+A2_API inline void a2_reg(struct a2_state* state, char* func_name, a2_cfunction func);
+A2_API inline void a2_getglobal(struct a2_state* state);
+A2_API inline void a2_setglobal(struct a2_state* state);
+A2_API inline void a2_setmap(struct a2_state* state);
+A2_API inline void a2_getmap(struct a2_state* state);
+A2_API inline void a2_setarray(struct a2_state* state);
+A2_API inline void a2_getarray(struct a2_state* state);
 
 #endif

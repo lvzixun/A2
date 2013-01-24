@@ -134,6 +134,21 @@ inline struct a2_obj* a2_map_next(struct a2_map* map_p, struct a2_obj* key){
 
 }
 
+
+inline struct a2_obj* a2_map_set(struct a2_map* map_p, struct a2_obj* key, struct a2_obj* value){
+	struct a2_obj* ret = a2_map_query(map_p, key);
+	if(ret==NULL){
+		struct a2_kv kv = {
+			key, value
+		};
+		assert(a2_map_add(map_p, &kv)==a2_true);
+		return value;
+	}
+	*ret = *value;
+	return value;
+}
+
+
 inline struct a2_obj* a2_map_query(struct a2_map* map_p, struct a2_obj* key){
 	struct a2_obj* kp = NULL;
 	return _a2_map_query(map_p, key, &kp, NULL);
