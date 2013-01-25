@@ -162,6 +162,7 @@ inline char* obj2str(struct a2_obj* obj, char* buf, size_t len){
 		default:
 			assert(0);
 	}
+	return NULL;
 }
 
 // test obj dump

@@ -369,7 +369,7 @@ static inline int  add_csymbol(struct a2_ir* ir_p, struct a2_obj* k){
 		struct a2_kv kv = {
 			k, &v
 		};
-		assert(a2_map_add(curr_csym, &kv)==a2_true);
+		a2_map_add(curr_csym, &kv);
 		return -1-idx;
 	}else
 		return -1 - (int)(vp->value.uinteger);
@@ -409,7 +409,7 @@ static inline int add_gsymbol(struct a2_ir* ir_p, struct a2_obj* k){
 	struct a2_kv kv = {
 		k, &v
 	};
-	assert(a2_map_add(curr_gsym, &kv)==a2_true);
+	a2_map_add(curr_gsym, &kv);
 	return idx;
 }
 
@@ -444,7 +444,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 					struct a2_kv kv = {
 						k, &v
 					};
-					assert(a2_map_add(curr_sym, &kv)==a2_true);
+					a2_map_add(curr_sym, &kv);
 					return idx+1;
 				}else{
 					assert(0);
@@ -653,12 +653,10 @@ static inline void a2_ir_foreach(struct a2_ir* ir_p, size_t root){
 
 	// prepare key , value , container 
 	struct a2_obj l_obj = node2obj(ir_p, k_node);
-	int _k = add_lsymbol(ir_p, &l_obj, root);
-	assert(_k==_b);
+	a2_assert(add_lsymbol(ir_p, &l_obj, root), ==, _b);
 
 	l_obj = node2obj(ir_p, v_node);
-	int _v = add_lsymbol(ir_p, &l_obj, root);
-	assert(_v==_b+1);
+	a2_assert(add_lsymbol(ir_p, &l_obj, root), ==, _b+1);
 
 	int _c = _a2_ir_exp(ir_p, c_node, add_arg);
 	assert(_c>=0);
@@ -714,8 +712,7 @@ static inline void a2_ir_for(struct a2_ir* ir_p, size_t root){
 	add_lsymbol(ir_p, &k, root);
 
 	// generate initial varable
-	int f_idx = a2_ir_ass(ir_p, node_p(root)->childs[0]);
-	assert(f_idx==_b);
+	a2_assert(a2_ir_ass(ir_p, node_p(root)->childs[0]), ==, _b);
 
 	// generate for count 
 	int c_idx = a2_ir_exp(ir_p, node_p(root)->childs[1]);
@@ -802,7 +799,8 @@ static inline void a2_ir_if(struct a2_ir* ir_p, size_t root){
 	free_symbol(ir_p);
 	set_arg(_b);
 
-	size_t end_addr = closure_add_ir(curr_cls, ir_abx(JUMP, 0, 0),curr_line);
+	size_t end_addr = (_else_node)?(closure_add_ir(curr_cls, ir_abx(JUMP, 0, 0),curr_line)):
+									(0);
 
 	// back record addr
 	size_t else_addr = closure_curr_iraddr(curr_cls);
@@ -818,12 +816,13 @@ static inline void a2_ir_if(struct a2_ir* ir_p, size_t root){
 	}
 	free_symbol(ir_p);
 	
-	size_t ea = closure_curr_iraddr(curr_cls);
-	addr_obj = a2_addr2obj(ea);
-	int _ea = add_csymbol(ir_p, &addr_obj);
-	ir* _jump_ir = closure_seek_ir(curr_cls, end_addr);
-	*_jump_ir = ir_abx(JUMP, 0, _ea);
-
+	if(end_addr){
+		size_t ea = closure_curr_iraddr(curr_cls);
+		addr_obj = a2_addr2obj(ea);
+		int _ea = add_csymbol(ir_p, &addr_obj);
+		ir* _jump_ir = closure_seek_ir(curr_cls, end_addr);
+		*_jump_ir = ir_abx(JUMP, 0, _ea);
+	}
 	set_arg(_b);
 }
 
@@ -936,6 +935,7 @@ static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, 
 						int _eb = curr_arg;
 						r_idx = _rv_func(ir_p, var_local, idx, right_root);  // parse right exp
 						assert(curr_arg<=_eb+1);
+						_eb++;
 						if(r_idx<0)
 							closure_add_ir(curr_cls, ir_abx(LOAD, idx-1, r_idx), node_line(root));
 						else if(r_idx!=idx-1)
@@ -980,6 +980,9 @@ HM_WVAR:
 		default:
 			assert(0);
 	}
+
+	assert(0);
+	return 0;
 }
 
 int _rv_ass(struct a2_ir* ir_p, int vt, int idx, size_t right_root){
@@ -993,6 +996,9 @@ int _rv_ass(struct a2_ir* ir_p, int vt, int idx, size_t right_root){
 		default:
 			assert(0);
 	}
+
+	assert(0);
+	return 0;
 }
 
 static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
@@ -1012,6 +1018,7 @@ static int a2_ir_ass(struct a2_ir* ir_p, size_t root){
 	}
 
 	assert(0);
+	return 0;
 }
 
 static inline int _comma_count(struct a2_ir* ir_p, size_t root){
@@ -1084,6 +1091,8 @@ static int _rv_mass(struct a2_ir* ir_p, int vt, int idx, size_t right_root){
 		default:
 			assert(0);
 	}
+	assert(0);
+	return 0;
 }
 
 static inline int a2_ir_exp(struct a2_ir* ir_p, size_t root){
@@ -1215,6 +1224,7 @@ CHM_EXP:
 			assert(0);
 	}
 	assert(0);
+	return 0;
 }
 
 // parse not
@@ -1288,6 +1298,7 @@ static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des){
 		else if (_v<top_arg)
 			closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _v), node_line(v));
 		assert(curr_arg-_kvb==2);
+		_kvb++;
 
 		kv_node = node_p(kv_node)->next;
 		count++;
@@ -1428,6 +1439,9 @@ static inline int a2_ir_var(struct a2_ir* ir_p, size_t root, int des){
 				assert(0);
 		}
 	}
+
+	assert(0);
+	return 0;
 }
 
 

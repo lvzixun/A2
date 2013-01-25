@@ -20,6 +20,7 @@ typedef int (*a2_cfunction)(struct a2_state*);
 A2_API struct a2_state* a2_open();
 A2_API void a2_close(struct a2_state* state);	
 A2_API void a2_loadfile(struct a2_state* state, const char* file);
+A2_API void a2_err(struct a2_state* state, const char* f, ...);
 
 // a2 <-> c stack
 A2_API inline int a2_top(struct a2_state* state);
@@ -43,5 +44,6 @@ A2_API inline void a2_setmap(struct a2_state* state);
 A2_API inline void a2_getmap(struct a2_state* state);
 A2_API inline void a2_setarray(struct a2_state* state);
 A2_API inline void a2_getarray(struct a2_state* state);
+A2_API inline void a2_addarray(struct a2_state* state);
 
 #endif

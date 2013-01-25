@@ -141,7 +141,7 @@ inline struct a2_obj* a2_map_set(struct a2_map* map_p, struct a2_obj* key, struc
 		struct a2_kv kv = {
 			key, value
 		};
-		assert(a2_map_add(map_p, &kv)==a2_true);
+		a2_map_add(map_p, &kv);
 		return value;
 	}
 	*ret = *value;
@@ -173,6 +173,7 @@ int a2_map_add(struct a2_map* map_p, struct a2_kv* kv){
 		for( ;; ){
 			if(map_p->slot_p[idx].hash == hash &&  a2_obj_cmp(&map_p->slot_p[idx].key, kv->key)==a2_true){
 				printf("the key is exits!\n");
+				assert(0);
 				return a2_fail;
 			}
 			if(map_p->slot_p[idx].next==0)

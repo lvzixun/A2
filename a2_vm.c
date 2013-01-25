@@ -341,6 +341,8 @@ static inline void _vm_setmap(struct a2_vm* vm_p){
 	int i, end=ir_gb(curr_ir)+2*ir_gc(curr_ir);
 	struct a2_obj* _d = a2_closure_container(curr_cls, ir_ga(curr_ir));
 	assert(_d->type==A2_TMAP);
+	_d = NULL;
+	
 	struct a2_kv kv;
 	for(i=ir_gb(curr_ir); i<end; i+=2){
 		kv.key = a2_closure_arg(curr_cls, i);

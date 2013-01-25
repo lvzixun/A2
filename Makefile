@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS += -g -Wall
+CFLAGS += -g -O2 -Wall
 
 A2_OBJ = a2_mem.o a2_error.o a2_io.o a2_lex.o a2_map.o a2_string.o a2_env.o \
 a2_obj.o a2_gc.o a2_parse.o a2_ir.o a2_closure.o a2_array.o a2_vm.o a2_state.o \

@@ -200,8 +200,6 @@ static size_t parse_segcontent(struct a2_parse* parse_p){
 			goto ERROR_TOKEN;
 	}
 
-	return 0;
-
 ERROR_TOKEN:{
 	char ts_buf[64] = {0};
 	a2_error("[parse error@line: %d]: the token \'%s \'is do not expect.\n", 
@@ -209,6 +207,7 @@ ERROR_TOKEN:{
 		a2_token2str(&(cur_token), ts_buf));
 	}	
 	assert(0);
+	return 0;
 }
 
 // parse global segment

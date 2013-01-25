@@ -1,24 +1,26 @@
+local a=[]
 
-local a=[5, 4, 3, 2, 1]
-local tmp
-
-function dump(array){
-	foreach(k, v in array){
-		print(v)
-	}
+for(i=0, 5000, 1){
+	add(a, 5000-i)
 }
 
-for(i=0, 5, 1){
+local s = t_time()
+
+print('----begin sort-----')
+
+for(i=0, 5000, 1){
 	local min = a[i]
-	for(j=i, 5, 1){
+	for(j=i, 5000, 1){
 		if(min>a[j]){
-			tmp = a[j]
-			a[j] = a[i]
-			a[i] = tmp
 			min = a[j]
+			a[j] = a[i]
+			a[i] = min
 		}
 	}
 }
 
 
-dump(a)
+local e = t_time()
+
+
+print('time = ', (e-s)/1000000 )

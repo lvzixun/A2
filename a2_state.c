@@ -7,6 +7,7 @@
 #include "a2_map.h"
 #include "a2_array.h"
 #include "a2_io.h"
+#include "a2_error.h"
 
 struct a2_state{
 	struct a2_env* env_p;
@@ -29,6 +30,11 @@ A2_API void a2_loadfile(struct a2_state* state, const char* file){
 	a2_io_close(io_p);
 }
 
+A2_API void a2_err(struct a2_state* state, const char* f, ...){
+	va_list args;
+	va_start(args, f);
+	a2_vserror(f, &args);
+}
 
 A2_API inline int a2_type(struct a2_state* state, int idx){
 	struct a2_obj* obj = a2_getcstack(state->env_p, idx);
@@ -188,8 +194,8 @@ A2_API inline void a2_setarray(struct a2_state* state){
 // get array
 A2_API inline void a2_getarray(struct a2_state* state){
 	int top = a2_top(state)-1;
-	struct a2_obj* k = a2_getcstack(state->env_p, top-1);
-	struct a2_obj* array = a2_getcstack(state->env_p, top-2);
+	struct a2_obj* k = a2_getcstack(state->env_p, top);
+	struct a2_obj* array = a2_getcstack(state->env_p, top-1);
 	struct a2_obj* _v = NULL;
 
 	check_array(array);
@@ -201,6 +207,15 @@ A2_API inline void a2_getarray(struct a2_state* state){
 		*k = *_v;
 }
 
+// add array
+A2_API inline void a2_addarray(struct a2_state* state){
+	int top = a2_top(state)-1;
+	struct a2_obj* v = a2_getcstack(state->env_p, top);
+	struct a2_obj* array = a2_getcstack(state->env_p, top-1);
+
+	check_array(array);
+	a2_array_add(a2_gcobj2array(array->value.obj), v);
+}
 
 A2_API inline int a2_top(struct a2_state* state){
 	return a2_gettop(state->env_p)-a2_getbottom(state->env_p);

@@ -50,7 +50,9 @@ void a2_io_close(struct a2_io* io_p){
 static void _a2_io_load(struct a2_io* io_p){
 	memcpy(io_p->buf, &(io_p->buf[io_p->seek]), MAX_IO_BUFFER-io_p->seek);
 	size_t len = fread( &(io_p->buf[MAX_IO_BUFFER-io_p->seek]), sizeof(byte), io_p->seek, io_p->fp);
-	assert(len);
+	if(len<=0)
+		a2_error("io error.");
+	
 	io_p->rsize += io_p->seek;
 	io_p->seek = MAX_IO_BUFFER-io_p->seek;
 }
