@@ -51,3 +51,4 @@ inline int closure_push_upvalue(struct a2_closure* cls, struct a2_closure* cls_p
 void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls);
 
 #endif
+

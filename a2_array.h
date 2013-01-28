@@ -12,3 +12,4 @@ inline struct a2_obj* a2_array_get(struct a2_array* array_p, struct a2_obj* k);
 inline struct a2_obj* a2_array_next(struct a2_array* array_p, struct a2_obj* k);
 
 #endif
+

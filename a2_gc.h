@@ -35,3 +35,4 @@ struct a2_gcobj* a2_nil2gcobj();
 void a2_gcobj_nilfree(struct a2_gcobj* gcobj);
 
 #endif
+

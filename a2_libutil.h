@@ -7,3 +7,4 @@ void a2_openutil(struct a2_state* state);
 
 
 #endif
+

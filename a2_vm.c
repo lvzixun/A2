@@ -68,6 +68,7 @@ static inline int __vm_return_cfunction(struct a2_vm* vm_p);
 struct a2_vm* a2_vm_new(struct a2_env* env_p){
 	struct a2_vm* vm_p = (struct a2_vm*)malloc(sizeof(*vm_p));
 	vm_p->env_p = env_p;
+	vm_p->call_chain = NULL;
 	return vm_p;
 }
 
@@ -343,7 +344,7 @@ static inline void _vm_setmap(struct a2_vm* vm_p){
 	assert(_d->type==A2_TMAP);
 	_d = NULL;
 	
-	struct a2_kv kv;
+	struct a2_kv kv={0};
 	for(i=ir_gb(curr_ir); i<end; i+=2){
 		kv.key = a2_closure_arg(curr_cls, i);
 		kv.vp = a2_closure_arg(curr_cls, i+1);

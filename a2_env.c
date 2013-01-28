@@ -73,7 +73,7 @@ void a2_env_load(struct a2_env* env_p, struct a2_io* stream){
 	struct a2_token* tk = a2_lex_read(env_p->lex_p, stream, &len);
 	struct a2_closure* cls = a2_parse_run(env_p->parse_p, tk, len);
 	
-	dump_closure(env_p->ir_p, cls);
+//	dump_closure(env_p->ir_p, cls);
 	
 	a2_vm_load(env_p->vm_p, cls);
 

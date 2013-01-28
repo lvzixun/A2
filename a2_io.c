@@ -95,3 +95,4 @@ inline int a2_io_end(struct a2_io* io_p){
 	assert(io_p);
 	return is_end(io_p);
 }
+

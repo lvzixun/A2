@@ -25,3 +25,4 @@ inline size_t calc_hash(byte* name, size_t len);
 // test dump
 void map_dump(struct a2_map* map_p);
 #endif
+

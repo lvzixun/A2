@@ -12,3 +12,5 @@ inline char* a2_string_append(char* a2_s, char c);
 inline size_t a2_string_len(char* a2_s);
 
 #endif
+
+	

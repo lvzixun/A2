@@ -19,7 +19,7 @@ int lua_ttime(struct lua_State* L){
 
 int main(int argc, char const *argv[])
 {	
-	struct lua_State* L = lua_open();
+	struct lua_State* L = luaL_newstate();
 	lua_register(L, "t_time", lua_ttime);
 	luaL_openlibs(L);
 	

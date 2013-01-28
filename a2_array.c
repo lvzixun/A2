@@ -58,3 +58,4 @@ inline struct a2_obj* a2_array_get(struct a2_array* array_p, struct a2_obj* k){
 	
 	return &(array_p->list[idx]);
 }
+

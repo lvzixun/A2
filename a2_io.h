@@ -11,3 +11,4 @@ inline char a2_io_matchchar(struct a2_io* io_p, int n);
 inline int a2_io_end(struct a2_io* io_p);
 
 #endif
+

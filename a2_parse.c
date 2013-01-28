@@ -219,12 +219,12 @@ static struct a2_closure* parse_gsegment(struct a2_parse* parse_p){
 		}
 		size_t root = parse_segcontent(parse_p);
 		// TODO: IR generation
-		printf("----parse----\n");
-		dump_node(parse_p, root);
-		printf("----end------\n");
+		// printf("----parse----\n");
+		// dump_node(parse_p, root);
+		// printf("----end------\n");
 		// for test 
 		a2_irexec(parse_p->env_p, root);
-		printf("---exec-----\n");
+//		printf("---exec-----\n");
 		// clear node buf
 		clear_node(parse_p);
 	}

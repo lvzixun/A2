@@ -13,6 +13,6 @@ int main(int argc, char const *argv[])
 	a2_loadfile(as, "vm.a2");
 
 	a2_close(as);
-	mem_print();
+//	mem_print();
 	return 0;
 }

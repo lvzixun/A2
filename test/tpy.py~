@@ -17,4 +17,4 @@ for i in xrange(0,5000):
 			array[i] = min
 
 e = time.time()
-print('time = %.4f' %  (e-s))
+print(('time = %.4f') %  e-s)

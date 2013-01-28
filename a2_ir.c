@@ -883,7 +883,7 @@ static inline  void a2_ir_local(struct a2_ir* ir_p, size_t root){
 
 
 static inline struct a2_obj node2obj(struct a2_ir* ir_p, size_t node){
-	struct a2_obj ret;
+	struct a2_obj ret={0};
 	switch(node_t(node)){
 		case var_node:
 		case str_node:
@@ -1272,7 +1272,7 @@ static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des){
 
 	for( ;kv_node; ){
 		size_t v = node_p(kv_node)->childs[0];
-		int _k, _v;
+		int _k=0, _v=0;
 		int _kvb = curr_arg;
 
 		// generate key
@@ -1385,7 +1385,6 @@ static inline int a2_ir_cma(struct a2_ir* ir_p, size_t root, int ldes, int des, 
 
 	// generate get key 
 	int key_idx = a2_ir_exp(ir_p, key_node);
-	printf("curr_arg = %d _b= %d\n", curr_arg, _b);
 	assert(curr_arg<=_b+2);
 
 	cma_func(ir_p, ctn_idx, key_idx, des);

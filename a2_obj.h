@@ -62,3 +62,4 @@ inline char* obj2str(struct a2_obj* obj, char* buf, size_t len);
 void obj_dump(struct a2_obj* obj);
 
 #endif
+
