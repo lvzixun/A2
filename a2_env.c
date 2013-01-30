@@ -122,13 +122,14 @@ static struct a2_gcobj* _a2_env_addstrobj(struct a2_env* env_p, char* a2_s, int 
 
 inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str){
 	char* a2_s = a2_string_new(str);
-	struct a2_gcobj* _gcp = _a2_env_addstrobj(env_p, a2_s, 0);
+	struct a2_gcobj* _gcp = _a2_env_addstrobj(env_p, a2_s, 1);
 	a2_value v;
 	v.obj = _gcp;
 	struct a2_obj ret = {
 		A2_TSTRING,
 		v
 	};
+	a2_string_free(a2_s);
 	return ret;
 }
 

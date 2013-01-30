@@ -44,6 +44,7 @@ enum{
 size_t a2_obj_size(struct a2_obj* obj_p);
 byte* a2_obj_bytes(struct a2_obj* obj_p);
 int a2_obj_cmp(struct a2_obj* obj1, struct a2_obj* obj2);
+inline const char* a2_type2string(int type);
 
 struct a2_obj  a2_string2obj(char* a2_s);
 struct a2_obj  a2_number2obj(a2_number num);

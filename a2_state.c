@@ -41,6 +41,10 @@ A2_API inline int a2_type(struct a2_state* state, int idx){
 	return obj->type;
 }
 
+A2_API inline const char* a2_typeinfo(struct a2_state* state, int idx){
+	return a2_type2string(a2_type(state, idx));
+}
+
 A2_API inline  void a2_pushnumber(struct a2_state* state, a2_number number){
 	struct a2_obj obj = a2_number2obj(number);
 	a2_pushstack(state->env_p, &obj);
@@ -52,6 +56,20 @@ A2_API inline a2_number a2_tonumber(struct a2_state* state, int idx){
 		return 0.0;
 	else 
 		return obj->value.number;
+}
+
+A2_API inline void* a2_topoint(struct a2_state* state, int idx){
+	struct a2_obj* obj = a2_getcstack(state->env_p, idx);
+	switch(obj->type){
+		case A2_TARRAY:
+			return a2_gcobj2array(obj->value.obj);
+		case A2_TMAP:
+			return a2_gcobj2map(obj->value.obj);
+		case A2_TCLOSURE:
+			return a2_gcobj2closure(obj->value.obj);
+		default:
+			return NULL;			
+	}
 }
 
 A2_API inline void a2_pushstring(struct a2_state* state, char* str){

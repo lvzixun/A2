@@ -1,0 +1,4 @@
+
+
+print(type(nil))
+print(type('111'))

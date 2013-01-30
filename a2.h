@@ -26,7 +26,9 @@ A2_API void a2_err(struct a2_state* state, const char* f, ...);
 A2_API inline int a2_top(struct a2_state* state);
 A2_API inline void a2_topset(struct  a2_state* state, int idx);
 
+A2_API inline const char* a2_typeinfo(struct a2_state* state, int idx);
 A2_API inline int a2_type(struct a2_state* state, int idx);
+A2_API inline void* a2_topoint(struct a2_state* state, int idx);
 
 A2_API inline int a2_tobool(struct a2_state* state, int idx);
 A2_API inline void a2_pushbool(struct a2_state* state, int b);

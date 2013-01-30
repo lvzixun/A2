@@ -1,11 +1,10 @@
 
-local a = 11
+local a = 2
 
 local map = {
 	a = 1,
 	b = 'string',
 	func = function func(){
-		print('func')
 		return function(){
 			return a+map.a
 		}
@@ -13,4 +12,4 @@ local map = {
 }
 
 
-print(map.func()())
+print(map['func']()())

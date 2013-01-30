@@ -635,14 +635,15 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 		a2_pushstack(vm_p->env_p, _obj);
 	}
 
+	int _retb = a2_gettop(vm_p->env_p)-a2_getbottom(vm_p->env_p);
 	// call c function
 	callinfo_new(vm_p, NULL, 0, 0);
 	int ret = _func->value.cfunction(a2_env2state(vm_p->env_p));
 	callinfo_free(vm_p);
 
 	// set return value
-	for(i=0, j=ir_ga(curr_ir); 
-		i<ret && j<ir_ga(curr_ir)+ir_gc(curr_ir);
+	for(i=_retb, j=ir_ga(curr_ir); 
+		i<ret+_retb && j<ir_ga(curr_ir)+ir_gc(curr_ir);
 		j++,i++){
 		_obj = a2_closure_arg(curr_cls, j);
 		*_obj = *a2_getcstack(vm_p->env_p, i);

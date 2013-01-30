@@ -309,6 +309,7 @@ static   size_t _parse_expression(struct a2_parse* parse_p, parse_func pfunc){
 		case tk_bool:
 		case tk_string:
 		case tk_number:
+		case tk_nil:
 			return pfunc(parse_p);
 		case tk_op:{
 			switch(tt2op(cur_token.tt)){

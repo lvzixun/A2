@@ -393,25 +393,13 @@ static inline int add_lsymbol(struct a2_ir* ir_p, struct a2_obj* k, size_t root)
 	struct a2_kv kv = {
 		k, &v
 	};
-	if(a2_map_add(curr_sym, &kv) == a2_fail){
+	if(a2_map_query(curr_sym, k)){
 		ir_error(root, "the varable is volatile.");
+	}else{
+		a2_map_add(curr_sym, &kv);
 	}
 	return curr_clssym->arg_cap++;
 }
-
-// add global varable symbol
-/*
-static inline int add_gsymbol(struct a2_ir* ir_p, struct a2_obj* k){
-	assert(k->type==A2_TSTRING);
-	int idx = add_csymbol(ir_p, k);
-	assert(idx<0);
-	struct a2_obj v = a2_uinteger2obj(sym_v(var_global, -1-idx));
-	struct a2_kv kv = {
-		k, &v
-	};
-	a2_map_add(curr_gsym, &kv);
-	return idx;
-}*/
 
 // get varable symbol return is closure idx+1, vt_p is return enum var_type
 static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){

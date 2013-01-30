@@ -1,4 +1,0 @@
-
-function func(a, b, c){
-    return a, 1+b, c
-}

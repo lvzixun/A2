@@ -10,6 +10,8 @@ static void _obj_strfree(struct a2_obj* obj_p);
 
 static _obj_free obj_free_func[] = {
 	NULL,
+
+	NULL,
 	_obj_strfree,  // string
 	NULL,
 	NULL,
@@ -17,11 +19,31 @@ static _obj_free obj_free_func[] = {
 	NULL,
 	NULL,  // closure
 	NULL,
-
+	NULL,
+	
 	NULL,
 	NULL
 };
 
+
+static const char* type_info[] = {
+	"_null",
+	
+	// public type
+	"nil",
+	"string",
+	"number",
+	"point",
+	"map",
+	"array",
+	"closure",
+	"cfunction",
+	"bool",
+
+	//private type
+	"_uinteger",
+	"addr"
+};
 
 // a2_string to obj
 struct a2_obj  a2_string2obj(char* a2_s){
@@ -141,6 +163,11 @@ int a2_obj_cmp(struct a2_obj* obj1, struct a2_obj* obj2){
 	return ((obj1->type == obj2->type) && 
 			a2_obj_size(obj1)==a2_obj_size(obj2) && 
 			memcmp(a2_obj_bytes(obj1), a2_obj_bytes(obj2), a2_obj_size(obj1))==0)?(a2_true):(a2_fail); 
+}
+
+inline const char* a2_type2string(int type){
+	assert(type>=0 && type<sizeof(type_info)/sizeof(type_info[0]));
+	return type_info[type];
 }
 
 inline char* obj2str(struct a2_obj* obj, char* buf, size_t len){

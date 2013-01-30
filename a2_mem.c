@@ -13,6 +13,8 @@ struct mem_info {
 static inline void* _a2_malloc(size_t size);
 static inline void* _a2_calloc(size_t count, size_t size);
 
+#define _DEBUG_
+
 #ifdef _DEBUG_
 
 #define MEM_SIZE 1024

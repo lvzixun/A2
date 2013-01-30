@@ -14,13 +14,15 @@ int a2_libprint(struct a2_state* state);
 int a2_libadd(struct a2_state* state);
 int a2_libt_time(struct a2_state* state);
 int a2_libsleep(struct a2_state* state);
+int a2_libtype(struct a2_state* state);
 
 void a2_openutil(struct a2_state* state){
 	struct kf _reg_func[] = {
 		{"print", a2_libprint},
 		{"add", a2_libadd},
 		{"t_time", a2_libt_time},
-		{"sleep", a2_libsleep}
+		{"sleep", a2_libsleep},
+		{"type", a2_libtype}
 	};
 	
 	int i;
@@ -29,6 +31,14 @@ void a2_openutil(struct a2_state* state){
 	}
 }
 
+// type
+int a2_libtype(struct a2_state* state){
+	int args = a2_top(state);
+	if(args==0)
+		a2_err(state, "the anumber of args is error.[exp: type(varable)]");
+	a2_pushstring(state, (char*)(a2_typeinfo(state, 0)));
+	return 1;
+}
 
 // add
 int a2_libadd(struct a2_state* state){
@@ -58,7 +68,7 @@ int a2_libt_time(struct a2_state* state){
 	struct timeval st;
  	gettimeofday(&st, 0);
  	
- 	a2_pushnumber(state, (a2_number)(st.tv_sec*1000000+st.tv_usec));
+ 	a2_pushnumber(state, (a2_number)((st.tv_sec*1000000+st.tv_usec)/1000000.0));
  	return 1;
 }
 
@@ -91,6 +101,15 @@ int a2_libprint(struct a2_state* state){
 				break;
 			case TCFUNCTION:
 				printf("cfunc:%p ", a2_tocfunction(state, i));
+				break;
+			case TCLOSURE:
+				printf("closure:%p ", a2_topoint(state, i));
+				break;
+			case TARRAY:
+				printf("array:%p ", a2_topoint(state, i));
+				break;
+			case TMAP:
+				printf("map:%p ", a2_topoint(state, i));
 				break;
 			default:
 				assert(0);
