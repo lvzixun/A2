@@ -12,6 +12,10 @@
 #define DEF_IR_SIZE 128
 #define DEF_ARG_SIZE 32
 
+struct upvalue_idx{
+	struct a2_closure* cls_p;
+	int arg_idx;
+};
 
 struct a2_closure{
 	int params;
@@ -38,10 +42,7 @@ struct a2_closure{
 
 	// upvalue  chain
 	struct {
-		struct {
-			struct a2_closure* cls_p;
-			int arg_idx;	
-		}*upvalue_chain;
+		struct upvalue_idx* upvalue_chain;
 		int len;
 		int size;
 	}upvalue;
@@ -64,7 +65,7 @@ struct a2_closure* a2_closure_new(){
 	// init container stack
 	obj_stack_init(&(ret->ctn_stack));
 	// init upvalue
-	ret->upvalue.upvalue_chain = (void*)malloc(sizeof(*(ret->upvalue.upvalue_chain))*DEF_UPVALUE_SIZE);
+	ret->upvalue.upvalue_chain = (void*)malloc(sizeof(struct upvalue_idx)*DEF_UPVALUE_SIZE);
 	ret->upvalue.size = DEF_UPVALUE_SIZE;
 	ret->upvalue.len=0;
 
@@ -120,6 +121,12 @@ inline struct a2_obj* a2_closure_upvalue(struct a2_closure* cls, int idx){
 	assert(idx>=0 && idx<cls->upvalue.len);
 	return  a2_closure_arg(cls->upvalue.upvalue_chain[idx].cls_p, 
 							cls->upvalue.upvalue_chain[idx].arg_idx);
+}
+
+inline struct a2_closure* a2_closure_upvalueaddr(struct a2_closure* cls, int up_idx, int* ret_idx){
+	assert(up_idx>=0 && up_idx<cls->upvalue.len && ret_idx);
+	*ret_idx = cls->upvalue.upvalue_chain[up_idx].arg_idx;
+	return cls->upvalue.upvalue_chain[up_idx].cls_p;
 }
 
 inline struct a2_obj* a2_closure_const(struct a2_closure* cls, int idx){
@@ -222,13 +229,20 @@ inline int closure_push_upvalue(struct a2_closure* cls, struct a2_closure* cls_p
 		cls->upvalue.upvalue_chain = (void*)realloc(cls->upvalue.upvalue_chain,
 		  cls->upvalue.size*sizeof(*(cls->upvalue.upvalue_chain)));
 	}
-	cls->upvalue.upvalue_chain[(cls->upvalue.len)].cls_p = cls_p;
-	int ret = cls->upvalue.len;
-	cls_p->upvalue.upvalue_chain[(cls->upvalue.len)++].arg_idx = arg_idx;
-	return ret;
+	cls->upvalue.upvalue_chain[cls->upvalue.len].cls_p = cls_p;
+	cls->upvalue.upvalue_chain[cls->upvalue.len].arg_idx = arg_idx;
+	return cls->upvalue.len++;
 }
 
 // for test 
+void dump_upvalue(struct a2_closure* cls){
+	int i;
+	for(i=0; i<cls->upvalue.len; i++){
+		printf("upvalue@[%p] [%d] cls = %p  idx= %d\n", cls, 
+			i, cls->upvalue.upvalue_chain[i].cls_p, cls->upvalue.upvalue_chain[i].arg_idx);
+	}
+}
+
 void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls){
 	int i, j;
 	assert(cls);
@@ -238,6 +252,7 @@ void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls){
 	printf("\n\n----params=%d%s upvalue=%d const=%d arg=%d addr=%p-----\n", 
 		(cls->params<0)?(-1-cls->params):(cls->params), __cp, 
 		cls->upvalue.len, cls->c_stack.top, cls->arg.size, cls);
+	dump_upvalue(cls);
 	for(i=0;i<cls->len; i++){
 		printf("<%lu>   [%d]   %s\n", cls->lines[i],  i, ir2string(ir_p, cls, cls->ir_chain[i], buf, sizeof(buf)));
 	}
@@ -248,6 +263,7 @@ void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls){
 		dump_closure(ir_p, a2_gcobj2closure(cls->cls_stack.stk_p[j].value.obj));
 	}
 }
+
 
 
 

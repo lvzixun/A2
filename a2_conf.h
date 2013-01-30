@@ -19,7 +19,7 @@ typedef double	 a2_number;
 
 #define A2_API	 
 
-//#define _DEBUG_
+#define _DEBUG_
 
 #ifdef _DEBUG_
 	#define a2_assert(exp, op, v)  assert( (exp) op (v) )

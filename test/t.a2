@@ -1,0 +1,16 @@
+
+local a = 11
+
+local map = {
+	a = 1,
+	b = 'string',
+	func = function func(){
+		print('func')
+		return function(){
+			return a+map.a
+		}
+	}
+}
+
+
+print(map.func()())

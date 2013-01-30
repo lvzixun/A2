@@ -26,6 +26,7 @@ inline int a2_closure_params(struct a2_closure* cls);
 inline void a2_closure_setarg(struct a2_closure* cls, int args);
 inline ir a2_closure_ir(struct a2_closure* cls, size_t idx);
 inline struct a2_obj* a2_closure_upvalue(struct a2_closure* cls, int idx);
+inline struct a2_closure* a2_closure_upvalueaddr(struct a2_closure* cls, int up_idx, int* ret_idx);
 size_t a2_closure_line(struct a2_closure* cls, size_t pc);
 
 inline size_t closure_add_ir(struct a2_closure* cls, ir i, size_t line);
@@ -49,6 +50,6 @@ inline int closure_push_upvalue(struct a2_closure* cls, struct a2_closure* cls_p
 
 // dump 
 void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls);
-
+void dump_upvalue(struct a2_closure* cls);
 #endif
 

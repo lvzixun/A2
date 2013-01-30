@@ -329,7 +329,7 @@ static inline void _vm_container(struct a2_vm* vm_p){
 //set list
 static inline void _vm_setlist(struct a2_vm* vm_p){
 	int i, end=ir_gb(curr_ir)+ir_gc(curr_ir);
-	struct a2_obj* _d = a2_closure_container(curr_cls, ir_ga(curr_ir));	
+	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));	
 	assert(_d->type==A2_TARRAY);
 	for(i=ir_gb(curr_ir); i<end; i++){
 		a2_array_add(a2_gcobj2array(_d->value.obj), a2_closure_arg(curr_cls, i));
@@ -340,9 +340,8 @@ static inline void _vm_setlist(struct a2_vm* vm_p){
 //set map
 static inline void _vm_setmap(struct a2_vm* vm_p){
 	int i, end=ir_gb(curr_ir)+2*ir_gc(curr_ir);
-	struct a2_obj* _d = a2_closure_container(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
 	assert(_d->type==A2_TMAP);
-	_d = NULL;
 	
 	struct a2_kv kv={0};
 	for(i=ir_gb(curr_ir); i<end; i+=2){

@@ -22,7 +22,7 @@
 #define ir_error(i, s)  do{a2_error("[ir error@line: %lu]: %s\n",node_p(i)->token->line,s);}while(0)
 #define curr_sym (ir_p->cls_sym_chain->sym.sym_chain[ir_p->cls_sym_chain->sym.cap-1])
 #define curr_csym (ir_p->cls_sym_chain->sym.sym_chain[0])
-#define curr_gsym  (ir_p->cls_sym_chain->sym.sym_chain[1])
+//#define curr_gsym  (ir_p->cls_sym_chain->sym.sym_chain[1])
 
 #define curr_clssym (ir_p->cls_sym_chain)
 #define curr_cls  a2_gcobj2closure(curr_clssym->cls_obj.value.obj)
@@ -346,7 +346,6 @@ static inline void new_clssym(struct a2_ir* ir_p){
 	_for_stack_init(&(np->fs));
 	_for_stack_init(&(np->fh));
 	new_symbol(ir_p); // const symbol
-	new_symbol(ir_p); // global symbol
 	new_symbol(ir_p); // local symbol
 }
 
@@ -401,6 +400,7 @@ static inline int add_lsymbol(struct a2_ir* ir_p, struct a2_obj* k, size_t root)
 }
 
 // add global varable symbol
+/*
 static inline int add_gsymbol(struct a2_ir* ir_p, struct a2_obj* k){
 	assert(k->type==A2_TSTRING);
 	int idx = add_csymbol(ir_p, k);
@@ -411,7 +411,7 @@ static inline int add_gsymbol(struct a2_ir* ir_p, struct a2_obj* k){
 	};
 	a2_map_add(curr_gsym, &kv);
 	return idx;
-}
+}*/
 
 // get varable symbol return is closure idx+1, vt_p is return enum var_type
 static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
@@ -420,7 +420,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 	int i;
 	struct a2_obj* vp = NULL;
 	// loop sym at cur_cls
-	for(i=curr_clssym->sym.cap-1; i>=2; i--){
+	for(i=curr_clssym->sym.cap-1; i>=1; i--){
 		vp = a2_map_query(curr_clssym->sym.sym_chain[i], k);
 		if(vp){
 			assert(vp->type==_A2_TUINTEGER);
@@ -433,37 +433,39 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 	struct cls_sym* p = curr_clssym->next;
 	while(p){
 		struct cls_sym* np = p->next;
-		for(i=p->sym.cap-1; i>=2; i--){
+		for(i=p->sym.cap-1; i>=1; i--){
 			vp = a2_map_query(p->sym.sym_chain[i], k);
 			if(vp){
 				assert(vp->type==_A2_TUINTEGER);
-				if(v2vt(vp->value.uinteger)==var_local || v2vt(vp->value.uinteger)==var_upvalue){		// set upvalue
-					*vt_p = var_upvalue;
-					int idx = closure_push_upvalue(curr_cls, curr_ocls(p->cls_obj), v2i(vp->value.uinteger));
-					struct a2_obj v = a2_uinteger2obj(sym_v(var_upvalue, idx));
-					struct a2_kv kv = {
-						k, &v
-					};
-					a2_map_add(curr_sym, &kv);
-					return idx+1;
-				}else{
-					assert(0);
+				struct a2_closure* __cls = NULL;
+				int __up_idx = 0;
+				switch(v2vt(vp->value.uinteger)){  // set upvalue
+					case var_local:
+						__cls = curr_ocls(p->cls_obj);
+						__up_idx = v2i(vp->value.uinteger);
+						break;
+					case var_upvalue:
+						__cls = a2_closure_upvalueaddr(curr_ocls(p->cls_obj), v2i(vp->value.uinteger), &__up_idx);
+						break;
+					default:
+						assert(0);
 				}
+				*vt_p = var_upvalue;
+				int idx = closure_push_upvalue(curr_cls, __cls, __up_idx);
+				struct a2_obj v = a2_uinteger2obj(sym_v(var_upvalue, idx));
+				struct a2_kv kv = {
+					k, &v
+				};
+				a2_map_add(curr_sym, &kv);
+				return idx+1;
 			}
 		}
 		 p = np;
 	}
 
-	//  not find varable at up cls_sym , so find it at global sym
-	vp = a2_map_query(curr_gsym, k);
-	if(vp){
-		*vt_p = var_global;
-		assert(vp->type==_A2_TUINTEGER);
-		return -1-(vp->value.uinteger);
-	}
-
-	// not find it
-	return 0;
+	//  not find varable at up cls_sym, so it is global varable
+	*vt_p = var_global;
+	return add_csymbol(ir_p, k);
 }
 
 static inline void _a2_ir_segment(struct a2_ir* ir_p, size_t root){
@@ -524,19 +526,18 @@ ARG_FUNC:
 	// global function
 	if(node_p(root)->token){
 		assert(tt2tk(node_p(root)->token->tt)==tk_ide);
-		int v = top_arg;
 		struct a2_obj func = {
 			A2_TSTRING,
 			node_p(root)->token->v
 		};
-		int k = add_gsymbol(ir_p, &func);
+		int k = add_csymbol(ir_p, &func);
 		assert(k<0);
 		if(is_Blimit(k)){
 			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, k), func_line);
 			k = top_arg;
 		}
 
-		closure_add_ir(curr_cls, ir_abc(SETGLOBAL, _b, k, v), func_line);
+		closure_add_ir(curr_cls, ir_abc(SETGLOBAL, des, k, des), func_line);
 	}else{	// Anonymous function
 		assert(curr_arg<=_b+1);
 	}
@@ -910,9 +911,8 @@ static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, 
 			struct a2_obj k = node2obj(ir_p, root);
 			int vt;
 			int idx = get_symbol(ir_p, &k, &vt);
-			if(!idx || vt==var_global){	// not find it
-				if(!idx)
-					idx = add_gsymbol(ir_p, &k);
+			assert(idx);
+			if(vt==var_global){	// not find it
 				assert(idx<0);
 				r_idx = _rv_func(ir_p, var_global, idx, right_root);
 				if(is_Blimit(idx)){
@@ -1360,7 +1360,7 @@ static int a2_ir_chi(struct a2_ir* ir_p, size_t root, int ldes, int des, _cma_fu
 
 	assert(node_t(cn)==var_node);
 	struct a2_obj k = node2obj(ir_p, cn);
-	c = add_gsymbol(ir_p, &k);
+	c = add_csymbol(ir_p, &k);
 	assert(c<0);
 
 	cma_func(ir_p, f, c, des);
