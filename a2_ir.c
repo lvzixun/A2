@@ -19,7 +19,7 @@
 #define node_ct(n,i)  (node_p(node_p(n)->childs[i])->type)
 #define node_cp(n,i)  (node_p(node_p(n)->childs[i]))
 
-#define ir_error(i, s)  do{a2_error("[ir error@line: %lu]: %s\n",node_p(i)->token->line,s);}while(0)
+#define ir_error(i, s)  do{a2_error("[ir error@line: %zd]: %s\n",node_p(i)->token->line,s);}while(0)
 #define curr_sym (ir_p->cls_sym_chain->sym.sym_chain[ir_p->cls_sym_chain->sym.cap-1])
 #define curr_csym (ir_p->cls_sym_chain->sym.sym_chain[0])
 //#define curr_gsym  (ir_p->cls_sym_chain->sym.sym_chain[1])

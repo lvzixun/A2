@@ -37,6 +37,15 @@ inline char* a2_string_append(char* a2_s, char c){
 	return a2_s;
 }
 
+inline char* a2_string_cat(char* a2_s, char* str){
+	assert(str && a2_s);
+	for( ;*str; ){
+		a2_s = a2_string_append(a2_s, *str);
+		str++;
+	}
+	return a2_s;
+}
+
 char* a2_string_new(const char* s){
 	int i=0;
 	struct a2_string* ret = NULL;

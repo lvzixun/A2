@@ -254,7 +254,7 @@ void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls){
 		cls->upvalue.len, cls->c_stack.top, cls->arg.size, cls);
 	dump_upvalue(cls);
 	for(i=0;i<cls->len; i++){
-		printf("<%lu>   [%d]   %s\n", cls->lines[i],  i, ir2string(ir_p, cls, cls->ir_chain[i], buf, sizeof(buf)));
+		printf("<%zd>   [%d]   %s\n", cls->lines[i],  i, ir2string(ir_p, cls, cls->ir_chain[i], buf, sizeof(buf)));
 	}
 
 	

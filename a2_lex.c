@@ -22,7 +22,7 @@ static char cmask[] = {
 
 #define DEFAULT_TOKENS_LEVEL 8
 #define DEFAULT_TOKENS_LEN	(1<<DEFAULT_TOKENS_LEVEL)
-#define lex_error(s) a2_error("[lex error @line: %lu]:%s\n", lex_p->line, s)
+#define lex_error(s) a2_error("[lex error @line: %zd]:%s\n", lex_p->line, s)
 #define _deep(l) (((size_t)1)<<(l))
 #define _mask(c)	(cmask[(uchar)(c)])
 //#define tk_mask(tk, v)	 ((((uint32)tk)<<24)|(v))
@@ -174,7 +174,7 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 				a2_io_readchar(io_p);
 				break;
 			default:			// error
-				a2_error("[lex error @line: %lu]: the character\' %c \' is not allow.\n", lex_p->line, c);
+				a2_error("[lex error @line: %zd]: the character\' %c \' is not allow.\n", lex_p->line, c);
 				break;
 		}
 	}
@@ -237,9 +237,29 @@ static inline void lex_string(struct a2_lex* lex_p, struct a2_io* io_p){
 	a2_io_readchar(io_p);		// match '
 	while(!a2_io_end(io_p)){
 		c=a2_io_readchar(io_p);
-		if( c!='\'' )
+		if(c=='\\'){ // escape char
+			switch(a2_io_atchar(io_p)){
+				case 't':
+					c = '\t';
+					a2_io_readchar(io_p);
+					break;
+				case 'n':
+					c = '\n';
+					a2_io_readchar(io_p);
+					break;
+				case '\\':
+					c = '\\';
+					a2_io_readchar(io_p);
+					break;
+				default:
+					c = '\\';
+					break;
+			}
+			goto READ_C;
+		}else if( c!='\'' ){
+READ_C:	
 			lex_p->a2_s_num_bufs = a2_string_append(lex_p->a2_s_num_bufs, c);
-		else{
+		}else{
 			token.v.obj = a2_env_addstrobj(lex_p->env_p, lex_p->a2_s_num_bufs);
 			lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
 			return;

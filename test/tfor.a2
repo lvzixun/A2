@@ -1,0 +1,26 @@
+
+
+
+array = [
+	11, 22, 33, 44
+]
+
+map = {
+	1 = 11,
+	2 = 22,
+	'sssss' = 33,
+	func = function (){
+		return 1
+	},
+
+	array = [ ]
+}
+
+foreach(i, v in array){
+	print(i, v)
+}
+
+print('------')
+foreach(k, v in map){
+	print(k, v)
+}

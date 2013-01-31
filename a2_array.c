@@ -29,11 +29,16 @@ void a2_array_free(struct a2_array* array_p){
 }
 
 inline struct a2_obj* a2_array_next(struct a2_array* array_p, struct a2_obj* k){
-	assert(k && k->type==A2_TNUMBER);
-	if( (size_t)(k->value.number)>=array_p->len )
+	assert(k);
+	if(k->type == A2_TNIL){
+		k->type = A2_TNUMBER;
+		k->value.number = -1;
+	}
+
+	if( (size_t)(k->value.number + 1)>=array_p->len )
 		return NULL;
-	struct a2_obj* v = &(array_p->list[(size_t)(k->value.number)]);
-	k->value.number = (a2_number)((size_t)(k->value.number) + 1);
+	struct a2_obj* v = &(array_p->list[(size_t)(k->value.number+1)]);
+	k->value.number = (a2_number)((size_t)(k->value.number)+1);
 	return v; 
 }
 

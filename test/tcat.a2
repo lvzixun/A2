@@ -1,0 +1,15 @@
+
+local a= 1..2..3..'stri'..nil..false..true
+
+print(a)
+
+b = [ ]..{}..function func(){
+	return 12
+}
+
+
+print(b)
+
+print( (1>2) )
+
+print('aa\ta\\\\\aa\nbbb')

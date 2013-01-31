@@ -1,0 +1,22 @@
+
+
+local b = a = [1, 2, 3]
+
+
+local logic = [
+	1>2,
+	1<2,
+	1<2 | 1>2,
+	true,
+	false,
+	b ==a,
+	b !=a,
+	3<4 & 5==5,
+	[] == [],
+	{} == {}
+]
+
+
+foreach(i,v in logic){
+	print('logic[', i, ']=', v)
+}

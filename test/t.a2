@@ -8,8 +8,23 @@ local map = {
 		return function(){
 			return a+map.a
 		}
-	}
+	},
+	
+	1 = 'aaaaa',
+	1 = 'dddd',
+	array = [1, 2, 3, 4,
+		function (){
+			return map.array[3]
+		}
+	]
 }
 
 
+
 print(map['func']()())
+
+
+print(map.array[3])
+
+print(map[1])
+print(map.array[4]())

@@ -6,6 +6,7 @@
 #include "a2_obj.h"
 #include "a2_array.h"
 #include "a2_map.h"
+#include "a2_string.h"
 
 #define curr_ci    (vm_p->call_chain)
 #define curr_pc    (curr_ci->pc)
@@ -14,7 +15,7 @@
 #define curr_op    (ir_gop(curr_ir))
 #define curr_line  a2_closure_line(curr_cls, curr_pc)
    
-#define vm_error(s)  do{a2_error("[vm error@%lu]: %s\n", curr_line, s);}while(0)
+#define vm_error(s)  do{a2_error("[vm error@%zd]: %s\n", curr_line, s);}while(0)
 
 
 struct vm_callinfo{
@@ -60,6 +61,7 @@ static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func);
 static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func);
 static inline void _vm_foreachloop(struct a2_vm* vm_p);
 static inline void _vm_foreachprep(struct a2_vm* vm_p);
+static inline void _vm_cat(struct a2_vm* vm_p);
 
 static inline int _vm_return(struct a2_vm* vm_p, int* ret);
 static inline int __vm_return_function(struct a2_vm* vm_p);
@@ -253,6 +255,9 @@ static int a2_vm_run(struct a2_vm* vm_p){
 			case NEG:
 				_vm_neg(vm_p);
 				break;
+			case CAT:
+				_vm_cat(vm_p);
+				break;
 			case CALL:
 				_vm_call(vm_p);
 				break;
@@ -300,7 +305,7 @@ static inline void _vm_getglobal(struct a2_vm* vm_p){
 
 	if(_obj==NULL){
 		char _buf[64] = {0};
-		a2_error("[vm error@%lu]: the global \'%s\' is not find.\n", 
+		a2_error("[vm error@%zd]: the global \'%s\' is not find.\n", 
 			curr_line, 
 			obj2str(_k, _buf, sizeof(_buf)));
 	}
@@ -341,13 +346,19 @@ static inline void _vm_setlist(struct a2_vm* vm_p){
 static inline void _vm_setmap(struct a2_vm* vm_p){
 	int i, end=ir_gb(curr_ir)+2*ir_gc(curr_ir);
 	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _v = NULL;
+	struct a2_map* map = NULL;
 	assert(_d->type==A2_TMAP);
 	
 	struct a2_kv kv={0};
 	for(i=ir_gb(curr_ir); i<end; i+=2){
 		kv.key = a2_closure_arg(curr_cls, i);
 		kv.vp = a2_closure_arg(curr_cls, i+1);
-		assert(a2_map_add(a2_gcobj2map(_d->value.obj), &kv)==a2_true);
+		map = a2_gcobj2map(_d->value.obj);
+		if( (_v=a2_map_query(map, kv.key))==NULL )
+			a2_map_add(map, &kv);
+		else
+			*_v = *kv.vp;
 	}
 	curr_pc++;
 }
@@ -484,7 +495,7 @@ static inline void _vm_foreachprep(struct a2_vm* vm_p){
 			}
 			break;
 		case A2_TARRAY:
-			*_k = a2_number2obj(0.0);
+			*_k = a2_nil2obj();
 			__v = a2_array_next(a2_gcobj2array(_c->value.obj), _k);
 			if(__v==NULL)  // dump is end
 				jump(ir_gbx(curr_ir));
@@ -599,6 +610,24 @@ static inline void _vm_set_upvalue(struct a2_vm* vm_p){
 	struct a2_obj* _ud = a2_closure_upvalue(curr_cls, ir_ga(curr_ir));
 	
 	*_ud = *_v;
+	curr_pc++;
+}
+
+// cat
+static inline void _vm_cat(struct a2_vm* vm_p){
+	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
+	struct a2_obj* _lv = _getvalue(vm_p, ir_gb(curr_ir));
+	struct a2_obj* _rv = _getvalue(vm_p, ir_gc(curr_ir));
+
+	char buf[64] = {0};
+	char buf0[64] = {0};
+	char* a2_s = a2_string_new(obj2str(_lv, buf, sizeof(buf)-1));
+	a2_s = a2_string_cat(a2_s, obj2str(_rv, buf0, sizeof(buf0)-1));
+
+	_d->type = A2_TSTRING;
+	_d->value.obj = a2_env_addstrobj(vm_p->env_p, a2_s);
+
+	a2_string_free(a2_s);
 	curr_pc++;
 }
 

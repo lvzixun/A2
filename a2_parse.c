@@ -475,9 +475,11 @@ static size_t parse_array(struct a2_parse* parse_p){
 		else
 			node_p(back)->next =  _v;
 		back = _v;
+SKIP_N:
 		tp = parse_readtoken(parse_p);
 		if(!tp)  goto ARRAY_END;
-		if(tt2op(tp->tt)==',') continue;  // jump ','
+		if(tt2tk(tp->tt)==tk_end) goto SKIP_N; 
+		else if(tt2op(tp->tt)==',') continue;  // jump ','
 		else if(tt2op(tp->tt)==']') return head;
 		else parse_error("you lost \' , \'.");
 	}
@@ -1149,9 +1151,9 @@ static size_t parse_elif(struct a2_parse* parse_p){
 void dump_node(struct a2_parse* parse_p, size_t root){
 	for( ;root; ){
 		char ts_buf[64] = {0};
-		printf("[%lu] nt=%d token=\' %s \'\n", root, node_p(root)->type, 
+		printf("[%zd] nt=%d token=\' %s \'\n", root, node_p(root)->type, 
 			a2_token2str(node_p(root)->token, ts_buf));
-		printf("    childs[%lu %lu %lu %lu] next[%lu]\n", node_p(root)->childs[0],
+		printf("    childs[%zd %zd %zd %zd] next[%zd]\n", node_p(root)->childs[0],
 			node_p(root)->childs[1],node_p(root)->childs[2],node_p(root)->childs[3], node_p(root)->next);
 		int i;
 		for(i=0; i<4; i++){

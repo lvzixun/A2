@@ -44,7 +44,7 @@ int main(int argc, char const *argv[])
 	tp = a2_lex_read(lex_p, io_p, &len);
 	printf("lex read end!\n");
 	for(i=0; i<len; i++){
-		printf("[line:%lu]tk = %s  op =\" %s \" \n", tp[i].line, _lk[tt2tk(tp[i].tt)], op2s(tt2op(tp[i].tt)));
+		printf("[line:%zd]tk = %s  op =\" %s \" \n", tp[i].line, _lk[tt2tk(tp[i].tt)], op2s(tt2op(tp[i].tt)));
 		if(tt2tk(tp[i].tt)==tk_ide || tt2tk(tp[i].tt)==tk_key || tt2tk(tp[i].tt)==tk_string){
 			printf("v = %s %p", a2_gcobj2string(tp[i].v.obj), a2_gcobj2string(tp[i].v.obj));
 		}else if(tt2tk(tp[i].tt)==tk_number){

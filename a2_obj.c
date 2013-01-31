@@ -184,7 +184,16 @@ inline char* obj2str(struct a2_obj* obj, char* buf, size_t len){
 		case A2_TNIL:
 			return "nil";
 		case _A2_TADDR:
-			snprintf(buf, len, "[%lu]", obj->value.addr);
+			snprintf(buf, len, "[%zd]", obj->value.addr);
+			return buf;
+		case A2_TCLOSURE:
+			snprintf(buf, len, "closure:%p", a2_gcobj2closure(obj->value.obj));
+			return buf;
+		case A2_TARRAY:
+			snprintf(buf, len, "array:%p", a2_gcobj2array(obj->value.obj));
+			return buf;
+		case A2_TMAP:
+			snprintf(buf, len, "map:%p", a2_gcobj2map(obj->value.obj));
 			return buf;
 		default:
 			assert(0);
