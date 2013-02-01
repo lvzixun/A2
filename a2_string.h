@@ -13,5 +13,3 @@ inline size_t a2_string_len(char* a2_s);
 inline char* a2_string_cat(char* a2_s, char* str);
 
 #endif
-
-	
