@@ -34,7 +34,9 @@ struct a2_io*  a2_io_open(const char* file_name){
 	ret->fp = fp;
 	ret->seek = 0;
 	ret->rsize = 0;
-	fread(ret->buf, sizeof(byte), MAX_IO_BUFFER, ret->fp);
+	size_t len = fread(ret->buf, sizeof(byte), MAX_IO_BUFFER, ret->fp);
+	if(len<=0)
+		a2_error("io error.\n");
 	return ret;
 }
 
@@ -51,7 +53,7 @@ static void _a2_io_load(struct a2_io* io_p){
 	memcpy(io_p->buf, &(io_p->buf[io_p->seek]), MAX_IO_BUFFER-io_p->seek);
 	size_t len = fread( &(io_p->buf[MAX_IO_BUFFER-io_p->seek]), sizeof(byte), io_p->seek, io_p->fp);
 	if(len<=0)
-		a2_error("io error.");
+		a2_error("io error.\n");
 	
 	io_p->rsize += io_p->seek;
 	io_p->seek = MAX_IO_BUFFER-io_p->seek;

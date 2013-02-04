@@ -1,6 +1,6 @@
 #include "a2_conf.h"
 #include "a2_ir.h"
-#include "a2_closure.h"
+#include "a2_xclosure.h"
 #include "a2_env.h"
 #include "a2_error.h"
 #include "a2_obj.h"
@@ -34,7 +34,6 @@ struct  a2_vm{
 	struct vm_callinfo* call_chain;
 };
 
-static inline struct a2_obj* _getvalue(struct a2_vm* vm_p, int idx);
 
 static inline int a2_vm_run(struct a2_vm* vm_p);
 static inline void _vm_load(struct a2_vm* vm_p);
@@ -108,6 +107,8 @@ void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 	a2_vm_run(vm_p);
 }
 
+#define _getvalue(vm_p, idx)	( ((idx)<0)?(a2_closure_const((curr_cls), (idx))):(a2_closure_arg((curr_cls), (idx))) )
+
 #define _vm_op(op)	 		__vm_op(op, a2_number2obj)
 #define _vm_oplimit(op) 	__vm_op(op, a2_bool2obj)
 
@@ -154,6 +155,7 @@ void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 // vm 
 static int a2_vm_run(struct a2_vm* vm_p){
 	int ret = 0;
+	
 	for(;;){
 		switch(curr_op){
 			case LOAD:
@@ -291,11 +293,6 @@ static inline void _vm_loadnil(struct a2_vm* vm_p){
 	curr_pc++;
 }
 
-static inline struct a2_obj* _getvalue(struct a2_vm* vm_p, int idx){
-	return (idx<0)?(a2_closure_const(curr_cls, idx)):
-					(a2_closure_arg(curr_cls, idx));
-}
-
 //get global varable
 static inline void _vm_getglobal(struct a2_vm* vm_p){
 	int bx = ir_gbx(curr_ir);
@@ -371,27 +368,27 @@ static inline void _vm_getvalue(struct a2_vm* vm_p){
 	struct a2_obj* __d = NULL;
 	switch(_c->type){
 		case A2_TARRAY:
-			if(_k->type!=A2_TNUMBER)
-				vm_error("the key is must number at get array.");
+	 		if(_k->type!=A2_TNUMBER)
+	 			vm_error("the key is must number at get array.");
 			__d = a2_array_get(a2_gcobj2array(_c->value.obj), _k);
-			if(__d==NULL) goto GVALUE_ERROR;
+			if(!__d) goto GVALUE_ERROR;
 			*_d = *__d;
 			break;
 		case A2_TMAP:
 			if(_k->type!=A2_TNUMBER && _k->type!=A2_TSTRING)
 				vm_error("the key is must number or string at get map.");
 			__d = a2_map_query(a2_gcobj2map(_c->value.obj), _k);
-			if(__d==NULL) goto GVALUE_ERROR;
+			if(!__d) goto GVALUE_ERROR;
 			*_d = *__d;
 			break;
 		default:
 			vm_error("the varable is not container.");
 	}
 
-	curr_pc++;
-	return;
+ 	curr_pc++;
+ 	return;
 GVALUE_ERROR:
-	vm_error("the key is overfllow at get array.");
+ 	vm_error("the key is overfllow at get array.");
 }
 
 // set value
@@ -402,27 +399,27 @@ static inline void _vm_setvalue(struct a2_vm* vm_p){
 	struct a2_obj* __d = NULL;
 	switch(_c->type){
 		case A2_TARRAY:
-			if(_k->type!=A2_TNUMBER)
-				vm_error("the key is must number at set array.");
+	 		if(_k->type!=A2_TNUMBER)
+	 			vm_error("the key is must number at set array.");
 			__d = a2_array_get(a2_gcobj2array(_c->value.obj), _k);
-			if(__d==NULL)  goto SVALUE_ERROR;
+			if(!__d)  goto SVALUE_ERROR;
 			*__d = *_v;
 			break;
 		case A2_TMAP:
 			if(_k->type!=A2_TNUMBER && _k->type!=A2_TSTRING)
 				vm_error("the key is must number or string at set map.");
 			__d = a2_map_query(a2_gcobj2map(_c->value.obj), _k);
-			if(__d==NULL) goto SVALUE_ERROR;
+			if(!__d) goto SVALUE_ERROR;
 			*__d = *_v;
 			break;
 		default:
 			vm_error("the varable is not container.");
 	}
 
-	curr_pc++;
-	return;
-SVALUE_ERROR:
-	vm_error("the key is overfllow at set array.");
+ 	curr_pc++;
+ 	return;
+ SVALUE_ERROR:
+ 	vm_error("the key is overfllow at set array.");
 }
 
 #define jump(idx)	do{struct a2_obj* _oa = a2_closure_const(curr_cls, (idx)); \

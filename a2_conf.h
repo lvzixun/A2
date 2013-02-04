@@ -28,6 +28,11 @@ typedef double	 a2_number;
 	#define _sf _snprintf
 #endif
 
+// 32bits
+#if __SIZEOF_POINTER__ == 4
+	#define NaN_Trick 
+#endif
+
 
 #ifdef _DEBUG_
 	#define a2_assert(exp, op, v)  assert( (exp) op (v) )
