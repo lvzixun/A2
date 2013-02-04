@@ -19,6 +19,16 @@ typedef double	 a2_number;
 
 #define A2_API	 
 
+
+
+// for mingw32 
+#ifndef _MINGW32_
+	#define _sf snprintf
+#else
+	#define _sf _snprintf
+#endif
+
+
 #ifdef _DEBUG_
 	#define a2_assert(exp, op, v)  assert( (exp) op (v) )
 	#define malloc(size) a2_malloc(size, __FILE__, __LINE__)

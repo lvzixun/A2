@@ -184,12 +184,6 @@ inline char* obj2str(struct a2_obj* obj, char* buf, size_t len){
 		case A2_TNIL:
 			return "nil";
 		case _A2_TADDR:
-			// for mingw32 
-			#ifndef _MINGW32_
-				#define _sf snprintf
-			#else
-				#define _sf _snprintf
-			#endif
 			_sf(buf, len, "[%zd]", obj->value.addr);
 			return buf;
 		case A2_TCLOSURE:
