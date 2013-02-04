@@ -13,7 +13,6 @@ struct kf{
 int a2_libprint(struct a2_state* state);
 int a2_libadd(struct a2_state* state);
 int a2_libt_time(struct a2_state* state);
-int a2_libsleep(struct a2_state* state);
 int a2_libtype(struct a2_state* state);
 
 void a2_openutil(struct a2_state* state){
@@ -21,7 +20,6 @@ void a2_openutil(struct a2_state* state){
 		{"print", a2_libprint},
 		{"add", a2_libadd},
 		{"t_time", a2_libt_time},
-		{"sleep", a2_libsleep},
 		{"type", a2_libtype}
 	};
 	
@@ -73,6 +71,7 @@ int a2_libt_time(struct a2_state* state){
 }
 
 // sleep
+/*
 int a2_libsleep(struct a2_state* state){
 	if(a2_type(state, 0)!=TNUMBER)
 		a2_err(state, "the arg must number.");
@@ -80,6 +79,7 @@ int a2_libsleep(struct a2_state* state){
 	sleep(t);
 	return 0;
 }
+*/
 
 // print 
 int a2_libprint(struct a2_state* state){
