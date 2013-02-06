@@ -88,8 +88,9 @@ inline struct a2_state* a2_env2state(struct a2_env* env_p){
 }
 
 static inline struct a2_obj* _fill_str2obj(struct a2_env* env_p, char* a2_s){
-	env_p->_forge_obj.type = A2_TSTRING;
-	env_p->_forge_obj.value.obj = env_p->_forge_gcobj;
+	// env_p->_forge_obj.type = A2_TSTRING;
+	// env_p->_forge_obj.value.obj = env_p->_forge_gcobj;
+	obj_setX(&(env_p->_forge_obj), A2_TSTRING, obj, env_p->_forge_gcobj);
 	a2_gcobj_setstring(env_p->_forge_gcobj, a2_s);
 	return &(env_p->_forge_obj);
 }
@@ -105,30 +106,25 @@ static struct a2_gcobj* _a2_env_addstrobj(struct a2_env* env_p, char* a2_s, int 
 	struct a2_obj* vp=a2_map_query(env_p->g_str, _fill_str2obj(env_p, a2_s));
 	if(vp==NULL){
 		struct a2_obj k, v;
-		v.type = A2_TPOINT;
 		struct a2_kv kv = {
 			&k, &v
 		};
 		if(is_copy)
 			a2_s = a2_string_new(a2_s);
 		k = a2_string2obj(a2_s);
-		v.value.point = k.value.obj;
-		a2_gc_add(env_p->gc_p, k.value.obj);		// add gc chain
+		obj_setX(&v, A2_TPOINT, point, obj_vX(&k, obj));
+		a2_gc_add(env_p->gc_p, obj_vX(&k, obj));		// add gc chain
 		a2_map_add(env_p->g_str, &kv);				// add global string map
-		return k.value.obj;
+		return obj_vX(&k, obj);
 	}else
-		return  vp->value.point;
+		return  obj_vX(vp, point);
 }
 
 inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str){
 	char* a2_s = a2_string_new(str);
 	struct a2_gcobj* _gcp = _a2_env_addstrobj(env_p, a2_s, 1);
-	a2_value v;
-	v.obj = _gcp;
-	struct a2_obj ret = {
-		A2_TSTRING,
-		v
-	};
+	struct a2_obj ret;
+	obj_setX(&ret, A2_TSTRING, obj, _gcp);
 	a2_string_free(a2_s);
 	return ret;
 }

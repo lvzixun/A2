@@ -25,8 +25,8 @@
 //#define curr_gsym  (ir_p->cls_sym_chain->sym.sym_chain[1])
 
 #define curr_clssym (ir_p->cls_sym_chain)
-#define curr_cls  a2_gcobj2closure(curr_clssym->cls_obj.value.obj)
-#define curr_ocls(co) a2_gcobj2closure((co).value.obj)
+#define curr_cls  a2_gcobj2closure(obj_vX(&(curr_clssym->cls_obj), obj))
+#define curr_ocls(co) a2_gcobj2closure(obj_vX(&(co), obj))
 
 #define add_arg  _add_arg(ir_p)
 #define curr_arg (curr_clssym->arg_cap)
@@ -203,9 +203,8 @@ static void _init_op_modle(struct a2_ir* ir_p){
 static struct cls_sym* cls_sym_new(struct a2_ir* ir_p){
 	struct cls_sym* ret = (struct cls_sym*)malloc(sizeof(*ret));
 	ret->next = NULL;
-	ret->cls_obj.type = A2_TCLOSURE;
-	ret->cls_obj.value.obj = a2_closure2gcobj(a2_closure_new());
-	a2_gcadd(ir_p->env_p, ret->cls_obj.value.obj);
+	obj_setX(&(ret->cls_obj), A2_TCLOSURE, obj, a2_closure2gcobj(a2_closure_new()));
+	a2_gcadd(ir_p->env_p, obj_vX(&(ret->cls_obj), obj));
 
 	ret->sym.cap=0;
 	ret->sym.size=DEF_SYM_SIZE;
@@ -358,8 +357,8 @@ static inline void free_clssym(struct a2_ir* ir_p){
 
 // add constant varable symbol
 static inline int  add_csymbol(struct a2_ir* ir_p, struct a2_obj* k){
-	assert(k->type==A2_TNUMBER || k->type==A2_TSTRING 
-		|| k->type==A2_TNIL || k->type==A2_TBOOL || k->type==_A2_TADDR);
+	assert(obj_t(k)==A2_TNUMBER || obj_t(k)==A2_TSTRING 
+		|| obj_t(k)==A2_TNIL || obj_t(k)==A2_TBOOL || obj_t(k)==_A2_TADDR);
 
 	struct a2_obj* vp = a2_map_query(curr_csym, k);
 	if(!vp){  // not find
@@ -371,7 +370,7 @@ static inline int  add_csymbol(struct a2_ir* ir_p, struct a2_obj* k){
 		a2_map_add(curr_csym, &kv);
 		return -1-idx;
 	}else
-		return -1 - (int)(vp->value.uinteger);
+		return -1 - (int)(obj_vX(vp, uinteger));
 }
 
 // add bool varable to constent symbol
@@ -388,7 +387,7 @@ static inline int add_nil(struct a2_ir* ir_p){
 
 // add local varable symbol
 static inline int add_lsymbol(struct a2_ir* ir_p, struct a2_obj* k, size_t root){
-	assert(k->type==A2_TSTRING);
+	assert(obj_t(k)==A2_TSTRING);
 	struct a2_obj v = a2_uinteger2obj(sym_v(var_local, curr_clssym->arg_cap));
 	struct a2_kv kv = {
 		k, &v
@@ -403,7 +402,7 @@ static inline int add_lsymbol(struct a2_ir* ir_p, struct a2_obj* k, size_t root)
 
 // get varable symbol return is closure idx+1, vt_p is return enum var_type
 static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
-	assert(k->type==A2_TSTRING);
+	assert(obj_t(k)==A2_TSTRING);
 	// if local varable , find at curr_clssym
 	int i;
 	struct a2_obj* vp = NULL;
@@ -411,9 +410,9 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 	for(i=curr_clssym->sym.cap-1; i>=1; i--){
 		vp = a2_map_query(curr_clssym->sym.sym_chain[i], k);
 		if(vp){
-			assert(vp->type==_A2_TUINTEGER);
-			*vt_p = v2vt(vp->value.uinteger);
-			return v2i(vp->value.uinteger)+1;
+			assert(obj_t(vp)==_A2_TUINTEGER);
+			*vt_p = v2vt(obj_vX(vp, uinteger));
+			return v2i(obj_vX(vp, uinteger))+1;
 		}
 	}
 
@@ -424,16 +423,16 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 		for(i=p->sym.cap-1; i>=1; i--){
 			vp = a2_map_query(p->sym.sym_chain[i], k);
 			if(vp){
-				assert(vp->type==_A2_TUINTEGER);
+				assert(obj_t(vp)==_A2_TUINTEGER);
 				struct a2_closure* __cls = NULL;
 				int __up_idx = 0;
-				switch(v2vt(vp->value.uinteger)){  // set upvalue
+				switch(v2vt(obj_vX(vp, uinteger))){  // set upvalue
 					case var_local:
 						__cls = curr_ocls(p->cls_obj);
-						__up_idx = v2i(vp->value.uinteger);
+						__up_idx = v2i(obj_vX(vp, uinteger));
 						break;
 					case var_upvalue:
-						__cls = a2_closure_upvalueaddr(curr_ocls(p->cls_obj), v2i(vp->value.uinteger), &__up_idx);
+						__cls = a2_closure_upvalueaddr(curr_ocls(p->cls_obj), v2i(obj_vX(vp, uinteger)), &__up_idx);
 						break;
 					default:
 						assert(0);
@@ -484,7 +483,7 @@ static inline int a2_ir_function(struct a2_ir* ir_p, size_t root, int des){
 			case args_node:{
 				// multiple parameter
 				struct a2_obj _args = a2_env_addstr(ir_p->env_p, "_args");
-				assert(_args.type==A2_TSTRING);
+				assert(obj_t(&_args)==A2_TSTRING);
 				add_lsymbol(ir_p, &_args, arg);
 				assert(params>0);
 				params = -1 -params;
@@ -514,10 +513,8 @@ ARG_FUNC:
 	// global function
 	if(node_p(root)->token){
 		assert(tt2tk(node_p(root)->token->tt)==tk_ide);
-		struct a2_obj func = {
-			A2_TSTRING,
-			node_p(root)->token->v
-		};
+		struct a2_obj func;
+		obj_setX(&func, A2_TSTRING, obj, node_p(root)->token->v.obj);
 		int k = add_csymbol(ir_p, &func);
 		assert(k<0);
 		if(is_Blimit(k)){
@@ -702,18 +699,15 @@ static inline void a2_ir_for(struct a2_ir* ir_p, size_t root){
 
 	// generate initial varable
 	a2_assert(a2_ir_ass(ir_p, node_p(root)->childs[0]), ==, _b);
-
+	
 	// generate for count 
-	int c_idx = a2_ir_exp(ir_p, node_p(root)->childs[1]);
+	int c_idx = _a2_ir_exp(ir_p, node_p(root)->childs[1], add_arg);
 	if(c_idx<0){
-		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, c_idx), node_line(root));
-		c_idx = top_arg;
+		closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, c_idx), node_line(root));
+	} else if(c_idx<_b+1){
+		closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, c_idx), node_line(root));
 	}
-	else if(c_idx<_b+1){
-		closure_add_ir(curr_cls, ir_abx(MOVE, add_arg, c_idx), node_line(root));
-		c_idx = top_arg;
-	}
-	assert(c_idx==_b+1);
+	assert(top_arg==_b+1);
 
 	// generate for step
 	int s_idx = a2_ir_exp(ir_p, node_p(root)->childs[2]);
@@ -849,15 +843,13 @@ static inline  void a2_ir_local(struct a2_ir* ir_p, size_t root){
 		switch(node_t(node)){
 			case var_node:
 				b = node;
-				k.type = A2_TSTRING;
-				k.value = node_p(b)->token->v;
+				obj_setX(&k, A2_TSTRING, obj, node_p(b)->token->v.obj);
 				add_lsymbol(ir_p, &k, b);
 				break;
 			case ass_node:{
 				assert(node_p(node_p(node)->childs[0])->type==var_node);
-				b = node_p(node)->childs[0];		
-				k.type = A2_TSTRING;
-				k.value = node_p(b)->token->v;
+				b = node_p(node)->childs[0];
+				obj_setX(&k, A2_TSTRING, obj, node_p(b)->token->v.obj);
 				add_lsymbol(ir_p, &k, b);
 				a2_ir_ass(ir_p, node);
 			}	
@@ -872,16 +864,14 @@ static inline  void a2_ir_local(struct a2_ir* ir_p, size_t root){
 
 
 static inline struct a2_obj node2obj(struct a2_ir* ir_p, size_t node){
-	struct a2_obj ret={0};
+	struct a2_obj ret=a2_nil2obj();
 	switch(node_t(node)){
 		case var_node:
 		case str_node:
-			ret.type = A2_TSTRING;
-			ret.value = node_p(node)->token->v;
+			obj_setX(&ret, A2_TSTRING, obj, node_p(node)->token->v.obj);
 			break;
 		case num_node:
-			ret.type = A2_TNUMBER;
-			ret.value = node_p(node)->token->v;
+			obj_setNum(&ret, node_p(node)->token->v.number);
 			break;
 		default:
 			assert(0); 
@@ -1141,9 +1131,8 @@ OP_IR:
 		}
 		// string
 		case str_node:{
-			struct a2_obj k = {
-				A2_TSTRING, node_p(root)->token->v
-			};
+			struct a2_obj k;
+			obj_setX(&k, A2_TSTRING, obj, node_p(root)->token->v.obj);
 			return add_csymbol(ir_p, &k);
 		}
 			break;
@@ -1246,12 +1235,8 @@ static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des){
 	// generate a2_obj add map to gc chain
 	struct a2_gcobj* _mg = 	a2_map2gcobj(a2_map_new());
 	a2_gcadd(ir_p->env_p, _mg);
-	a2_value v;
-	v.obj = _mg;
-	struct a2_obj obj = {
-		A2_TMAP,
-		v
-	};
+	struct a2_obj obj;
+	obj_setX(&obj, A2_TMAP, obj, _mg);
 
 	int _b = curr_arg, count=0;
 	int adr = closure_push_ctnstack(curr_cls, &obj);
@@ -1305,12 +1290,8 @@ static inline int a2_ir_array(struct a2_ir* ir_p, size_t root, int des){
 	// generate a2_obj, add array to gc chain
 	struct a2_gcobj* _ag = a2_array2gcobj(a2_array_new());
 	a2_gcadd(ir_p->env_p, _ag);
-	a2_value v;
-	v.obj = _ag;
-	struct a2_obj obj = {
-		A2_TARRAY,
-		v
-	};
+	struct a2_obj obj;
+	obj_setX(&obj, A2_TARRAY, obj, _ag);
 
 	int _b = curr_arg;
 	int adr = closure_push_ctnstack(curr_cls, &obj);

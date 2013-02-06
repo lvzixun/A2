@@ -4,7 +4,7 @@ CFLAGS += -O2  -g -Wall
 ifeq ($(OS), Windows_NT)
  N = \\
  RM = del
- CFLAGS += -D __USE_MINGW_ANSI_STDIO -D _MINGW32_
+ CFLAGS += -D _MINGW32_
 else
  N = //
  RM = rm -rf
@@ -15,7 +15,7 @@ a2_obj.o a2_gc.o a2_parse.o a2_ir.o a2_closure.o a2_array.o a2_vm.o a2_state.o \
 a2_libutil.o
 
 #TEST_OBJ = ./test/test_io.o ./test/test_string.o ./test/test_lex.o ./test/test_map.o ./test/test_parse.o ./test/test_ir.o
-TEST_OBJ = .$(N)test$(N)test_vm.o
+TEST_OBJ = .$(N)test$(N)test_a2.o
 OBJ = $(A2_OBJ) $(TEST_OBJ)
 
 TEST =  $(foreach s, $(TEST_OBJ), $(basename $(s)))

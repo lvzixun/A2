@@ -13,10 +13,32 @@ typedef union {
 		size_t addr;
 }a2_value;
 
-struct a2_obj{
-	int type;
-	a2_value value;
-};
+
+#ifndef NaN_Trick
+	struct a2_obj{
+		int type;
+		a2_value value;
+	};
+#else
+	union  nan_u{
+		struct a2_gcobj* obj;
+		a2_cfunction cfunction;
+		void* point;
+		uint32 uinteger; 
+		size_t addr;
+	};
+
+	struct a2_obj{
+		union {
+			// only lite endian
+			struct {
+				union nan_u _v;
+				int _t;
+			} _m;
+			double number;
+		} __v;
+	};
+#endif
 
 enum{
 	// invalid object
@@ -38,8 +60,27 @@ enum{
 	_A2_TADDR
 };
 
-#define str_obj(obj_p)  (a2_gcobj2string((obj_p)->value.obj))
-#define num_obj(obj_p)  ((obj_p)->value.number)
+
+
+#ifndef NaN_Trick
+	#define obj_t(p)	((p)->type)
+	#define obj_vX(p, vn)	((p)->value.vn)
+	#define obj_vNum(p)		obj_vX(p, number)
+	#define obj_setX(p, t, vn, v)	( (p)->type=(t), (p)->value.vn=(v) )
+	#define obj_setNum(p, n)	obj_setX(p, A2_TNUMBER, number, n)
+#else
+	#define NN_MARK		0x7FF7A500
+	#define NN_MASK		0x7FFFFF00
+	#define POS_TYPE	(32)
+	#define is_num(p)	((((p)->__v._m._t) & NN_MASK)!=NN_MARK)
+	#define ot(p)		((p)->__v._m._t)
+	#define obj_t(p)	( (is_num(p))?(A2_TNUMBER):(ot(p) & 0XFF) )	
+	#define obj_vX(p, vn)	( (p)->__v._m._v.vn )
+	#define obj_vNum(p)		( (p)->__v.number )
+	#define obj_setX(p, t, vn, v)	( (p)->__v._m._t=(NN_MARK|(t)), (p)->__v._m._v.vn=(v) )
+	#define obj_setNum(p, n)	((p)->__v.number=(n))
+#endif
+
 
 size_t a2_obj_size(struct a2_obj* obj_p);
 byte* a2_obj_bytes(struct a2_obj* obj_p);

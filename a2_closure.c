@@ -225,8 +225,8 @@ void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls){
 
 	
 	for(j=0; j<cls->cls_stack.top; j++){
-		assert(cls->cls_stack.stk_p[j].type==A2_TCLOSURE);
-		dump_closure(ir_p, a2_gcobj2closure(cls->cls_stack.stk_p[j].value.obj));
+		assert(obj_t(&(cls->cls_stack.stk_p[j]))==A2_TCLOSURE);
+		dump_closure(ir_p, a2_gcobj2closure(obj_vX(&(cls->cls_stack.stk_p[j]), obj)));
 	}
 }
 

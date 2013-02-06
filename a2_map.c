@@ -20,7 +20,7 @@ struct a2_map{
 };
 
 #define DEFAULT_MAP_LEN		32
-#define is_nil(v) ((v).type==_A2_TNULL)
+#define is_nil(v) (obj_t(&(v))==_A2_TNULL)
 
 inline size_t calc_hash(byte* name, size_t len)
 {
@@ -36,7 +36,12 @@ struct a2_map* a2_map_new(){
 	struct a2_map* ret = (struct a2_map*)malloc(sizeof(*ret));
 	ret->size = DEFAULT_MAP_LEN;
 	ret->cap = 0;
-	ret->slot_p = (struct a2_slot*)calloc(DEFAULT_MAP_LEN, sizeof(struct a2_slot));
+	ret->slot_p = (struct a2_slot*)malloc(DEFAULT_MAP_LEN*sizeof(struct a2_slot));
+	int i;
+	for(i=0; i<DEFAULT_MAP_LEN; i++){
+		obj_setX( &(ret->slot_p[i].key), _A2_TNULL, obj, NULL);
+		ret->slot_p[i].next = 0;
+	}
 	return ret;
 }
 
@@ -121,7 +126,7 @@ static inline struct a2_obj* _map_dump(struct a2_map* map_p, size_t begin, struc
 inline struct a2_obj* a2_map_next(struct a2_map* map_p, struct a2_obj* key){
 	assert(map_p && key);
 	// begin 
-	if(key->type==A2_TNIL)
+	if(obj_t(key)==A2_TNIL)
 		return _map_dump(map_p, 0, key);
 	else{
 		struct a2_obj* kp = NULL;

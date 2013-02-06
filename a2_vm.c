@@ -115,22 +115,22 @@ void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 #define  __vm_op(op, f) do{struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir)); \
 							struct a2_obj* _v1 = _getvalue(vm_p, ir_gb(curr_ir)); \
 							struct a2_obj* _v2 = _getvalue(vm_p, ir_gc(curr_ir)); \
-							if(_v1->type!=A2_TNUMBER || _v2->type!=A2_TNUMBER) \
+							if(obj_t(_v1)!=A2_TNUMBER || obj_t(_v2)!=A2_TNUMBER) \
 								vm_error("the varable is not number."); \
-							*_d = f(_v1->value.number op _v2->value.number);\
+							*_d = f(obj_vNum(_v1) op obj_vNum(_v2));\
 							curr_pc++;}while(0)
 
 #define _vm_ope(op)		do{struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir)); \
 							struct a2_obj* _v1 = _getvalue(vm_p, ir_gb(curr_ir)); \
 							struct a2_obj* _v2 = _getvalue(vm_p, ir_gc(curr_ir)); \
-							if(_v1->type != _v2->type) \
+							if(obj_t(_v1) != obj_t(_v2)) \
 								vm_error("the varables is different."); \
-							switch(_v1->type){ \
+							switch(obj_t(_v1)){ \
 								case A2_TNUMBER: \
-									*_d = a2_bool2obj(_v1->value.number op _v2->value.number); \
+									*_d = a2_bool2obj(obj_vNum(_v1) op obj_vNum(_v2)); \
 									break; \
 								case A2_TSTRING: \
-									*_d = a2_bool2obj(a2_gcobj2string(_v1->value.obj) op a2_gcobj2string(_v2->value.obj)); \
+									*_d = a2_bool2obj(a2_gcobj2string(obj_vX(_v1, obj)) op a2_gcobj2string(obj_vX(_v2, obj))); \
 									break; \
 								case A2_TNIL: \
 									*_d = a2_bool2obj(1); \
@@ -138,7 +138,7 @@ void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 								case A2_TARRAY: \
 								case A2_TCLOSURE: \
 								case A2_TMAP: \
-									*_d = a2_bool2obj(_v1->value.obj op _v2->value.obj); \
+									*_d = a2_bool2obj(obj_vX(_v1, obj) op obj_vX(_v2, obj)); \
 									break; \
 							} \
 							curr_pc++;}while(0)
@@ -147,9 +147,9 @@ void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 #define _vm_opl(op)  do{struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir)); \
 						struct a2_obj* _v1 = _getvalue(vm_p, ir_gb(curr_ir)); \
 						struct a2_obj* _v2 = _getvalue(vm_p, ir_gc(curr_ir)); \
-						if(_v1->type!=A2_TBOOL || _v2->type!=A2_TBOOL) \
+						if(obj_t(_v1)!=A2_TBOOL || obj_t(_v2)!=A2_TBOOL) \
 							vm_error("the varable is must bool."); \
-						*_d = a2_bool2obj( _v1->value.uinteger op _v2->value.uinteger); \
+						*_d = a2_bool2obj( obj_vX(_v1, uinteger) op obj_vX(_v2, uinteger)); \
 						curr_pc++;}while(0)
 
 // vm 
@@ -288,7 +288,7 @@ static inline void _vm_loadnil(struct a2_vm* vm_p){
 	struct a2_obj* _obj = NULL;
 	for(i=ir_ga(curr_ir); i<(ir_ga(curr_ir)+ir_gbx(curr_ir)); i++){
 		_obj = a2_closure_arg(curr_cls, i);
-		_obj->type = A2_TNIL;
+		obj_setX(_obj, A2_TNIL, point, NULL);
 	}
 	curr_pc++;
 }
@@ -332,9 +332,9 @@ static inline void _vm_container(struct a2_vm* vm_p){
 static inline void _vm_setlist(struct a2_vm* vm_p){
 	int i, end=ir_gb(curr_ir)+ir_gc(curr_ir);
 	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));	
-	assert(_d->type==A2_TARRAY);
+	assert(obj_t(_d)==A2_TARRAY);
 	for(i=ir_gb(curr_ir); i<end; i++){
-		a2_array_add(a2_gcobj2array(_d->value.obj), a2_closure_arg(curr_cls, i));
+		a2_array_add(a2_gcobj2array(obj_vX(_d, obj)), a2_closure_arg(curr_cls, i));
 	}
 	curr_pc++;
 }
@@ -345,13 +345,13 @@ static inline void _vm_setmap(struct a2_vm* vm_p){
 	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
 	struct a2_obj* _v = NULL;
 	struct a2_map* map = NULL;
-	assert(_d->type==A2_TMAP);
+	assert(obj_t(_d)==A2_TMAP);
 	
 	struct a2_kv kv={0};
 	for(i=ir_gb(curr_ir); i<end; i+=2){
 		kv.key = a2_closure_arg(curr_cls, i);
 		kv.vp = a2_closure_arg(curr_cls, i+1);
-		map = a2_gcobj2map(_d->value.obj);
+		map = a2_gcobj2map(obj_vX(_d, obj));
 		if( (_v=a2_map_query(map, kv.key))==NULL )
 			a2_map_add(map, &kv);
 		else
@@ -366,18 +366,18 @@ static inline void _vm_getvalue(struct a2_vm* vm_p){
 	struct a2_obj* _c = a2_closure_arg(curr_cls, ir_gb(curr_ir));
 	struct a2_obj* _k = _getvalue(vm_p, ir_gc(curr_ir));
 	struct a2_obj* __d = NULL;
-	switch(_c->type){
+	switch(obj_t(_c)){
 		case A2_TARRAY:
-	 		if(_k->type!=A2_TNUMBER)
+	 		if(obj_t(_k)!=A2_TNUMBER)
 	 			vm_error("the key is must number at get array.");
-			__d = a2_array_get(a2_gcobj2array(_c->value.obj), _k);
+			__d = a2_array_get(a2_gcobj2array(obj_vX(_c, obj)), _k);
 			if(!__d) goto GVALUE_ERROR;
 			*_d = *__d;
 			break;
 		case A2_TMAP:
-			if(_k->type!=A2_TNUMBER && _k->type!=A2_TSTRING)
+			if(obj_t(_k)!=A2_TNUMBER && obj_t(_k)!=A2_TSTRING)
 				vm_error("the key is must number or string at get map.");
-			__d = a2_map_query(a2_gcobj2map(_c->value.obj), _k);
+			__d = a2_map_query(a2_gcobj2map(obj_vX(_c, obj)), _k);
 			if(!__d) goto GVALUE_ERROR;
 			*_d = *__d;
 			break;
@@ -397,18 +397,18 @@ static inline void _vm_setvalue(struct a2_vm* vm_p){
 	struct a2_obj* _k = _getvalue(vm_p, ir_gb(curr_ir));
 	struct a2_obj* _v = _getvalue(vm_p, ir_gc(curr_ir));
 	struct a2_obj* __d = NULL;
-	switch(_c->type){
+	switch(obj_t(_c)){
 		case A2_TARRAY:
-	 		if(_k->type!=A2_TNUMBER)
+	 		if(obj_t(_k)!=A2_TNUMBER)
 	 			vm_error("the key is must number at set array.");
-			__d = a2_array_get(a2_gcobj2array(_c->value.obj), _k);
+			__d = a2_array_get(a2_gcobj2array(obj_vX(_c, obj)), _k);
 			if(!__d)  goto SVALUE_ERROR;
 			*__d = *_v;
 			break;
 		case A2_TMAP:
-			if(_k->type!=A2_TNUMBER && _k->type!=A2_TSTRING)
+			if(obj_t(_k)!=A2_TNUMBER && obj_t(_k)!=A2_TSTRING)
 				vm_error("the key is must number or string at set map.");
-			__d = a2_map_query(a2_gcobj2map(_c->value.obj), _k);
+			__d = a2_map_query(a2_gcobj2map(obj_vX(_c, obj)), _k);
 			if(!__d) goto SVALUE_ERROR;
 			*__d = *_v;
 			break;
@@ -423,8 +423,8 @@ static inline void _vm_setvalue(struct a2_vm* vm_p){
 }
 
 #define jump(idx)	do{struct a2_obj* _oa = a2_closure_const(curr_cls, (idx)); \
-						assert(_oa->type = _A2_TADDR); \
-						curr_pc = _oa->value.addr;}while(0)
+						assert(obj_t(_oa) == _A2_TADDR); \
+						curr_pc = obj_vX(_oa, addr);}while(0)
 
 // closure
 static inline void _vm_closure(struct a2_vm* vm_p){
@@ -439,14 +439,14 @@ static inline void _vm_forprep(struct a2_vm* vm_p){
 	struct a2_obj* _count = a2_closure_arg(curr_cls, ir_ga(curr_ir)+1);
 	struct a2_obj* _step = a2_closure_arg(curr_cls, ir_ga(curr_ir)+2);
 
-	if(_i->type!=A2_TNUMBER)
+	if(obj_t(_i)!=A2_TNUMBER)
 		vm_error("the index varable is must number.");
-	if(_count->type!=A2_TNUMBER)
+	if(obj_t(_count)!=A2_TNUMBER)
 		vm_error("the for's count is must number.");
-	if(_step->type!=A2_TNUMBER)
+	if(obj_t(_step)!=A2_TNUMBER)
 		vm_error("the for's step is must number.");
 
-	if(_i->value.number>=_count->value.number)  // for end
+	if(obj_vNum(_i)>=obj_vNum(_count))  // for end
 		jump(ir_gbx(curr_ir));
 	else	// for continue
 		curr_pc++;
@@ -458,12 +458,12 @@ static inline void _vm_forloop(struct a2_vm* vm_p){
 	struct a2_obj* _count = a2_closure_arg(curr_cls, ir_ga(curr_ir)+1);
 	struct a2_obj* _step = a2_closure_arg(curr_cls, ir_ga(curr_ir)+2);
 
-	if(_i->type!=A2_TNUMBER)
+	if(obj_t(_i)!=A2_TNUMBER)
 		vm_error("the index varable is must number.");
 
-	assert(_i->type==A2_TNUMBER && _count->type==A2_TNUMBER && _step->type==A2_TNUMBER);
-	_i->value.number += _step->value.number;
-	if(_i->value.number<_count->value.number) // continue for
+	assert(obj_t(_i)==A2_TNUMBER && obj_t(_count)==A2_TNUMBER && obj_t(_step)==A2_TNUMBER);
+	obj_vNum(_i) += obj_vNum(_step);
+	if(obj_vNum(_i) < obj_vNum(_count)) // continue for
 		jump(ir_gbx(curr_ir));
 	else // for end
 		curr_pc++;
@@ -476,14 +476,14 @@ static inline void _vm_foreachprep(struct a2_vm* vm_p){
 	struct a2_obj* _c = a2_closure_arg(curr_cls, ir_ga(curr_ir)+2);
 	struct a2_obj* __v = NULL;
 
-	if(_c->type!=A2_TMAP && _c->type!=A2_TARRAY)
+	if(obj_t(_c)!=A2_TMAP && obj_t(_c)!=A2_TARRAY)
 		vm_error("the varable is not container.");
 
 	// set init varable
-	switch(_c->type){
+	switch(obj_t(_c)){
 		case A2_TMAP:
 			*_k = a2_nil2obj();
-			__v = a2_map_next(a2_gcobj2map(_c->value.obj), _k);
+			__v = a2_map_next(a2_gcobj2map(obj_vX(_c, obj)), _k);
 			if(__v==NULL)
 				jump(ir_gbx(curr_ir));
 			else{
@@ -493,7 +493,7 @@ static inline void _vm_foreachprep(struct a2_vm* vm_p){
 			break;
 		case A2_TARRAY:
 			*_k = a2_nil2obj();
-			__v = a2_array_next(a2_gcobj2array(_c->value.obj), _k);
+			__v = a2_array_next(a2_gcobj2array(obj_vX(_c, obj)), _k);
 			if(__v==NULL)  // dump is end
 				jump(ir_gbx(curr_ir));
 			else{
@@ -513,13 +513,13 @@ static inline void _vm_foreachloop(struct a2_vm* vm_p){
 	struct a2_obj* _c = a2_closure_arg(curr_cls, ir_ga(curr_ir)+2);
 	struct a2_obj* __v = NULL;
 
-	if(_c->type!=A2_TMAP && _c->type!=A2_TARRAY)
+	if(obj_t(_c)!=A2_TMAP && obj_t(_c)!=A2_TARRAY)
 		vm_error("the varable is not container.");
 
 	// dump next
-	switch(_c->type){
+	switch(obj_t(_c)){
 		case A2_TMAP:
-			__v = a2_map_next(a2_gcobj2map(_c->value.obj), _k);
+			__v = a2_map_next(a2_gcobj2map(obj_vX(_c, obj)), _k);
 			if(__v==NULL)
 				curr_pc++;
 			else{
@@ -528,7 +528,7 @@ static inline void _vm_foreachloop(struct a2_vm* vm_p){
 			}
 			break;
 		case A2_TARRAY:
-			__v = a2_array_next(a2_gcobj2array(_c->value.obj), _k);
+			__v = a2_array_next(a2_gcobj2array(obj_vX(_c, obj)), _k);
 			if(__v==NULL)  // dump is end
 				curr_pc++;
 			else{
@@ -556,7 +556,7 @@ static inline void _vm_move(struct a2_vm* vm_p){
 // test
 static inline void _vm_test(struct a2_vm* vm_p){
 	struct  a2_obj* _v = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	if(_v->type==A2_TNIL || (_v->type==A2_TBOOL && !(_v->value.uinteger)))
+	if(obj_t(_v)==A2_TNIL || (obj_t(_v)==A2_TBOOL && !(obj_vX(_v, uinteger))))
 		jump(ir_gbx(curr_ir));
 	else
 		curr_pc++;
@@ -567,12 +567,12 @@ static inline void _vm_not(struct a2_vm* vm_p){
 	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
 	struct a2_obj* _v = _getvalue(vm_p, ir_gbx(curr_ir));
 
-	switch(_v->type){
+	switch(obj_t(_v)){
 		case A2_TNIL:
 			*_d = a2_bool2obj(1);
 			break;
 		case A2_TBOOL:
-			*_d = a2_bool2obj(!(_v->value.uinteger));
+			*_d = a2_bool2obj(!(obj_vX(_v, uinteger)));
 			break;
 		default:
 			vm_error("the varable is not bool type.");
@@ -586,9 +586,9 @@ static inline void _vm_neg(struct a2_vm* vm_p){
 	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
 	struct a2_obj* _v = _getvalue(vm_p, ir_gbx(curr_ir));
 
-	if(_v->type!=A2_TNUMBER)
+	if(obj_t(_v)!=A2_TNUMBER)
 		vm_error("the varable is not number type at set neg.");
-	*_d = a2_number2obj(_v->value.number*(-1));
+	*_d = a2_number2obj(obj_vNum(_v)*(-1));
 	curr_pc++;
 }
 
@@ -621,8 +621,7 @@ static inline void _vm_cat(struct a2_vm* vm_p){
 	char* a2_s = a2_string_new(obj2str(_lv, buf, sizeof(buf)-1));
 	a2_s = a2_string_cat(a2_s, obj2str(_rv, buf0, sizeof(buf0)-1));
 
-	_d->type = A2_TSTRING;
-	_d->value.obj = a2_env_addstrobj(vm_p->env_p, a2_s);
+	obj_setX(_d, A2_TSTRING, obj, a2_env_addstrobj(vm_p->env_p, a2_s));
 
 	a2_string_free(a2_s);
 	curr_pc++;
@@ -631,7 +630,7 @@ static inline void _vm_cat(struct a2_vm* vm_p){
 // call
 static inline void _vm_call(struct a2_vm* vm_p){
 	struct a2_obj* _func = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	switch(_func->type){
+	switch(obj_t(_func)){
 		case A2_TCLOSURE:
 			__vm_call_function(vm_p, _func);
 			break;
@@ -645,7 +644,7 @@ static inline void _vm_call(struct a2_vm* vm_p){
 
 // call c function
 static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func){
-	assert(_func->type==A2_TCFUNCTION);
+	assert(obj_t(_func)==A2_TCFUNCTION);
 	int i, j;
 	struct a2_obj* _obj = NULL;
 
@@ -664,7 +663,7 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 	int _retb = a2_gettop(vm_p->env_p)-a2_getbottom(vm_p->env_p);
 	// call c function
 	callinfo_new(vm_p, NULL, 0, 0);
-	int ret = _func->value.cfunction(a2_env2state(vm_p->env_p));
+	int ret = obj_vX(_func, cfunction)(a2_env2state(vm_p->env_p));
 	callinfo_free(vm_p);
 
 	// set return value
@@ -677,7 +676,7 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 
 	for(; j<ir_ga(curr_ir)+ir_gc(curr_ir); j++){
 		_obj = a2_closure_arg(curr_cls, j);
-		_obj->type = A2_TNIL;
+		obj_setX(_obj, A2_TNIL, point, NULL);
 	}
 
 	a2_setbottom(vm_p->env_p, _b);
@@ -687,9 +686,9 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 
 // call a2 function
 static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func){
-	assert(_func->type==A2_TCLOSURE);
+	assert(obj_t(_func)==A2_TCLOSURE);
 	struct a2_obj* _obj = NULL;
-	int i, j, params = a2_closure_params(a2_gcobj2closure(_func->value.obj));
+	int i, j, params = a2_closure_params(a2_gcobj2closure(obj_vX(_func, obj)));
 
 	//TODO not allow ...
 	assert(params>=0);
@@ -698,21 +697,21 @@ static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func){
 	for(i=ir_ga(curr_ir)+1, j=0; 
 		i<=ir_ga(curr_ir)+ir_gb(curr_ir) && j<params; 
 		j++, i++){
-		_obj = a2_closure_arg(a2_gcobj2closure(_func->value.obj), j);
+		_obj = a2_closure_arg(a2_gcobj2closure(obj_vX(_func, obj)), j);
 		*_obj = *a2_closure_arg(curr_cls, i);
 	}
 	
 	// set clear params
 	for( ;j<params; j++){
-		_obj = a2_closure_arg(a2_gcobj2closure(_func->value.obj), j);
-		_obj->type = A2_TNIL;
+		_obj = a2_closure_arg(a2_gcobj2closure(obj_vX(_func, obj)), j);
+		obj_setX(_obj, A2_TNIL, point, NULL);
 	}
 	
 	// new call info
 	int b = ir_ga(curr_ir), n=ir_gc(curr_ir);
 
 	curr_pc++; 
-	callinfo_new(vm_p, a2_gcobj2closure(_func->value.obj), b, n);
+	callinfo_new(vm_p, a2_gcobj2closure(obj_vX(_func, obj)), b, n);
 }
 
 // return
@@ -767,7 +766,7 @@ static inline int __vm_return_function(struct a2_vm* vm_p){
 	// set clear
 	for( ; j<curr_ci->retbegin+curr_ci->retnumber; j++){
 		_obj = a2_closure_arg(call_ci->cls, j);
-		_obj->type = A2_TNIL;
+		obj_setX(_obj, A2_TNIL, point, NULL);
 	}
 
 	ret = curr_ci->retnumber;

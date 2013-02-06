@@ -49,48 +49,50 @@ static const char* type_info[] = {
 struct a2_obj  a2_string2obj(char* a2_s){
 	assert(a2_s);
 	struct a2_obj ret;
-	ret.type = A2_TSTRING;
-	ret.value.obj = a2_string2gcobj(a2_s);
+	obj_setX(&ret, A2_TSTRING, obj, a2_string2gcobj(a2_s));
 	return ret;
 }
 
 // a2_number to obj
 struct a2_obj a2_number2obj(a2_number num){
 	struct a2_obj ret;
-	ret.type = A2_TNUMBER;
-	ret.value.number = num;
+	obj_setNum(&ret, num);
 	return ret;
 }
 
 // void* point to obj
 struct a2_obj  a2_point2obj(void* p){
 	struct a2_obj ret;
-	ret.type = A2_TPOINT;
-	ret.value.point = p;
+	obj_setX(&ret, A2_TPOINT, point, p);
+	// ret.type = A2_TPOINT;
+	// ret.value.point = p;
 	return ret;
 }
 
 // uint32 v to obj
 struct a2_obj a2_uinteger2obj(uint32 v){
 	struct a2_obj ret;
-	ret.type = _A2_TUINTEGER;
-	ret.value.uinteger = v;
+	obj_setX(&ret, _A2_TUINTEGER, uinteger, v);
+	// ret.type = _A2_TUINTEGER;
+	// ret.value.uinteger = v;
 	return ret;
 }
 
 // bool varable to object
 struct a2_obj a2_bool2obj(int t){
 	struct a2_obj ret;
-	ret.type = A2_TBOOL;
-	ret.value.uinteger = (!(t==0));
+	obj_setX(&ret, A2_TBOOL, uinteger, (!(t==0)));
+	// ret.type = A2_TBOOL;
+	// ret.value.uinteger = (!(t==0));
 	return ret;
 }
 
 // nil varable to object
 struct a2_obj a2_nil2obj(){
 	struct a2_obj ret;
-	ret.type = A2_TNIL;
-	ret.value.point = NULL;
+	obj_setX(&ret, A2_TNIL, point, NULL);
+	// ret.type = A2_TNIL;
+	// ret.value.point = NULL;
 	return ret;
 }
 
@@ -98,40 +100,44 @@ struct a2_obj a2_nil2obj(){
 struct a2_obj a2_cfunction2obj(a2_cfunction func){
 	assert(func);
 	struct a2_obj ret;
-	ret.type = A2_TCFUNCTION;
-	ret.value.cfunction = func;
+	obj_setX(&ret, A2_TCFUNCTION, cfunction, func);
+	// ret.type = A2_TCFUNCTION;
+	// ret.value.cfunction = func;
 	return ret;
 }
 
 // addr to object
 struct a2_obj a2_addr2obj(size_t addr){
 	struct a2_obj ret;
-	ret.type = _A2_TADDR;
-	ret.value.addr = addr;
+	obj_setX(&ret, _A2_TADDR, addr, addr);
+	// ret.type = _A2_TADDR;
+	// ret.value.addr = addr;
 	return ret;
 }
 
 void a2_obj_free(struct a2_obj* obj_p){
-	assert(obj_p && obj_p->type <=4);
-	if(obj_free_func[obj_p->type])
-		obj_free_func[obj_p->type](obj_p);
-	obj_p->type = _A2_TNULL;
+	assert(obj_p && obj_t(obj_p) <=4);
+	int t = obj_t(obj_p);
+	if(obj_free_func[t])
+		obj_free_func[t](obj_p);
+	obj_setX(obj_p, _A2_TNULL, point, NULL);
+//	obj_p->type = _A2_TNULL;
 }
 
 // get data size from a2_obj
 size_t a2_obj_size(struct a2_obj* obj_p){
 	assert(obj_p);
-	switch(obj_p->type){
+	switch(obj_t(obj_p)){
 		case A2_TSTRING:
-			return   a2_string_len(a2_gcobj2string(obj_p->value.obj));
+			return   a2_string_len(a2_gcobj2string(obj_vX(obj_p, obj)));
 		case A2_TNUMBER:
 			return sizeof(a2_number);
 		case A2_TNIL:
 			return 0;
 		case A2_TBOOL:
-			return sizeof(obj_p->value.uinteger);
+			return sizeof(obj_vX(obj_p, uinteger));
 		case _A2_TADDR:
-			return sizeof(obj_p->value.addr);
+			return sizeof(obj_vX(obj_p, addr));
 		default:
 			return 0;
 	}
@@ -139,28 +145,28 @@ size_t a2_obj_size(struct a2_obj* obj_p){
 
 byte* a2_obj_bytes(struct a2_obj* obj_p){
 	assert(obj_p);
-	switch(obj_p->type){
+	switch(obj_t(obj_p)){
 		case A2_TSTRING:
-			return  (byte*)(a2_gcobj2string(obj_p->value.obj));
+			return  (byte*)(a2_gcobj2string(obj_vX(obj_p, obj)));
 		case A2_TNUMBER:
-			return (byte*)(&(obj_p->value.number));
+			return (byte*)(&obj_vNum(obj_p));
 		case A2_TNIL:
 			return NULL;
 		case A2_TBOOL:
-			return (byte*)(&(obj_p->value.uinteger));
+			return (byte*)(&obj_vX(obj_p, uinteger));
 		case _A2_TADDR:
-			return (byte*)(&(obj_p->value.addr));
+			return (byte*)(&obj_vX(obj_p, addr));
 		default:
 			return NULL;
 	}
 }
 
 static void _obj_strfree(struct a2_obj* obj_p){
-	a2_gcobj_stringfree(obj_p->value.obj);
+	a2_gcobj_stringfree(obj_vX(obj_p, obj));
 }
 
 int a2_obj_cmp(struct a2_obj* obj1, struct a2_obj* obj2){
-	return ((obj1->type == obj2->type) && 
+	return ((obj_t(obj1) == obj_t(obj2)) && 
 			a2_obj_size(obj1)==a2_obj_size(obj2) && 
 			memcmp(a2_obj_bytes(obj1), a2_obj_bytes(obj2), a2_obj_size(obj1))==0)?(a2_true):(a2_fail); 
 }
@@ -172,28 +178,28 @@ inline const char* a2_type2string(int type){
 
 inline char* obj2str(struct a2_obj* obj, char* buf, size_t len){
 	assert(obj);
-	switch(obj->type){
+	switch(obj_t(obj)){
 		case A2_TNUMBER:
-			snprintf(buf, len, "%.14g", obj->value.number);
+			snprintf(buf, len, "%.14g", obj_vNum(obj));
 			return buf;
 		case A2_TSTRING:
-			return a2_gcobj2string(obj->value.obj);
+			return a2_gcobj2string(obj_vX(obj, obj));
 		case A2_TBOOL:
-			snprintf(buf, len, "%s", (obj->value.uinteger)?("true"):("false"));
+			snprintf(buf, len, "%s", (obj_vX(obj, uinteger))?("true"):("false"));
 			return buf;
 		case A2_TNIL:
 			return "nil";
 		case _A2_TADDR:
-			_sf(buf, len, "[%zd]", obj->value.addr);
+			_sf(buf, len, "[%zd]", obj_vX(obj, addr));
 			return buf;
 		case A2_TCLOSURE:
-			snprintf(buf, len, "closure:%p", a2_gcobj2closure(obj->value.obj));
+			snprintf(buf, len, "closure:%p", a2_gcobj2closure(obj_vX(obj, obj)));
 			return buf;
 		case A2_TARRAY:
-			snprintf(buf, len, "array:%p", a2_gcobj2array(obj->value.obj));
+			snprintf(buf, len, "array:%p", a2_gcobj2array(obj_vX(obj, obj)));
 			return buf;
 		case A2_TMAP:
-			snprintf(buf, len, "map:%p", a2_gcobj2map(obj->value.obj));
+			snprintf(buf, len, "map:%p", a2_gcobj2map(obj_vX(obj, obj)));
 			return buf;
 		default:
 			assert(0);
@@ -203,12 +209,12 @@ inline char* obj2str(struct a2_obj* obj, char* buf, size_t len){
 
 // test obj dump
 void obj_dump(struct a2_obj* obj){
-	switch(obj->type){
+	switch(obj_t(obj)){
 		case A2_TSTRING:
-			printf("%s", str_obj(obj));
+			printf("%s", a2_gcobj2string(obj_vX(obj, obj)));
 			break;
 		case A2_TNUMBER:
-			printf("%.14g", num_obj(obj));
+			printf("%.14g", obj_vNum(obj));
 			break;
 		default:
 			printf("<null>");

@@ -30,15 +30,15 @@ void a2_array_free(struct a2_array* array_p){
 
 inline struct a2_obj* a2_array_next(struct a2_array* array_p, struct a2_obj* k){
 	assert(k);
-	if(k->type == A2_TNIL){
-		k->type = A2_TNUMBER;
-		k->value.number = -1;
+	if(obj_t(k) == A2_TNIL){
+		obj_setNum(k, -1);
 	}
 
-	if( (size_t)(k->value.number + 1)>=array_p->len )
+	if( (size_t)(obj_vNum(k) + 1)>=array_p->len )
 		return NULL;
-	struct a2_obj* v = &(array_p->list[(size_t)(k->value.number+1)]);
-	k->value.number = (a2_number)((size_t)(k->value.number)+1);
+	struct a2_obj* v = &(array_p->list[(size_t)(obj_vNum(k)+1)]);
+	a2_number number = (a2_number)((size_t)(obj_vNum(k))+1);
+	obj_setNum(k, number);
 	return v; 
 }
 
@@ -56,8 +56,8 @@ inline struct a2_obj* a2_array_add(struct a2_array* array_p, struct a2_obj* obj)
 
 
 inline struct a2_obj* a2_array_get(struct a2_array* array_p, struct a2_obj* k){
-	assert(k->type==A2_TNUMBER);
-	size_t idx=(size_t)(k->value.number);  
+	assert(obj_t(k)==A2_TNUMBER);
+	size_t idx=(size_t)(obj_vNum(k));  
 	if(idx>=array_p->len)
 		return NULL;
 	
