@@ -4,7 +4,7 @@ CFLAGS += -O2  -g -Wall
 ifeq ($(OS), Windows_NT)
  N = \\
  RM = del
- CFLAGS += -D _MINGW32_
+ CFLAGS += -D __USE_MINGW_ANSI_STDIO -D _MINGW32_
 else
  N = //
  RM = rm -rf

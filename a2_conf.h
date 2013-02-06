@@ -23,7 +23,6 @@ typedef double	 a2_number;
 #ifndef _MINGW32_
 	#define _sf snprintf
 #else
-	#define __USE_MINGW_ANSI_STDIO
 	#define _sf _snprintf
 #endif
 
