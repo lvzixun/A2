@@ -1,4 +1,7 @@
-
+.gitignore
 .DS_Store
 *.swap
+*.o
+*.exe
+*.a
 *~
