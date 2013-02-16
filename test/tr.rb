@@ -6,19 +6,15 @@ array = Array.new(count) {|i| count-i}
 n  = Time.now.to_i
 
 print "----begin-----\n"
-i=0
-while i<count do
+for i in 0..(count-1)
 	min = array[i]
-	j = i
-	while j<count do
+	for j in i..(count-1)
 		if min>array[j] then
 			array[i] = array[j]
 			array[j] = min
 			min = array[i]
-		end
-		j += 1			
-	end
-	i += 1	
+		end	
+	end	
 end
 
 e = Time.now.to_i
