@@ -1,13 +1,16 @@
 CC = gcc
 CFLAGS += -O2  -g -Wall
+AR = ar rcu
 
 ifeq ($(OS), Windows_NT)
  N = \\
  RM = del
  CFLAGS += -D __USE_MINGW_ANSI_STDIO -D _MINGW32_
+ A2 = a2.lib
 else
  N = //
  RM = rm -rf
+ A2 = liba2.a
 endif
 
 A2_OBJ = a2_mem.o a2_error.o a2_io.o a2_lex.o a2_map.o a2_string.o a2_env.o \
@@ -20,10 +23,13 @@ OBJ = $(A2_OBJ) $(TEST_OBJ)
 
 TEST =  $(foreach s, $(TEST_OBJ), $(basename $(s)))
 
-all: $(OBJ) $(TEST)
+all: $(A2) $(TEST)
 
-$(TEST): $(A2_OBJ) 
-	$(CC) $(CFLAGS) -o $@ $? $(basename $@).o
+$(TEST):
+	$(CC) $(CFLAGS) -o $@ $? $(basename $@).o  $(A2)
+
+$(A2): $(OBJ)
+	$(AR) $(A2) $?
 
 $(OBJ): 
 	$(CC) $(CFLAGS) -c -o $@ $(basename $@).c
@@ -33,3 +39,4 @@ clean:
 	$(RM) $(A2_OBJ)
 	$(RM) $(TEST_OBJ)
 	$(RM) $(TEST)
+	$(RM) $(A2)

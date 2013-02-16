@@ -1,16 +1,26 @@
-local a=[]
 
-for(i=0, 5000, 1){
-	add(a, 5000-i)
+
+function dump(array){
+	foreach(i,v in array){
+		print('array[', i,']=', v)
+	}
+}
+
+
+local a=[]
+local count = 5000
+for(i=0, count, 1){
+	add(a, count-i)
 }
 
 local s = t_time()
 
+#dump(a)
 print('----begin sort-----')
 
-for(i=0, 5000, 1){
+for(i=0, count, 1){
 	local min = a[i]
-	for(j=i, 5000, 1){
+	for(j=i, count, 1){
 		if(min>a[j]){
 			min = a[j]
 			a[j] = a[i]
@@ -22,5 +32,5 @@ for(i=0, 5000, 1){
 
 local e = t_time()
 
-
 print('time = ', (e-s))
+#dump(a)
