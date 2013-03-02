@@ -22,6 +22,7 @@ static _obj_free obj_free_func[] = {
 	NULL,
 	
 	NULL,
+	NULL,
 	NULL
 };
 
@@ -42,7 +43,8 @@ static const char* type_info[] = {
 
 	//private type
 	"_uinteger",
-	"addr"
+	"_addr",
+	"_upvalue"
 };
 
 // a2_string to obj
@@ -64,8 +66,6 @@ struct a2_obj a2_number2obj(a2_number num){
 struct a2_obj  a2_point2obj(void* p){
 	struct a2_obj ret;
 	obj_setX(&ret, A2_TPOINT, point, p);
-	// ret.type = A2_TPOINT;
-	// ret.value.point = p;
 	return ret;
 }
 
@@ -73,8 +73,6 @@ struct a2_obj  a2_point2obj(void* p){
 struct a2_obj a2_uinteger2obj(uint32 v){
 	struct a2_obj ret;
 	obj_setX(&ret, _A2_TUINTEGER, uinteger, v);
-	// ret.type = _A2_TUINTEGER;
-	// ret.value.uinteger = v;
 	return ret;
 }
 
@@ -82,8 +80,6 @@ struct a2_obj a2_uinteger2obj(uint32 v){
 struct a2_obj a2_bool2obj(int t){
 	struct a2_obj ret;
 	obj_setX(&ret, A2_TBOOL, uinteger, (!(t==0)));
-	// ret.type = A2_TBOOL;
-	// ret.value.uinteger = (!(t==0));
 	return ret;
 }
 
@@ -91,8 +87,6 @@ struct a2_obj a2_bool2obj(int t){
 struct a2_obj a2_nil2obj(){
 	struct a2_obj ret;
 	obj_setX(&ret, A2_TNIL, point, NULL);
-	// ret.type = A2_TNIL;
-	// ret.value.point = NULL;
 	return ret;
 }
 
@@ -101,8 +95,6 @@ struct a2_obj a2_cfunction2obj(a2_cfunction func){
 	assert(func);
 	struct a2_obj ret;
 	obj_setX(&ret, A2_TCFUNCTION, cfunction, func);
-	// ret.type = A2_TCFUNCTION;
-	// ret.value.cfunction = func;
 	return ret;
 }
 
@@ -110,8 +102,6 @@ struct a2_obj a2_cfunction2obj(a2_cfunction func){
 struct a2_obj a2_addr2obj(size_t addr){
 	struct a2_obj ret;
 	obj_setX(&ret, _A2_TADDR, addr, addr);
-	// ret.type = _A2_TADDR;
-	// ret.value.addr = addr;
 	return ret;
 }
 
@@ -121,7 +111,6 @@ void a2_obj_free(struct a2_obj* obj_p){
 	if(obj_free_func[t])
 		obj_free_func[t](obj_p);
 	obj_setX(obj_p, _A2_TNULL, point, NULL);
-//	obj_p->type = _A2_TNULL;
 }
 
 // get data size from a2_obj
@@ -139,6 +128,7 @@ size_t a2_obj_size(struct a2_obj* obj_p){
 		case _A2_TADDR:
 			return sizeof(obj_vX(obj_p, addr));
 		default:
+			assert(0);
 			return 0;
 	}
 }
@@ -157,6 +147,7 @@ byte* a2_obj_bytes(struct a2_obj* obj_p){
 		case _A2_TADDR:
 			return (byte*)(&obj_vX(obj_p, addr));
 		default:
+			assert(0);
 			return NULL;
 	}
 }

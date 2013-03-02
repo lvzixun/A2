@@ -2,6 +2,7 @@
 #define _A2_GC_H_
 #include "a2_conf.h"
 
+struct a2_obj;
 struct a2_map;
 struct a2_array;
 struct a2_gc;
@@ -34,5 +35,8 @@ inline struct a2_map* a2_gcobj2map(struct a2_gcobj* gcobj);
 struct a2_gcobj* a2_nil2gcobj();
 void a2_gcobj_nilfree(struct a2_gcobj* gcobj);
 
+// upvalue
+struct a2_gcobj* a2_upvalue2gcobj(struct a2_obj* obj);
+inline struct a2_obj* a2_gcobj2upvalue(struct a2_gcobj* gcobj);
 #endif
 

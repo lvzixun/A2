@@ -5,7 +5,7 @@
 
 typedef uint32  ir;
 typedef int32   sir;
-struct a2_closure;
+struct a2_xclosure;
 
 // ir code is included 4 byte, the 4byte like that:
 //  thanks for lua
@@ -75,7 +75,8 @@ enum ir_op{
 	SETGLOBAL,  // set global variable,  modle is abc
 	GETUPVALUE,	// get upvalue, modle is abx
 	SETUPVALUE,	// set upvalue, modle is abc
-	CONTAINER,  // load container, modle is abx
+	NEWLIST,	// new list, modle is abx
+	NEWMAP,		// new map modle is abx
 	SETLIST,	// set list,  modle is abc
 	SETMAP,		// set map, modle is abc
 	GETVALUE,	// get value, modle is abc
@@ -118,10 +119,10 @@ struct a2_ir* a2_ir_open(struct a2_env* env);
 void a2_ir_close(struct a2_ir* ir_p);
 void a2_ir_clear(struct a2_ir* ir_p);
 inline void a2_ir_exec(struct a2_ir* ir_p, size_t root);
-inline struct a2_closure* a2_ir_exend(struct a2_ir* ir_p);
+inline struct a2_xclosure* a2_ir_exend(struct a2_ir* ir_p);
 
 // for test
-char* ir2string(struct a2_ir* ir_p, struct a2_closure* cls, ir _ir, char* str, size_t size);
+char* ir2string(struct a2_ir* ir_p, struct a2_xclosure* xcls, ir _ir, char* str, size_t size);
 void dump_ir(struct a2_ir* ir_p);
 
 #endif

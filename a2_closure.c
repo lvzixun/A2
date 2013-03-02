@@ -1,236 +1,120 @@
 #include "a2_conf.h"
 #include "a2_obj.h"
-#include "a2_ir.h"
-#include "a2_error.h"
 #include "a2_xclosure.h"
-#include <stdio.h>
+#include "a2_closure.h"
+#include "a2_gc.h"
+#include "a2_env.h"
 
-#define DEF_STK_SIZE 32
-#define DEF_UPVALUE_SIZE 32
-#define DEF_IR_CHAIN_SIZE 64
+#define DEF_UD_SIZE	8
 
-#define DEF_IR_SIZE 128
-#define DEF_ARG_SIZE 32
 
-struct a2_closure* a2_closure_new(){
-	struct a2_closure* ret = (struct a2_closure*)malloc(sizeof(*ret));
-	// init ir chain
-	ret->params = 0;
-	ret->ir_chain = (ir*)malloc(sizeof(ir)*DEF_IR_SIZE);
-	ret->lines = (size_t*)malloc(sizeof(size_t)*DEF_IR_SIZE);
-	ret->size = DEF_IR_SIZE;
-	ret->len = 0;
-	ret->arg.arg_p = NULL;
-	ret->arg.size = 0;
-	// init constent stack
-	obj_stack_init(&(ret->c_stack));
-	// init cls stack
-	obj_stack_init(&(ret->cls_stack));
-	// init container stack
-	obj_stack_init(&(ret->ctn_stack));
+static inline void _closure_add_uped(struct a2_closure* cls, struct a2_upvalue* uv_p);
+
+struct a2_closure* a2_closure_new(struct vm_callinfo* ci, int idx){
+	struct a2_xclosure* xcls_p = xcls_xcls(vm_callinfo_cls(ci)->xcls_p, idx);
+	xcls_add_refs(xcls_p);
+	int _s = xcls_p->upvaluex.size;
+	struct a2_closure* cls = (struct a2_closure*)malloc(
+		sizeof(*cls)+sizeof(struct a2_upvalue)*_s);
+
+	cls->uv_size = _s;
+	cls->xcls_p = xcls_p;
+
+	// init uped
+	cls->ud_size = DEF_UD_SIZE;
+	cls->ud_cap = 0;
+	cls->uped_chain = (struct a2_upvalue**)calloc(cls->ud_size, 
+		sizeof(struct a2_upvalue*));
+
+	struct a2_closure* _cls = vm_callinfo_cls(ci);
+	
 	// init upvalue
-	ret->upvalue.upvalue_chain = (void*)malloc(sizeof(struct upvalue_idx)*DEF_UPVALUE_SIZE);
-	ret->upvalue.size = DEF_UPVALUE_SIZE;
-	ret->upvalue.len=0;
+	int i;
+	for(i=0; i<xcls_p->upvaluex.len; i++){
+		struct upvaluex_idx* uvx_idx = &(xcls_p->upvaluex.upvaluex_chain[i]);
+		assert(_cls->xcls_p == uvx_idx->xcls_p);
+		switch(uvx_idx->uvx_type){
+			case uvx_reg:{
+					// set upvalue
+					cls->uv_chain[i].type = uv_stack;
+					cls->uv_chain[i].v.sf_idx = vm_callinfo_sfi(ci, uvx_idx->idx.regs_idx);
 
-	return ret;
+					// set uped 
+					_closure_add_uped(_cls, &(cls->uv_chain[i]));
+				}
+				break;
+			case uvx_upvalue:{
+					cls->uv_chain[i].type = uv_gc;
+					assert(uvx_idx->idx.upvalue_idx < _cls->uv_size);
+					cls->uv_chain[i] = _cls->uv_chain[uvx_idx->idx.upvalue_idx];
+				}
+				break;
+			default:
+				assert(0);
+		}
+	}
+	return cls;
+}
+
+
+struct a2_closure* a2_closure_newrun(struct a2_xclosure* xcls){
+	assert(xcls);
+	struct a2_closure* cls = (struct a2_closure*)malloc(sizeof(*cls));
+	xcls_add_refs(xcls);
+	cls->xcls_p = xcls;
+
+	// init upvalue
+	cls->uv_size = 0;
+	cls->uped_chain = NULL;
+
+	// init uped
+	cls->ud_size = DEF_UD_SIZE;
+	cls->ud_cap = 0;
+	cls->uped_chain = (struct a2_upvalue**)calloc(cls->ud_size, 
+		sizeof(struct a2_upvalue*));
+
+	return cls;
 }
 
 void a2_closure_free(struct a2_closure* cls){
-	assert(cls);
-	free(cls->ir_chain);
-	//TODO: stack obj free
-	obj_stack_destory(&(cls->c_stack));
-	obj_stack_destory(&(cls->cls_stack));
-	obj_stack_destory(&(cls->ctn_stack));
-	// TODO: upvalue obj free
-	free(cls->upvalue.upvalue_chain);
-	free(cls->arg.arg_p);
-	free(cls->lines);
+	xcls_del_refs(cls->xcls_p);
+	if(cls->xcls_p->refs == 0)
+		a2_xclosure_free(cls->xcls_p);
+	if(cls->uped_chain)
+		free(cls->uped_chain);
 	free(cls);
 }
 
-size_t a2_closure_line(struct a2_closure* cls, size_t pc){
-	assert(pc<cls->len);
-	return cls->lines[pc];	
-}
-
-inline void a2_closure_setarg(struct a2_closure* cls, int args){
-	assert(cls->arg.arg_p==NULL && cls->arg.size==0);
-	cls->arg.size = args;
-	cls->arg.arg_p = (struct a2_obj*)malloc(sizeof(struct a2_obj)*args);
-}
-
-inline void a2_closure_setparams(struct a2_closure* cls, int params){
+// the upvalue will set uv_gc when the closure return
+void a2_closure_return(struct a2_closure* cls, struct a2_env* env_p){
 	assert(cls);
-	cls->params = params;
+	int i;
+	for(i=0; i<cls->ud_cap; i++){
+		assert(cls->uped_chain[i]);
+		assert(cls->uped_chain[i]->type == uv_stack);
+		cls->uped_chain[i]->type = uv_gc;
+		
+		struct a2_obj* obj = a2_sfidx(env_p, cls->uped_chain[i]->v.sf_idx);
+		struct a2_gcobj* _gcobj = a2_upvalue2gcobj(obj);
+		cls->uped_chain[i]->v.uv_obj = _gcobj;
+		a2_gcadd(env_p, _gcobj);
+	}
+	cls->ud_cap = 0;
 }
 
 inline int a2_closure_params(struct a2_closure* cls){
 	assert(cls);
-	return cls->params;
+	return cls->xcls_p->params;
 }
 
-inline struct a2_closure* a2_closure_upvalueaddr(struct a2_closure* cls, int up_idx, int* ret_idx){
-	assert(up_idx>=0 && up_idx<cls->upvalue.len && ret_idx);
-	*ret_idx = cls->upvalue.upvalue_chain[up_idx].arg_idx;
-	return cls->upvalue.upvalue_chain[up_idx].cls_p;
-}
 
-/*
-inline ir a2_closure_ir(struct a2_closure* cls, size_t idx){
-	assert(idx<cls->len);
-	return cls->ir_chain[idx];
-}
-
-inline struct a2_obj* a2_closure_arg(struct a2_closure* cls, int idx){
-	assert(idx>=0 && idx<cls->arg.size);
-	return &(cls->arg.arg_p[idx]);
-}
-
-inline struct a2_obj* a2_closure_upvalue(struct a2_closure* cls, int idx){
-	assert(idx>=0 && idx<cls->upvalue.len);
-	return  a2_closure_arg(cls->upvalue.upvalue_chain[idx].cls_p, 
-							cls->upvalue.upvalue_chain[idx].arg_idx);
-}
-
-inline struct a2_obj* a2_closure_const(struct a2_closure* cls, int idx){
-	assert(idx<0 && (-1-idx)<cls->c_stack.top);
-	return &(cls->c_stack.stk_p[-1-idx]);
-}
-
-inline struct a2_obj* a2_closure_container(struct a2_closure* cls, int idx){
-	assert(idx>=0 && idx<cls->ctn_stack.top);
-	return &(cls->ctn_stack.stk_p[idx]);
-}
-
-inline struct a2_obj* a2_closure_cls(struct a2_closure* cls, int idx){
-	assert(idx>=0 && idx<cls->cls_stack.top);
-	return &(cls->cls_stack.stk_p[idx]);
-}
-*/
-
-inline void obj_stack_init(struct obj_stack* os_p){
-	os_p->stk_p = (struct a2_obj*)malloc(sizeof(struct a2_obj)*DEF_STK_SIZE);
-	os_p->size = DEF_STK_SIZE;
-	os_p->top =0;
-}
-
-inline void obj_stack_destory(struct obj_stack* os_p){
-	free(os_p->stk_p);
-	os_p->stk_p = NULL;
-	os_p->size=0;
-	os_p->top = 0;
-}
-
-inline int obj_stack_add(struct obj_stack* os_p, struct a2_obj* obj_p){
-	if(os_p->top>=os_p->size){
-		os_p->size *= 2;
-		os_p->stk_p = (struct a2_obj*)realloc(os_p->stk_p, os_p->size*sizeof(struct a2_obj));
-	}
-	os_p->stk_p[os_p->top] = *obj_p;
-	return os_p->top++;
-}
-
-// IR OP
-inline size_t closure_add_ir(struct a2_closure* cls, ir i, size_t line){
-	assert(cls);
-	// reszie
-	if(cls->len>=cls->size){
-		cls->size *=2;
-		cls->ir_chain = (ir*)realloc(cls->ir_chain, cls->size*sizeof(ir));
-		cls->lines = (size_t*)realloc(cls->lines, cls->size*sizeof(size_t));
-	}
-	cls->lines[cls->len] = line;
-	cls->ir_chain[cls->len] = i;
-	return cls->len++;
-}
-
-// seek ir
-inline ir* closure_seek_ir(struct a2_closure* cls, size_t idx){
-	assert(idx<cls->len);
-	return &(cls->ir_chain[idx]);
-}
-
-inline size_t closure_curr_iraddr(struct a2_closure* cls){
-	return cls->len;
-}
-
-// stack op
-inline int closure_push_cstack(struct a2_closure* cls, struct a2_obj* obj){
-	assert(cls);
-	assert(obj);
-	if(cls->c_stack.top>=BX_MAX)
-		a2_error("the constent stack is overfllow.\n");
-	return obj_stack_add(&(cls->c_stack), obj);
-}
-
-inline struct  a2_obj* closure_at_cstack(struct a2_closure* cls, int idx){
-	assert(cls);
-	assert(idx<0 && ((0-idx-1)<cls->c_stack.top));
-	return &(cls->c_stack.stk_p[0-idx-1]);
-}
-
-inline int closure_push_clsstack(struct a2_closure* cls, struct a2_obj* obj){
-	if(cls->cls_stack.top>=BX_MAX)
-		a2_error("the gc stack from closure is overfllow.\n");
-	return obj_stack_add(&(cls->cls_stack), obj);
-}
-
-inline int closure_push_ctnstack(struct a2_closure* cls, struct a2_obj* obj){
-	if(cls->ctn_stack.top>=BX_MAX)
-		a2_error("the gc stack from closure is overfllow.\n");
-	return obj_stack_add(&(cls->ctn_stack), obj);
-}
-
-// upvalue op
-inline int closure_push_upvalue(struct a2_closure* cls, struct a2_closure* cls_p, int arg_idx){
-	assert(cls);
-	assert(cls_p);
-	assert(arg_idx>=0);
-
-	// resize
-	if(cls->upvalue.len>=cls->upvalue.size){
-		cls->upvalue.size *=2;
-		cls->upvalue.upvalue_chain = (void*)realloc(cls->upvalue.upvalue_chain,
-		  cls->upvalue.size*sizeof(*(cls->upvalue.upvalue_chain)));
-	}
-	cls->upvalue.upvalue_chain[cls->upvalue.len].cls_p = cls_p;
-	cls->upvalue.upvalue_chain[cls->upvalue.len].arg_idx = arg_idx;
-	return cls->upvalue.len++;
-}
-
-// for test 
-void dump_upvalue(struct a2_closure* cls){
-	int i;
-	for(i=0; i<cls->upvalue.len; i++){
-		printf("upvalue@[%p] [%d] cls = %p  idx= %d\n", cls, 
-			i, cls->upvalue.upvalue_chain[i].cls_p, cls->upvalue.upvalue_chain[i].arg_idx);
-	}
-}
-
-void dump_closure(struct a2_ir* ir_p, struct a2_closure* cls){
-	int i, j;
-	assert(cls);
-	char buf[512] = {0};
-	char* __cp = (cls->params<0)?("+"):("");
-
-	printf("\n\n----params=%d%s upvalue=%d const=%d arg=%d addr=%p-----\n", 
-		(cls->params<0)?(-1-cls->params):(cls->params), __cp, 
-		cls->upvalue.len, cls->c_stack.top, cls->arg.size, cls);
-	dump_upvalue(cls);
-	for(i=0;i<cls->len; i++){
-		printf("<%zd>   [%d]   %s\n", cls->lines[i],  i, ir2string(ir_p, cls, cls->ir_chain[i], buf, sizeof(buf)));
+static inline void _closure_add_uped(struct a2_closure* cls, struct a2_upvalue* uv_p){
+	assert(uv_p);
+	if(cls->ud_cap>= cls->ud_size){
+		cls->ud_size *= 2;
+		cls->uped_chain = (struct a2_upvalue**)realloc(cls->uped_chain,
+			 cls->ud_size*sizeof(struct a2_upvalue*));
 	}
 
-	
-	for(j=0; j<cls->cls_stack.top; j++){
-		assert(obj_t(&(cls->cls_stack.stk_p[j]))==A2_TCLOSURE);
-		dump_closure(ir_p, a2_gcobj2closure(obj_vX(&(cls->cls_stack.stk_p[j]), obj)));
-	}
+	cls->uped_chain[cls->ud_cap++] = uv_p;
 }
-
-
-
-
-

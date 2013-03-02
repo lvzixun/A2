@@ -71,12 +71,14 @@ void a2_env_free(struct a2_env* env_p){
 void a2_env_load(struct a2_env* env_p, struct a2_io* stream){
 	size_t len = 0;
 	struct a2_token* tk = a2_lex_read(env_p->lex_p, stream, &len);
-	struct a2_closure* cls = a2_parse_run(env_p->parse_p, tk, len);
+	struct a2_xclosure* xcls = a2_parse_run(env_p->parse_p, tk, len);
 	
 	#ifdef _DEBUG_	
-	dump_closure(env_p->ir_p, cls);
+	dump_xclosure(env_p->ir_p, xcls);
 	#endif
 
+	struct a2_closure* cls = a2_closure_newrun(xcls);
+	a2_gcadd(env_p, a2_closure2gcobj(cls)); 
 	a2_vm_load(env_p->vm_p, cls);
 
 	a2_lex_clear(env_p->lex_p);
@@ -88,8 +90,6 @@ inline struct a2_state* a2_env2state(struct a2_env* env_p){
 }
 
 static inline struct a2_obj* _fill_str2obj(struct a2_env* env_p, char* a2_s){
-	// env_p->_forge_obj.type = A2_TSTRING;
-	// env_p->_forge_obj.value.obj = env_p->_forge_gcobj;
 	obj_setX(&(env_p->_forge_obj), A2_TSTRING, obj, env_p->_forge_gcobj);
 	a2_gcobj_setstring(env_p->_forge_gcobj, a2_s);
 	return &(env_p->_forge_obj);
@@ -169,7 +169,7 @@ inline void a2_irexec(struct a2_env* env_p, size_t root){
 	a2_ir_exec(env_p->ir_p, root);
 }
 
-inline struct a2_closure* a2_irexend(struct a2_env* env_p){
+inline struct a2_xclosure* a2_irexend(struct a2_env* env_p){
 	return a2_ir_exend(env_p->ir_p);
 }
 
@@ -181,6 +181,11 @@ inline  void a2_gcadd(struct a2_env* env_p, struct a2_gcobj* gcobj){
 	a2_gc_add(env_p->gc_p, gcobj);
 }
 
+inline struct a2_obj* a2_sfidx(struct a2_env* env_p, size_t sf_idx){
+	return vm_sf_index(env_p->vm_p, sf_idx);
+}
+
+// key check function
 inline int a2_ktisfunction(struct a2_env* env_p, struct a2_token* token){
 	return a2_tokenisfunction(env_p->lex_p, token);
 }
@@ -224,9 +229,6 @@ inline int a2_ktisin(struct a2_env* env_p, struct a2_token* token){
 inline int a2_ktislocal(struct a2_env* env_p, struct a2_token* token){
 	return a2_tokenislocal(env_p->lex_p, token);
 }
-
-
-
 
 // for test 
 inline struct a2_lex* a2_envlex(struct a2_env* env_p){

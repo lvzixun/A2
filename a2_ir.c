@@ -7,7 +7,7 @@
 #include "a2_array.h"
 #include "a2_ir.h"
 #include "a2_gc.h"
-#include "a2_closure.h"
+#include "a2_xclosure.h"
 #include "a2_string.h"
 #include <stdio.h>
 #include <string.h>
@@ -25,8 +25,7 @@
 //#define curr_gsym  (ir_p->cls_sym_chain->sym.sym_chain[1])
 
 #define curr_clssym (ir_p->cls_sym_chain)
-#define curr_cls  a2_gcobj2closure(obj_vX(&(curr_clssym->cls_obj), obj))
-#define curr_ocls(co) a2_gcobj2closure(obj_vX(&(co), obj))
+#define curr_xcls  	(curr_clssym->xcls)
 
 #define add_arg  _add_arg(ir_p)
 #define curr_arg (curr_clssym->arg_cap)
@@ -68,7 +67,7 @@ struct for_stack{
 
 struct cls_sym{
 	struct symbol  sym;
-	struct a2_obj cls_obj;
+	struct a2_xclosure* xcls;
 	int arg_cap;
 	int max_arg;
 	struct for_stack fs;
@@ -184,7 +183,8 @@ static void _init_op_modle(struct a2_ir* ir_p){
 	ir_p->op_modle[GETGLOBAL] = ABX_MODE;
 	ir_p->op_modle[SETUPVALUE] = ABX_MODE;
 	ir_p->op_modle[GETUPVALUE] = ABX_MODE;
-	ir_p->op_modle[CONTAINER] = ABX_MODE;
+	ir_p->op_modle[NEWLIST] = ABX_MODE;
+	ir_p->op_modle[NEWMAP] = ABX_MODE;
 	ir_p->op_modle[CLOSURE] = ABX_MODE;
 	ir_p->op_modle[RETURN] = ABX_MODE;
 	ir_p->op_modle[FORLOOP] = ABX_MODE;
@@ -203,8 +203,7 @@ static void _init_op_modle(struct a2_ir* ir_p){
 static struct cls_sym* cls_sym_new(struct a2_ir* ir_p){
 	struct cls_sym* ret = (struct cls_sym*)malloc(sizeof(*ret));
 	ret->next = NULL;
-	obj_setX(&(ret->cls_obj), A2_TCLOSURE, obj, a2_closure2gcobj(a2_closure_new()));
-	a2_gcadd(ir_p->env_p, obj_vX(&(ret->cls_obj), obj));
+	ret->xcls = a2_xclosure_new();
 
 	ret->sym.cap=0;
 	ret->sym.size=DEF_SYM_SIZE;
@@ -269,11 +268,11 @@ inline void a2_ir_exec(struct a2_ir* ir_p, size_t root){
 	_a2_ir_exec(ir_p, ir_p->cls_sym_chain, root);
 }
 
-inline struct a2_closure* a2_ir_exend(struct a2_ir* ir_p){
+inline struct a2_xclosure* a2_ir_exend(struct a2_ir* ir_p){
 	assert(ir_p->cls_sym_chain->next==NULL);
-	a2_closure_setarg(curr_cls, curr_clssym->max_arg);
-	closure_add_ir(curr_cls, ir_abx(RETURN, 0, 0), curr_line);
-	return curr_cls;
+	xclosure_add_ir(curr_xcls, ir_abx(RETURN, 0, 0), curr_line);
+	a2_xclosure_setregs(curr_xcls, curr_clssym->max_arg);
+	return curr_xcls;
 }
 
 static inline void _a2_ir_exec(struct a2_ir* ir_p, struct cls_sym* cls_sp, size_t root){
@@ -362,7 +361,7 @@ static inline int  add_csymbol(struct a2_ir* ir_p, struct a2_obj* k){
 
 	struct a2_obj* vp = a2_map_query(curr_csym, k);
 	if(!vp){  // not find
-		int idx = closure_push_cstack(curr_cls, k); 
+		int idx = xclosure_push_cstack(curr_xcls, k); 
 		struct a2_obj v = a2_uinteger2obj(idx);
 		struct a2_kv kv = {
 			k, &v
@@ -424,26 +423,56 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 			vp = a2_map_query(p->sym.sym_chain[i], k);
 			if(vp){
 				assert(obj_t(vp)==_A2_TUINTEGER);
-				struct a2_closure* __cls = NULL;
-				int __up_idx = 0;
+				int uv_idx;
+				struct a2_obj v;
+				struct a2_kv kv;
+				struct cls_sym* _p = curr_clssym;
+				int idx = -1;
 				switch(v2vt(obj_vX(vp, uinteger))){  // set upvalue
-					case var_local:
-						__cls = curr_ocls(p->cls_obj);
-						__up_idx = v2i(obj_vX(vp, uinteger));
+					case var_local:{ 
+							while(_p->next!=p){
+								uv_idx = xclosure_push_upvaluex(_p->xcls, _p->next->xcls, 
+									uvx_upvalue, xcls_cur_uvx_count(_p->next->xcls));
+								if(idx<=-1)
+									idx = uv_idx;
+								v = a2_uinteger2obj(sym_v(var_upvalue, uv_idx));
+								kv.key = k;
+								kv.vp = &v;
+								a2_map_add(_p->sym.sym_chain[1], &kv);
+								_p = _p->next;
+							}
+
+							assert(_p->next == p);
+							uv_idx = xclosure_push_upvaluex(_p->xcls, p->xcls, 
+								uvx_reg, v2i(obj_vX(vp, uinteger)));
+							if(idx<=-1)
+								idx = uv_idx;
+							v = a2_uinteger2obj(sym_v(var_upvalue, uv_idx));
+							kv.key = k;
+							kv.vp = &v;
+							a2_map_add(_p->sym.sym_chain[1], &kv);
+							assert(idx>=0);
+						}
 						break;
-					case var_upvalue:
-						__cls = a2_closure_upvalueaddr(curr_ocls(p->cls_obj), v2i(obj_vX(vp, uinteger)), &__up_idx);
+					case var_upvalue:{
+							while(_p!=p){
+								uv_idx = xclosure_push_upvaluex(_p->xcls, _p->next->xcls, 
+									uvx_upvalue, xcls_cur_uvx_count(_p->next->xcls));
+								if(idx<=-1)
+									idx = uv_idx;
+								v = a2_uinteger2obj(sym_v(var_upvalue, uv_idx));
+								kv.key = k;
+								kv.vp = &v;
+								a2_map_add(_p->sym.sym_chain[1], &kv);
+								_p = _p->next;
+							}
+						}
 						break;
 					default:
 						assert(0);
 				}
 				*vt_p = var_upvalue;
-				int idx = closure_push_upvalue(curr_cls, __cls, __up_idx);
-				struct a2_obj v = a2_uinteger2obj(sym_v(var_upvalue, idx));
-				struct a2_kv kv = {
-					k, &v
-				};
-				a2_map_add(curr_sym, &kv);
+				assert(idx>=0);
 				return idx+1;
 			}
 		}
@@ -496,20 +525,20 @@ static inline int a2_ir_function(struct a2_ir* ir_p, size_t root, int des){
 ARG_FUNC:
 		arg = node_p(arg)->next;
 	}
-	a2_closure_setparams(curr_cls, params);
+	a2_xclosure_setparams(curr_xcls, params);
 	size_t func_line = (node_p(root)->token)?(node_line(root)):(node_cp(root, 1)->token->line);
 	// generater segment
 	_a2_ir_segment(ir_p, seg);
-	struct a2_obj func_obj = curr_clssym->cls_obj;
-	closure_add_ir(curr_cls, ir_abx(RETURN,0,0), curr_line);
-	a2_closure_setarg(curr_cls, curr_clssym->max_arg);
+	struct a2_xclosure* _xcls = curr_xcls;
+	xclosure_add_ir(curr_xcls, ir_abx(RETURN,0,0), curr_line);
+	a2_xclosure_setregs(curr_xcls, curr_clssym->max_arg);
 	free_clssym(ir_p);
 
 	// set gc stack
-	int cls_gcidx = closure_push_clsstack(curr_cls, &func_obj);
+	int cls_gcidx = xclosure_push_xcls(curr_xcls, _xcls);
 	assert(cls_gcidx>=0);
 
-	closure_add_ir(curr_cls, ir_abx(CLOSURE, des, cls_gcidx), func_line);
+	xclosure_add_ir(curr_xcls, ir_abx(CLOSURE, des, cls_gcidx), func_line);
 	// global function
 	if(node_p(root)->token){
 		assert(tt2tk(node_p(root)->token->tt)==tk_ide);
@@ -518,11 +547,11 @@ ARG_FUNC:
 		int k = add_csymbol(ir_p, &func);
 		assert(k<0);
 		if(is_Blimit(k)){
-			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, k), func_line);
+			xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, k), func_line);
 			k = top_arg;
 		}
 
-		closure_add_ir(curr_cls, ir_abc(SETGLOBAL, des, k, des), func_line);
+		xclosure_add_ir(curr_xcls, ir_abc(SETGLOBAL, des, k, des), func_line);
 	}else{	// Anonymous function
 		assert(curr_arg<=_b+1);
 	}
@@ -541,7 +570,7 @@ static inline int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count)
 	int _func = a2_ir_exp(ir_p, node_p(root)->childs[0]);
 	assert(_func>=0);
 	if(_func<_b){
-		closure_add_ir(curr_cls, ir_abx(MOVE, _b, _func), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(MOVE, _b, _func), node_line(root));
 		_func = _b;
 	}else if(_func - _b >0)
 		assert(0);
@@ -553,7 +582,7 @@ static inline int a2_ir_funccall(struct a2_ir* ir_p, size_t root, int ret_count)
 	if(count >=B_MAX)
 		ir_error(root, "you set argument is overfllow.");
 
-	closure_add_ir(curr_cls, ir_abc(CALL, _func, count, ret_count), node_line(root));
+	xclosure_add_ir(curr_xcls, ir_abc(CALL, _func, count, ret_count), node_line(root));
 	curr_clssym->max_arg += ret_count;
 	set_arg(_b+1);
 	return _b;
@@ -565,9 +594,9 @@ static inline int  _a2_ir_comm(struct a2_ir* ir_p, size_t rb){
 		int _cb = curr_arg;
 		int _rb = a2_ir_exp(ir_p, rb);
 		if(_rb<0)
-			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, _rb), node_line(rb));
+			xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, _rb), node_line(rb));
 		else if(_rb<_cb)
-			closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _rb), node_line(rb));
+			xclosure_add_ir(curr_xcls, ir_abx(MOVE, top_arg, _rb), node_line(rb));
 		assert(curr_arg-_cb==1);
 		rb = node_p(rb)->next;
 		count++;
@@ -583,22 +612,22 @@ static void a2_ir_return(struct a2_ir* ir_p, size_t root){
 
 	// not return varable 
 	if(ret==0){
-		closure_add_ir(curr_cls, ir_abx(RETURN, 0, 0), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(RETURN, 0, 0), node_line(root));
 	}else if(node_p(ret)->type == comma_node){  // return a, b, c ...
 		size_t rb = node_p(ret)->childs[0];
 		assert(node_p(ret)->next==0);
 		int count = _a2_ir_comm(ir_p, rb);
 		assert(curr_arg-_b>0);
-		closure_add_ir(curr_cls, ir_abx(RETURN, _b, count), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(RETURN, _b, count), node_line(root));
 	}else{
 		// pgenerate return one value
 		int _r = a2_ir_exp(ir_p, ret);
 		if(_r<0){ // if is constent varable
 			assert(curr_arg==_b);
-			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, _r), node_line(root));
+			xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, _r), node_line(root));
 			_r = top_arg;
 		}
-		closure_add_ir(curr_cls, ir_abx(RETURN, _r, 1), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(RETURN, _r, 1), node_line(root));
 		set_arg(_b);
 	}
 }
@@ -608,7 +637,7 @@ static inline void a2_ir_break(struct a2_ir* ir_p, size_t root){
 	if(curr_fh->len==0)
 		ir_error(root, "the break is error.");
 	// set JUMP 0, 0  1 is break
-	size_t addr = closure_add_ir(curr_cls, ir_abx(JUMP, 0, 0), node_line(root));
+	size_t addr = xclosure_add_ir(curr_xcls, ir_abx(JUMP, 0, 0), node_line(root));
 	_for_stack_add(curr_fs, addr);
 }
 
@@ -617,7 +646,7 @@ static inline void a2_ir_continue(struct a2_ir* ir_p, size_t root){
 	if(curr_fh->len==0)
 		ir_error(root, "th continue is error.");
 	// set JUMP 1, 0  1 is continue
-	size_t addr = closure_add_ir(curr_cls, ir_abx(JUMP, 1, 0), node_line(root));
+	size_t addr = xclosure_add_ir(curr_xcls, ir_abx(JUMP, 1, 0), node_line(root));
 	_for_stack_add(curr_fs, addr);
 }
 
@@ -647,33 +676,33 @@ static inline void a2_ir_foreach(struct a2_ir* ir_p, size_t root){
 	int _c = _a2_ir_exp(ir_p, c_node, add_arg);
 	assert(_c>=0);
 	if( _c<(_b+2) )
-		closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _c), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(MOVE, top_arg, _c), node_line(root));
 
 	// generate foreach ir
-	size_t fb = closure_add_ir(curr_cls, ir_abx(FOREACHPREP, _b, 0), node_line(root));
-	l_obj = a2_addr2obj(closure_curr_iraddr(curr_cls));
+	size_t fb = xclosure_add_ir(curr_xcls, ir_abx(FOREACHPREP, _b, 0), node_line(root));
+	l_obj = a2_addr2obj(xclosure_curr_iraddr(curr_xcls));
 	int b_addr = add_csymbol(ir_p, &l_obj);
 	assert(b_addr<0);
 	add_forh(-1-b_addr);
 
 	// generate foreach segment
 	_a2_ir_segment(ir_p, s_node);
-	closure_add_ir(curr_cls, ir_abx(FOREACHLOOP, _b, b_addr), curr_line);
+	xclosure_add_ir(curr_xcls, ir_abx(FOREACHLOOP, _b, b_addr), curr_line);
 
 	free_symbol(ir_p);
 	set_arg(_b);
-	size_t ir_end = closure_curr_iraddr(curr_cls);
+	size_t ir_end = xclosure_curr_iraddr(curr_xcls);
 	struct a2_obj ao = a2_addr2obj(ir_end);
 	int addr = add_csymbol(ir_p, &ao);
 	ao = a2_addr2obj(ir_end-1);
 	int _addr = add_csymbol(ir_p, &ao);
 
 	//write back ir
-	ir* p = closure_seek_ir(curr_cls, fb);
+	ir* p = xclosure_seek_ir(curr_xcls, fb);
 	*p = ir_abx(FOREACHPREP, _b, addr);
 	size_t i;
 	for(i= _for_b; i<curr_fs->len; i++){
-		p = closure_seek_ir(curr_cls, curr_fs->f_p[i]);
+		p = xclosure_seek_ir(curr_xcls, curr_fs->f_p[i]);
 		assert(ir_gop(*p)==JUMP);
 		if(ir_ga(*p)==0)  // break
 			*p = ir_abx(JUMP, 0, addr);
@@ -703,45 +732,45 @@ static inline void a2_ir_for(struct a2_ir* ir_p, size_t root){
 	// generate for count 
 	int c_idx = _a2_ir_exp(ir_p, node_p(root)->childs[1], add_arg);
 	if(c_idx<0){
-		closure_add_ir(curr_cls, ir_abx(LOAD, top_arg, c_idx), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(LOAD, top_arg, c_idx), node_line(root));
 	} else if(c_idx<_b+1){
-		closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, c_idx), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(MOVE, top_arg, c_idx), node_line(root));
 	}
 	assert(top_arg==_b+1);
 
 	// generate for step
 	int s_idx = a2_ir_exp(ir_p, node_p(root)->childs[2]);
 	assert(s_idx<0);
-	closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, s_idx), node_line(root));
+	xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, s_idx), node_line(root));
 	s_idx = top_arg;
 	assert(s_idx==_b+2);
 
 	// for
-	size_t ti = closure_add_ir(curr_cls, ir_abx(FORPREP, _b, 0), node_line(root));
+	size_t ti = xclosure_add_ir(curr_xcls, ir_abx(FORPREP, _b, 0), node_line(root));
 
 	//record the for begin addr
-	k = a2_addr2obj(closure_curr_iraddr(curr_cls));
+	k = a2_addr2obj(xclosure_curr_iraddr(curr_xcls));
 	int b_addr = add_csymbol(ir_p, &k);
 	assert(b_addr<0);
 	add_forh(-1-b_addr);
 
 	// generate segment ir
 	_a2_ir_segment(ir_p, node_p(root)->childs[3]);
-	closure_add_ir(curr_cls, ir_abx(FORLOOP, _b, b_addr), curr_line);
+	xclosure_add_ir(curr_xcls, ir_abx(FORLOOP, _b, b_addr), curr_line);
 	free_symbol(ir_p);
 	set_arg(_b);
-	size_t ir_end = closure_curr_iraddr(curr_cls);
+	size_t ir_end = xclosure_curr_iraddr(curr_xcls);
 	struct a2_obj ao = a2_addr2obj(ir_end);
 	int addr = add_csymbol(ir_p, &ao);
 	ao = a2_addr2obj(ir_end-1);
 	int _addr = add_csymbol(ir_p, &ao);
 	
 	//write back ir
-	ir* p = closure_seek_ir(curr_cls, ti);
+	ir* p = xclosure_seek_ir(curr_xcls, ti);
 	*p = ir_abx(FORPREP, _b, addr);
 	size_t i;
 	for(i= _for_b; i<curr_fs->len; i++){
-		p = closure_seek_ir(curr_cls, curr_fs->f_p[i]);
+		p = xclosure_seek_ir(curr_xcls, curr_fs->f_p[i]);
 		assert(ir_gop(*p)==JUMP);
 		if(ir_ga(*p)==0)  // break
 			*p = ir_abx(JUMP, 0, addr);
@@ -766,12 +795,12 @@ static inline void a2_ir_if(struct a2_ir* ir_p, size_t root){
 	// generate logic ir
 	int logic = a2_ir_exp(ir_p, logic_node);
 	if(is_Alimit(logic)){ // is constent varable
-		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, logic), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, logic), node_line(root));
 		logic = top_arg;
 	}
 	
 	// if logic is false will jump
-	size_t addr = closure_add_ir(curr_cls, ir_abx(TEST, logic, 0), node_line(root));
+	size_t addr = xclosure_add_ir(curr_xcls, ir_abx(TEST, logic, 0), node_line(root));
 	set_arg(_b);
 
 	new_symbol(ir_p);
@@ -782,14 +811,14 @@ static inline void a2_ir_if(struct a2_ir* ir_p, size_t root){
 	free_symbol(ir_p);
 	set_arg(_b);
 
-	size_t end_addr = (_else_node)?(closure_add_ir(curr_cls, ir_abx(JUMP, 0, 0),curr_line)):
+	size_t end_addr = (_else_node)?(xclosure_add_ir(curr_xcls, ir_abx(JUMP, 0, 0),curr_line)):
 									(0);
 
 	// back record addr
-	size_t else_addr = closure_curr_iraddr(curr_cls);
+	size_t else_addr = xclosure_curr_iraddr(curr_xcls);
 	struct a2_obj addr_obj = a2_addr2obj(else_addr);
 	int _else_addr = add_csymbol(ir_p, &addr_obj);
-	ir* _test_ir = closure_seek_ir(curr_cls, addr);
+	ir* _test_ir = xclosure_seek_ir(curr_xcls, addr);
 	*_test_ir = ir_abx(TEST, logic, _else_addr);
 
 	new_symbol(ir_p);
@@ -800,10 +829,10 @@ static inline void a2_ir_if(struct a2_ir* ir_p, size_t root){
 	free_symbol(ir_p);
 	
 	if(end_addr){
-		size_t ea = closure_curr_iraddr(curr_cls);
+		size_t ea = xclosure_curr_iraddr(curr_xcls);
 		addr_obj = a2_addr2obj(ea);
 		int _ea = add_csymbol(ir_p, &addr_obj);
-		ir* _jump_ir = closure_seek_ir(curr_cls, end_addr);
+		ir* _jump_ir = xclosure_seek_ir(curr_xcls, end_addr);
 		*_jump_ir = ir_abx(JUMP, 0, _ea);
 	}
 	set_arg(_b);
@@ -834,7 +863,7 @@ static inline  void a2_ir_local(struct a2_ir* ir_p, size_t root){
 	}
 	assert(count);
 	if(count>_count){
-		closure_add_ir(curr_cls, ir_abx(LOADNIL, top, count), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(LOADNIL, top, count), node_line(root));
 	}
 
 	// add local varable
@@ -894,16 +923,16 @@ static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, 
 				assert(idx<0);
 				r_idx = _rv_func(ir_p, var_global, idx, right_root);
 				if(is_Blimit(idx)){
-					closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, idx), node_line(root));	// set key to reg
+					xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, idx), node_line(root));	// set key to reg
 					idx = top_arg;
 				}
 
 				if(is_Climit(r_idx)){
-					closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, r_idx), node_line(root));
+					xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, r_idx), node_line(root));
 					r_idx = top_arg;
 				}
 
-				closure_add_ir(curr_cls, ir_abc(SETGLOBAL, _b, idx, r_idx), node_line(root));
+				xclosure_add_ir(curr_xcls, ir_abc(SETGLOBAL, _b, idx, r_idx), node_line(root));
 				set_arg(_b+1);
 				return _b; 
 			}else{
@@ -915,15 +944,15 @@ static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, 
 						assert(curr_arg<=_eb+1);
 						_eb++;
 						if(r_idx<0)
-							closure_add_ir(curr_cls, ir_abx(LOAD, idx-1, r_idx), node_line(root));
+							xclosure_add_ir(curr_xcls, ir_abx(LOAD, idx-1, r_idx), node_line(root));
 						else if(r_idx!=idx-1)
-							closure_add_ir(curr_cls, ir_abx(MOVE, idx-1, r_idx), node_line(root));
+							xclosure_add_ir(curr_xcls, ir_abx(MOVE, idx-1, r_idx), node_line(root));
 						set_arg(_b);
 					}
 						return idx-1;
 					case var_upvalue:
 						r_idx = _rv_func(ir_p, var_upvalue, idx, right_root);
-						closure_add_ir(curr_cls, ir_abx(SETUPVALUE, idx-1, r_idx), node_line(root));
+						xclosure_add_ir(curr_xcls, ir_abx(SETUPVALUE, idx-1, r_idx), node_line(root));
 						if(curr_arg- _b >1){
 							assert(_b==r_idx);
 							set_arg(_b+1);
@@ -949,7 +978,7 @@ HM_WVAR:
 				set_arg(_b);
 				return r_cma;
 			}else if(r_cma>_b){
-				closure_add_ir(curr_cls, ir_abx(MOVE, _b, r_cma), node_line(root));
+				xclosure_add_ir(curr_xcls, ir_abx(MOVE, _b, r_cma), node_line(root));
 			}
 			set_arg(_b+1);
 			return _b;
@@ -1050,7 +1079,7 @@ static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root){
 
 	assert(_ra>=0 && _ra<=_rb);
 	if(_ra>_b){
-		closure_add_ir(curr_cls, ir_abx(MOVE, _b, _ra), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(MOVE, _b, _ra), node_line(root));
 		set_arg(_b+1);
 	}else{
 		set_arg(_b);
@@ -1102,19 +1131,19 @@ OP_IR:
 			l_idx = a2_ir_exp(ir_p, node_p(root)->childs[0]); // left op value
 			r_idx = a2_ir_exp(ir_p, node_p(root)->childs[1]); // right op value
 			if(is_Blimit(l_idx)){
-				closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, l_idx), node_line(root));
+				xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, l_idx), node_line(root));
 				l_idx = top_arg;
 			}
 			if(is_Climit(r_idx)){
-				closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, r_idx), node_line(root));
+				xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, r_idx), node_line(root));
 				r_idx = top_arg;
 			}
 			if(des<0){
-				closure_add_ir(curr_cls, ir_abc(op, _b, l_idx, r_idx), node_line(root));
+				xclosure_add_ir(curr_xcls, ir_abc(op, _b, l_idx, r_idx), node_line(root));
 				set_arg(_b+1);
 				return _b;
 			}else{
-				closure_add_ir(curr_cls, ir_abc(op, des, l_idx, r_idx), node_line(root));
+				xclosure_add_ir(curr_xcls, ir_abc(op, des, l_idx, r_idx), node_line(root));
 				set_arg(_b);
 				return des;
 			}
@@ -1211,7 +1240,7 @@ static inline int a2_ir_not(struct a2_ir* ir_p, size_t root, int des){
 	assert(des>=0);
 
 	int not_v = _a2_ir_exp(ir_p, node_p(root)->childs[0], des);
-	closure_add_ir(curr_cls, ir_abx(NOT, des, not_v), node_line(root));
+	xclosure_add_ir(curr_xcls, ir_abx(NOT, des, not_v), node_line(root));
 	return des;
 }
 
@@ -1222,7 +1251,7 @@ static inline int a2_ir_neg(struct a2_ir* ir_p, size_t root, int des){
 	assert(des>=0);
 
 	int neg_v = _a2_ir_exp(ir_p, node_p(root)->childs[0], des);
-	closure_add_ir(curr_cls, ir_abx(NEG, des, neg_v), node_line(root));
+	xclosure_add_ir(curr_xcls, ir_abx(NEG, des, neg_v), node_line(root));
 	return des;
 }
 
@@ -1239,8 +1268,7 @@ static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des){
 	obj_setX(&obj, A2_TMAP, obj, _mg);
 
 	int _b = curr_arg, count=0;
-	int adr = closure_push_ctnstack(curr_cls, &obj);
-	closure_add_ir(curr_cls, ir_abx(CONTAINER, des, adr), node_line(root));
+	xclosure_add_ir(curr_xcls, ir_abx(NEWMAP, des, 0), node_line(root));
 	int _kv_idx = curr_arg;
 
 	for( ;kv_node; ){
@@ -1263,13 +1291,13 @@ static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des){
 		} 
 
 		// set key
-		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, _k), node_line(kv_node));
+		xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, _k), node_line(kv_node));
 		// set value
 		_v = a2_ir_exp(ir_p, v);
 		if(_v<0)
-			closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, _v), node_line(v));
+			xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, _v), node_line(v));
 		else if (_v<top_arg)
-			closure_add_ir(curr_cls, ir_abx(MOVE, top_arg, _v), node_line(v));
+			xclosure_add_ir(curr_xcls, ir_abx(MOVE, top_arg, _v), node_line(v));
 		assert(curr_arg-_kvb==2);
 		_kvb++;
 
@@ -1278,7 +1306,7 @@ static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des){
 	}
 
 	assert(curr_arg-_kv_idx==count*2);
-	closure_add_ir(curr_cls, ir_abc(SETMAP, des, _kv_idx, count), curr_line);
+	xclosure_add_ir(curr_xcls, ir_abc(SETMAP, des, _kv_idx, count), curr_line);
 	set_arg(_b);
 	return des;
 }
@@ -1294,8 +1322,7 @@ static inline int a2_ir_array(struct a2_ir* ir_p, size_t root, int des){
 	obj_setX(&obj, A2_TARRAY, obj, _ag);
 
 	int _b = curr_arg;
-	int adr = closure_push_ctnstack(curr_cls, &obj);
-	closure_add_ir(curr_cls, ir_abx(CONTAINER, des, adr), node_line(root));
+	xclosure_add_ir(curr_xcls, ir_abx(NEWLIST, des, 0), node_line(root));
 	size_t vn = node_p(root)->childs[0];
 
 	// generate value 
@@ -1303,7 +1330,7 @@ static inline int a2_ir_array(struct a2_ir* ir_p, size_t root, int des){
 	int count = _a2_ir_comm(ir_p, vn);
 	assert(curr_arg-_b==count);
 	if(count>0)
-		closure_add_ir(curr_cls, ir_abc(SETLIST, des, _vb, count), curr_line);
+		xclosure_add_ir(curr_xcls, ir_abc(SETLIST, des, _vb, count), curr_line);
 	set_arg(_b);
 	return des;
 }
@@ -1364,23 +1391,23 @@ static inline int a2_ir_cma(struct a2_ir* ir_p, size_t root, int ldes, int des, 
 static void _cma_get(struct a2_ir* ir_p, int ctn, int key, int des){
 	assert(ctn>=0 && des>=0);
 	if(is_Climit(key)){
-		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, key), curr_line);
+		xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, key), curr_line);
 		key = top_arg;
 	}
-	closure_add_ir(curr_cls, ir_abc(GETVALUE, des, ctn, key), curr_line);
+	xclosure_add_ir(curr_xcls, ir_abc(GETVALUE, des, ctn, key), curr_line);
 }
 
 static void _cma_set(struct a2_ir* ir_p, int ctn, int key, int value){
 	assert(ctn>=0);
 	if(is_Climit(key)){
-		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, key), curr_line);
+		xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, key), curr_line);
 		key = top_arg;
 	}
 	if(is_Climit(value)){
-		closure_add_ir(curr_cls, ir_abx(LOAD, add_arg, value), curr_line);
+		xclosure_add_ir(curr_xcls, ir_abx(LOAD, add_arg, value), curr_line);
 		value = top_arg;
 	}
-	closure_add_ir(curr_cls, ir_abc(SETVALUE, ctn, key, value), curr_line);
+	xclosure_add_ir(curr_xcls, ir_abc(SETVALUE, ctn, key, value), curr_line);
 }
 
 // parse varable
@@ -1391,17 +1418,17 @@ static inline int a2_ir_var(struct a2_ir* ir_p, size_t root, int des){
 	assert(des>=0);
 	if(!idx){
 		int k_idx = add_csymbol(ir_p, &k);
-		closure_add_ir(curr_cls, ir_abx(GETGLOBAL, des, k_idx), node_line(root));
+		xclosure_add_ir(curr_xcls, ir_abx(GETGLOBAL, des, k_idx), node_line(root));
 		return des;
 	}else{
 		switch(vt){
 			case var_global:
-				closure_add_ir(curr_cls, ir_abx(GETGLOBAL, des, idx), node_line(root));
+				xclosure_add_ir(curr_xcls, ir_abx(GETGLOBAL, des, idx), node_line(root));
 				return des;
 			case var_local:
 				return idx-1;
 			case var_upvalue:
-				closure_add_ir(curr_cls, ir_abx(GETUPVALUE, des, idx-1), node_line(root));
+				xclosure_add_ir(curr_xcls, ir_abx(GETUPVALUE, des, idx-1), node_line(root));
 				return des;
 			default:
 				assert(0);
@@ -1415,14 +1442,15 @@ static inline int a2_ir_var(struct a2_ir* ir_p, size_t root, int des){
 
 
 // for test 
-char* ir2string(struct a2_ir* ir_p, struct a2_closure* cls, ir _ir, char* str, size_t size){
+char* ir2string(struct a2_ir* ir_p, struct a2_xclosure* xcls, ir _ir, char* str, size_t size){
 	static char* _irs[] = {
 		"NIL",
 		"GETGLOBAL",  	// get global variable
 		"SETGLOBAL",  	// set global variable 
 		"GETUPVALUE",	// get upvalue
 		"SETUPVALUE",	// set upvalue
-		"CONTAINER", 	// load CONTAINER
+		"NEWLIST",	// new list
+		"NEWMAP",	// new map
 		"SETLIST",  // set list
 		"SETMAP", 	// set map
 		"GETVALUE", // get value
@@ -1466,9 +1494,9 @@ char* ir2string(struct a2_ir* ir_p, struct a2_closure* cls, ir _ir, char* str, s
 			int b = ir_gb(_ir);
 			int c = ir_gc(_ir);
 			char b_buf[32] = {0};
-			char* bs = (b<0)?(obj2str(closure_at_cstack(cls, b), b_buf, sizeof(b_buf)-1)):(NULL);
+			char* bs = (b<0)?(obj2str(xclosure_at_cstack(xcls, b), b_buf, sizeof(b_buf)-1)):(NULL);
 			char c_buf[32] = {0};
-			char* cs = (c<0)?(obj2str(closure_at_cstack(cls, c), c_buf, sizeof(c_buf)-1)):(NULL);
+			char* cs = (c<0)?(obj2str(xclosure_at_cstack(xcls, c), c_buf, sizeof(c_buf)-1)):(NULL);
 			
 			int cap = snprintf(str, size, "%s  %d  %d  %d;",ops, a, ir_gb(_ir), ir_gc(_ir));
 			if(bs)
@@ -1480,7 +1508,7 @@ char* ir2string(struct a2_ir* ir_p, struct a2_closure* cls, ir _ir, char* str, s
 		case ABX_MODE:{
 			int bx = ir_gbx(_ir);
 			char bx_buf[32] = {0};
-			char*  bxs = (bx<0)?(obj2str(closure_at_cstack(cls, bx), bx_buf, sizeof(bx_buf)-1)):(NULL);
+			char*  bxs = (bx<0)?(obj2str(xclosure_at_cstack(xcls, bx), bx_buf, sizeof(bx_buf)-1)):(NULL);
 			int cap = snprintf(str, size, "%s  %d  %d;", ops, a, ir_gbx(_ir));
 			if(bxs)
 				snprintf(str+cap, size-cap, "%s", bxs);
@@ -1500,7 +1528,7 @@ void dump_ir(struct a2_ir* ir_p){
 
 	// only current
 	printf("ir arg=%d\n", curr_clssym->arg_cap);
-	dump_closure(ir_p, curr_cls);
+	dump_xclosure(ir_p, curr_xcls);
 }
 
 

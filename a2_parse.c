@@ -38,7 +38,7 @@ static inline struct a2_token* parse_matchtoken(struct a2_parse* parse_p, size_t
 
 
 typedef size_t(*parse_func)(struct a2_parse*);
-static struct a2_closure* parse_gsegment(struct a2_parse* parse_p);
+static struct a2_xclosure* parse_gsegment(struct a2_parse* parse_p);
 static size_t parse_lsegment(struct a2_parse* parse_p);
 static   size_t _parse_expression(struct a2_parse* parse_p, parse_func pfunc);
 static inline size_t parse_expression(struct a2_parse* parse_p);
@@ -88,7 +88,7 @@ void a2_parse_clear(struct a2_parse* parse_p){
 }
 
 // parse token chain
-struct a2_closure* a2_parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t len){
+struct a2_xclosure* a2_parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t len){
 	assert(parse_p);
 	assert(token_chain);
 	assert(len);
@@ -211,7 +211,7 @@ ERROR_TOKEN:{
 }
 
 // parse global segment
-static struct a2_closure* parse_gsegment(struct a2_parse* parse_p){
+static struct a2_xclosure* parse_gsegment(struct a2_parse* parse_p){
 	for( ; !is_end; ){
 		if(tt2tk(cur_token.tt)==tk_end){
 			parse_readtoken(parse_p);

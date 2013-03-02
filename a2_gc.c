@@ -13,6 +13,7 @@ struct a2_gcobj{
 		struct a2_closure* cls;
 		struct a2_array* array;
 		struct a2_map* map;
+		struct a2_obj* uv;
 		void* obj;
 	}value;
 	struct a2_gcobj* next;
@@ -27,6 +28,7 @@ static void _gcobj_strMfree(struct a2_gcobj* gcobj);
 static void _gcobj_clsMfree(struct a2_gcobj* gcobj);
 static void _gcobj_arrayMfree(struct a2_gcobj* gcobj);
 static void _gcobj_mapMfree(struct a2_gcobj* gcobj);
+static void _gcobj_upvalueMfree(struct a2_gcobj* gcobj);
 
 struct a2_gc* a2_gc_new(){
 	struct a2_gc* ret = (struct a2_gc*)malloc(sizeof(*ret));
@@ -51,6 +53,9 @@ void a2_gc_free(struct a2_gc* gc_p){
 				break;
 			case A2_TMAP:
 				_gcobj_mapMfree(gc_p->chain);
+				break;
+			case _A2_TUPVALUE:
+				_gcobj_upvalueMfree(gc_p->chain);
 				break;
 			default:
 				free(gc_p->chain);
@@ -107,6 +112,15 @@ struct a2_gcobj* a2_map2gcobj(struct a2_map* map){
 	return ret;
 }
 
+struct a2_gcobj* a2_upvalue2gcobj(struct a2_obj* obj){
+	assert(obj);
+	struct a2_gcobj* ret = a2_nil2gcobj();
+	ret->type = _A2_TUPVALUE;
+	ret->value.uv = (struct a2_obj*)malloc(sizeof(struct a2_obj));
+	*(ret->value.uv) = *obj;
+	return ret;
+}
+
 struct a2_gcobj* a2_nil2gcobj(){
 	struct a2_gcobj* ret = (struct a2_gcobj*)malloc(sizeof(*ret));
 	ret->next = NULL;
@@ -139,6 +153,11 @@ inline struct a2_map* a2_gcobj2map(struct a2_gcobj* gcobj){
 	return gcobj->value.map;
 }
 
+inline struct a2_obj* a2_gcobj2upvalue(struct a2_gcobj* gcobj){
+	assert(gcobj->type==_A2_TUPVALUE);
+	return gcobj->value.uv;
+}
+
 // TODO: because gc , the gcobj only's mark.
 void a2_gcobj_stringfree(struct a2_gcobj* gcobj){
 	//mart it:
@@ -151,6 +170,14 @@ static void _gcobj_strMfree(struct a2_gcobj* gcobj){
 	a2_string_free(gcobj->value.str);
 	free(gcobj); 
 }
+
+static void _gcobj_upvalueMfree(struct a2_gcobj* gcobj){
+	assert(gcobj);
+	assert(gcobj->type==_A2_TUPVALUE);
+	free(gcobj->value.uv);
+	free(gcobj);
+}
+
 
 static void _gcobj_clsMfree(struct a2_gcobj* gcobj){
 	assert(gcobj);

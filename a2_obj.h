@@ -57,7 +57,8 @@ enum{
 
 	//private type
 	_A2_TUINTEGER,
-	_A2_TADDR
+	_A2_TADDR,
+	_A2_TUPVALUE
 };
 
 

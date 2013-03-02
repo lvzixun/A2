@@ -101,7 +101,7 @@ struct a2_parse;
 
 struct a2_parse*  a2_parse_open(struct a2_env* env_p);
 void a2_parse_close(struct a2_parse* parse_p);
-struct a2_closure* a2_parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t len);
+struct a2_xclosure* a2_parse_run(struct a2_parse* parse_p, struct a2_token* token_chain, size_t len);
 void a2_parse_clear(struct a2_parse* parse_p);
 
 

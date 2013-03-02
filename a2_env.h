@@ -34,11 +34,14 @@ inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str);
 
 // ir operation function
 inline void a2_irexec(struct a2_env* env_p, size_t root);
-inline struct a2_closure* a2_irexend(struct a2_env* env_p);
+inline struct a2_xclosure* a2_irexend(struct a2_env* env_p);
 // parse operation function
 inline struct a2_node* a2_nodep(struct a2_env* env_p, size_t idx);
 // add gc object
 inline  void a2_gcadd(struct a2_env* env_p, struct a2_gcobj* gcobj);
+// the obj from stack frame at sf_idx
+inline struct a2_obj* a2_sfidx(struct a2_env* env_p, size_t sf_idx);
+
 
 // key token check
 inline int a2_ktisfunction(struct a2_env* env_p, struct a2_token* token);

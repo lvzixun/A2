@@ -1,0 +1,36 @@
+
+function func(a){
+	print(a)
+	local _f = function (){
+		return function (){
+			return function (){
+				a = 5
+				print(a)
+			}
+		}
+	}
+
+	_f()()()
+	print(a)
+}
+
+func(1)
+
+function func2(a){
+	return function (){
+		local b = 11
+		local c = 22
+		return function (){
+			print(a)
+			return function (){
+				return function (){
+					print(a, b, c)
+				}
+			}
+		}
+	}
+}
+
+
+func2(1)()()()()
+func2(2)()()()()

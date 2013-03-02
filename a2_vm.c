@@ -1,6 +1,6 @@
 #include "a2_conf.h"
 #include "a2_ir.h"
-#include "a2_xclosure.h"
+#include "a2_closure.h"
 #include "a2_env.h"
 #include "a2_error.h"
 #include "a2_obj.h"
@@ -14,12 +14,23 @@
 #define curr_ir    a2_closure_ir(curr_cls, curr_pc)
 #define curr_op    (ir_gop(curr_ir))
 #define curr_line  a2_closure_line(curr_cls, curr_pc)
-   
+
+#define callinfo_sfi(ci, idx)	(assert((ci) && (idx)<(ci)->reg_stack.len), (ci)->reg_stack.sf_idx+(idx))
+#define sf_reg(sf_idx)			(assert((sf_idx)<vm_p->stack_frame.cap), &(vm_p->stack_frame.sf_p[sf_idx]))				
+#define callinfo_sfreg(ci, idx)	(&(vm_p->stack_frame.sf_p[callinfo_sfi(ci, idx)]))
+
+#define DEF_STACK_FRAME_SIZE	64
+
 #define vm_error(s)  do{a2_error("[vm error@%zd]: %s\n", curr_line, s);}while(0)
 
 
 struct vm_callinfo{
 	struct a2_closure* cls;
+	struct {
+		size_t sf_idx;
+		size_t len;
+	}reg_stack;
+
 	int retbegin;
 	int retnumber;
 	size_t pc;
@@ -30,7 +41,11 @@ struct vm_callinfo{
 
 struct  a2_vm{
 	struct a2_env* env_p;
-
+	struct {
+		struct a2_obj* sf_p;
+		size_t cap;
+		size_t size;
+	}stack_frame;
 	struct vm_callinfo* call_chain;
 };
 
@@ -41,7 +56,6 @@ static inline void _vm_loadnil(struct a2_vm* vm_p);
 static inline void _vm_getglobal(struct a2_vm* vm_p);
 static inline void _vm_setglobal(struct a2_vm* vm_p);
 static inline void _vm_getvalue(struct a2_vm* vm_p);
-static inline void _vm_container(struct a2_vm* vm_p);
 static inline void _vm_setlist(struct a2_vm* vm_p);
 static inline void _vm_setmap(struct a2_vm* vm_p);
 static inline void _vm_setvalue(struct a2_vm* vm_p);
@@ -61,6 +75,8 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 static inline void _vm_foreachloop(struct a2_vm* vm_p);
 static inline void _vm_foreachprep(struct a2_vm* vm_p);
 static inline void _vm_cat(struct a2_vm* vm_p);
+static inline void _vm_newlist(struct a2_vm* vm_p);
+static inline void _vm_newmap(struct a2_vm* vm_p);
 
 static inline int _vm_return(struct a2_vm* vm_p, int* ret);
 static inline int __vm_return_function(struct a2_vm* vm_p);
@@ -70,18 +86,61 @@ struct a2_vm* a2_vm_new(struct a2_env* env_p){
 	struct a2_vm* vm_p = (struct a2_vm*)malloc(sizeof(*vm_p));
 	vm_p->env_p = env_p;
 	vm_p->call_chain = NULL;
+
+	vm_p->stack_frame.sf_p = (struct a2_obj*)malloc(sizeof(struct a2_obj)*DEF_STACK_FRAME_SIZE);
+	vm_p->stack_frame.cap = 0;
+	vm_p->stack_frame.size = DEF_STACK_FRAME_SIZE;
 	return vm_p;
 }
 
 
 void a2_vm_free(struct a2_vm* vm_p){
+	free(vm_p->stack_frame.sf_p);
 	free(vm_p);
+}
+
+inline size_t vm_callinfo_sfi(struct vm_callinfo* ci, size_t reg_idx){
+	return callinfo_sfi(ci, reg_idx);
+}
+
+inline struct a2_closure* vm_callinfo_cls(struct vm_callinfo* ci){
+	assert(ci);
+	return ci->cls;
+}
+
+inline struct a2_obj* vm_sf_index(struct a2_vm* vm_p, size_t sf_idx){
+	assert(vm_p);
+	assert(sf_idx < vm_p->stack_frame.cap);
+	return &(vm_p->stack_frame.sf_p[sf_idx]);
+}
+
+// get slice from stack_frame
+static inline size_t up_stack_frame(struct a2_vm* vm_p, int size){
+	if(vm_p->stack_frame.cap+size > vm_p->stack_frame.size){
+		do{
+			vm_p->stack_frame.size *=2;
+		}while(vm_p->stack_frame.size-vm_p->stack_frame.cap<size);
+		vm_p->stack_frame.sf_p = (struct a2_obj*)realloc(vm_p->stack_frame.sf_p,
+			vm_p->stack_frame.size);
+	}
+
+	size_t ret = vm_p->stack_frame.cap;
+	vm_p->stack_frame.cap+=size;
+	return ret;
+}
+
+static inline void down_stack_frame(struct a2_vm* vm_p, int size){
+	assert(vm_p->stack_frame.cap - size >=0);
+	vm_p->stack_frame.cap -= size;
 }
 
 static inline void callinfo_new(struct a2_vm* vm_p, struct a2_closure* cls, int retbegin, int retnumber){
 	assert(vm_p);
 	struct vm_callinfo* ci = (struct vm_callinfo*)malloc(sizeof(*ci));
 	ci->cls = cls;
+	// set closure stack frame
+	ci->reg_stack.len = (cls)?(a2_closure_regscount(cls)):(0);
+	ci->reg_stack.sf_idx = up_stack_frame(vm_p, ci->reg_stack.len);
 	ci->pc=0;
 	ci->front = NULL;
 	ci->retbegin = retbegin;
@@ -93,12 +152,13 @@ static inline void callinfo_new(struct a2_vm* vm_p, struct a2_closure* cls, int 
 }
 
 static inline void callinfo_free(struct a2_vm* vm_p){
-	assert(vm_p->call_chain);
-	struct vm_callinfo* b = vm_p->call_chain->next;
-	free(vm_p->call_chain);
+	assert(curr_ci);
+	struct vm_callinfo* b = curr_ci->next;
+	down_stack_frame(vm_p, curr_ci->reg_stack.len);
+	free(curr_ci);
 	if(b)
 		b->front = NULL;
-	vm_p->call_chain = b;
+	curr_ci = b;
 }
 
 void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
@@ -107,12 +167,12 @@ void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 	a2_vm_run(vm_p);
 }
 
-#define _getvalue(vm_p, idx)	( ((idx)<0)?(a2_closure_const((curr_cls), (idx))):(a2_closure_arg((curr_cls), (idx))) )
+#define _getvalue(vm_p, idx)	( ((idx)<0)?(a2_closure_const((curr_cls), (idx))):(callinfo_sfreg((curr_ci), (idx))) )
 
 #define _vm_op(op)	 		__vm_op(op, a2_number2obj)
 #define _vm_oplimit(op) 	__vm_op(op, a2_bool2obj)
 
-#define  __vm_op(op, f) do{struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir)); \
+#define  __vm_op(op, f) do{struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir)); \
 							struct a2_obj* _v1 = _getvalue(vm_p, ir_gb(curr_ir)); \
 							struct a2_obj* _v2 = _getvalue(vm_p, ir_gc(curr_ir)); \
 							if(obj_t(_v1)!=A2_TNUMBER || obj_t(_v2)!=A2_TNUMBER) \
@@ -120,7 +180,7 @@ void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 							*_d = f(obj_vNum(_v1) op obj_vNum(_v2));\
 							curr_pc++;}while(0)
 
-#define _vm_ope(op)		do{struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir)); \
+#define _vm_ope(op)		do{struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir)); \
 							struct a2_obj* _v1 = _getvalue(vm_p, ir_gb(curr_ir)); \
 							struct a2_obj* _v2 = _getvalue(vm_p, ir_gc(curr_ir)); \
 							if(obj_t(_v1) != obj_t(_v2)) \
@@ -144,7 +204,7 @@ void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 							curr_pc++;}while(0)
 
 
-#define _vm_opl(op)  do{struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir)); \
+#define _vm_opl(op)  do{struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir)); \
 						struct a2_obj* _v1 = _getvalue(vm_p, ir_gb(curr_ir)); \
 						struct a2_obj* _v2 = _getvalue(vm_p, ir_gc(curr_ir)); \
 						if(obj_t(_v1)!=A2_TBOOL || obj_t(_v2)!=A2_TBOOL) \
@@ -176,8 +236,11 @@ static int a2_vm_run(struct a2_vm* vm_p){
 			case SETUPVALUE:
 				_vm_set_upvalue(vm_p);
 				break;
-			case CONTAINER:
-				_vm_container(vm_p);
+			case NEWLIST:
+				_vm_newlist(vm_p);
+				break;
+			case NEWMAP:
+				_vm_newmap(vm_p);
 				break;
 			case GETVALUE:
 				_vm_getvalue(vm_p);
@@ -277,7 +340,7 @@ static int a2_vm_run(struct a2_vm* vm_p){
 
 // load
 static inline void _vm_load(struct a2_vm* vm_p){
-	struct a2_obj* _des_obj = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _des_obj = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	*_des_obj = *(a2_closure_const(curr_cls, ir_gbx(curr_ir)));
 	curr_pc++;
 }
@@ -287,7 +350,7 @@ static inline void _vm_loadnil(struct a2_vm* vm_p){
 	int i;
 	struct a2_obj* _obj = NULL;
 	for(i=ir_ga(curr_ir); i<(ir_ga(curr_ir)+ir_gbx(curr_ir)); i++){
-		_obj = a2_closure_arg(curr_cls, i);
+		_obj = callinfo_sfreg(curr_ci, i);
 		obj_setX(_obj, A2_TNIL, point, NULL);
 	}
 	curr_pc++;
@@ -296,7 +359,7 @@ static inline void _vm_loadnil(struct a2_vm* vm_p){
 //get global varable
 static inline void _vm_getglobal(struct a2_vm* vm_p){
 	int bx = ir_gbx(curr_ir);
-	struct a2_obj* _dobj = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _dobj = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	struct a2_obj* _k = _getvalue(vm_p, bx);
 	struct a2_obj* _obj = a2_get_envglobal(vm_p->env_p, _k);
 
@@ -321,20 +384,31 @@ static inline void _vm_setglobal(struct a2_vm* vm_p){
 	curr_pc++;	
 }
 
-// load container
-static inline void _vm_container(struct a2_vm* vm_p){
+// new list
+static inline void _vm_newlist(struct a2_vm* vm_p){
 	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
-	*_d = *a2_closure_container(curr_cls, ir_gbx(curr_ir));
+	struct a2_gcobj* _gcobj = a2_array2gcobj(a2_array_new());
+	a2_gcadd(vm_p->env_p, _gcobj);
+	obj_setX(_d, A2_TARRAY, obj,  _gcobj);
+	curr_pc++;
+}
+
+// new map
+static inline void _vm_newmap(struct a2_vm* vm_p){
+	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
+	struct a2_gcobj* _gcobj = a2_map2gcobj(a2_map_new());
+	a2_gcadd(vm_p->env_p, _gcobj);
+	obj_setX(_d, A2_TARRAY, obj, _gcobj);
 	curr_pc++;
 }
 
 //set list
 static inline void _vm_setlist(struct a2_vm* vm_p){
 	int i, end=ir_gb(curr_ir)+ir_gc(curr_ir);
-	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));	
+	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));	
 	assert(obj_t(_d)==A2_TARRAY);
 	for(i=ir_gb(curr_ir); i<end; i++){
-		a2_array_add(a2_gcobj2array(obj_vX(_d, obj)), a2_closure_arg(curr_cls, i));
+		a2_array_add(a2_gcobj2array(obj_vX(_d, obj)), callinfo_sfreg(curr_ci, i));
 	}
 	curr_pc++;
 }
@@ -342,15 +416,15 @@ static inline void _vm_setlist(struct a2_vm* vm_p){
 //set map
 static inline void _vm_setmap(struct a2_vm* vm_p){
 	int i, end=ir_gb(curr_ir)+2*ir_gc(curr_ir);
-	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	struct a2_obj* _v = NULL;
 	struct a2_map* map = NULL;
 	assert(obj_t(_d)==A2_TMAP);
 	
 	struct a2_kv kv={0};
 	for(i=ir_gb(curr_ir); i<end; i+=2){
-		kv.key = a2_closure_arg(curr_cls, i);
-		kv.vp = a2_closure_arg(curr_cls, i+1);
+		kv.key = callinfo_sfreg(curr_ci, i);
+		kv.vp = callinfo_sfreg(curr_ci, i+1);
 		map = a2_gcobj2map(obj_vX(_d, obj));
 		if( (_v=a2_map_query(map, kv.key))==NULL )
 			a2_map_add(map, &kv);
@@ -362,8 +436,8 @@ static inline void _vm_setmap(struct a2_vm* vm_p){
 
 // get value 
 static inline void _vm_getvalue(struct a2_vm* vm_p){
-	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	struct a2_obj* _c = a2_closure_arg(curr_cls, ir_gb(curr_ir));
+	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
+	struct a2_obj* _c = callinfo_sfreg(curr_ci, ir_gb(curr_ir));
 	struct a2_obj* _k = _getvalue(vm_p, ir_gc(curr_ir));
 	struct a2_obj* __d = NULL;
 	switch(obj_t(_c)){
@@ -393,7 +467,7 @@ GVALUE_ERROR:
 
 // set value
 static inline void _vm_setvalue(struct a2_vm* vm_p){
-	struct a2_obj* _c = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _c = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	struct a2_obj* _k = _getvalue(vm_p, ir_gb(curr_ir));
 	struct a2_obj* _v = _getvalue(vm_p, ir_gc(curr_ir));
 	struct a2_obj* __d = NULL;
@@ -426,18 +500,21 @@ static inline void _vm_setvalue(struct a2_vm* vm_p){
 						assert(obj_t(_oa) == _A2_TADDR); \
 						curr_pc = obj_vX(_oa, addr);}while(0)
 
-// closure
+// TODO: closure
 static inline void _vm_closure(struct a2_vm* vm_p){
-	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	*_d = *a2_closure_cls(curr_cls, ir_gbx(curr_ir));
+	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
+	struct a2_closure* _cls = a2_closure_new(curr_ci, ir_gbx(curr_ir));
+	struct a2_gcobj* _gcobj = a2_closure2gcobj(_cls);
+	obj_setX(_d, A2_TCLOSURE, obj, _gcobj);
+	a2_gcadd(vm_p->env_p, _gcobj);
 	curr_pc++;
 }
 
 // forprep
 static inline void _vm_forprep(struct a2_vm* vm_p){
-	struct a2_obj* _i = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	struct a2_obj* _count = a2_closure_arg(curr_cls, ir_ga(curr_ir)+1);
-	struct a2_obj* _step = a2_closure_arg(curr_cls, ir_ga(curr_ir)+2);
+	struct a2_obj* _i = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
+	struct a2_obj* _count = callinfo_sfreg(curr_ci, ir_ga(curr_ir)+1);
+	struct a2_obj* _step = callinfo_sfreg(curr_ci, ir_ga(curr_ir)+2);
 
 	if(obj_t(_i)!=A2_TNUMBER)
 		vm_error("the index varable is must number.");
@@ -454,9 +531,9 @@ static inline void _vm_forprep(struct a2_vm* vm_p){
 
 // forloop
 static inline void _vm_forloop(struct a2_vm* vm_p){
-	struct a2_obj* _i = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	struct a2_obj* _count = a2_closure_arg(curr_cls, ir_ga(curr_ir)+1);
-	struct a2_obj* _step = a2_closure_arg(curr_cls, ir_ga(curr_ir)+2);
+	struct a2_obj* _i = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
+	struct a2_obj* _count = callinfo_sfreg(curr_ci, ir_ga(curr_ir)+1);
+	struct a2_obj* _step = callinfo_sfreg(curr_ci, ir_ga(curr_ir)+2);
 
 	if(obj_t(_i)!=A2_TNUMBER)
 		vm_error("the index varable is must number.");
@@ -471,9 +548,9 @@ static inline void _vm_forloop(struct a2_vm* vm_p){
 
 // foreachprep 
 static inline void _vm_foreachprep(struct a2_vm* vm_p){
-	struct a2_obj* _k = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	struct a2_obj* _v = a2_closure_arg(curr_cls, ir_ga(curr_ir)+1);
-	struct a2_obj* _c = a2_closure_arg(curr_cls, ir_ga(curr_ir)+2);
+	struct a2_obj* _k = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
+	struct a2_obj* _v = callinfo_sfreg(curr_ci, ir_ga(curr_ir)+1);
+	struct a2_obj* _c = callinfo_sfreg(curr_ci, ir_ga(curr_ir)+2);
 	struct a2_obj* __v = NULL;
 
 	if(obj_t(_c)!=A2_TMAP && obj_t(_c)!=A2_TARRAY)
@@ -508,9 +585,9 @@ static inline void _vm_foreachprep(struct a2_vm* vm_p){
 
 // foreachloop
 static inline void _vm_foreachloop(struct a2_vm* vm_p){
-	struct a2_obj* _k = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	struct a2_obj* _v = a2_closure_arg(curr_cls, ir_ga(curr_ir)+1);
-	struct a2_obj* _c = a2_closure_arg(curr_cls, ir_ga(curr_ir)+2);
+	struct a2_obj* _k = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
+	struct a2_obj* _v = callinfo_sfreg(curr_ci, ir_ga(curr_ir)+1);
+	struct a2_obj* _c = callinfo_sfreg(curr_ci, ir_ga(curr_ir)+2);
 	struct a2_obj* __v = NULL;
 
 	if(obj_t(_c)!=A2_TMAP && obj_t(_c)!=A2_TARRAY)
@@ -548,14 +625,14 @@ static inline void _vm_jump(struct a2_vm* vm_p){
 
 // move
 static inline void _vm_move(struct a2_vm* vm_p){
-	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
-	*_d = *a2_closure_arg(curr_cls, ir_gbx(curr_ir));
+	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
+	*_d = *callinfo_sfreg(curr_ci, ir_gbx(curr_ir));
 	curr_pc++;
 }
 
 // test
 static inline void _vm_test(struct a2_vm* vm_p){
-	struct  a2_obj* _v = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct  a2_obj* _v = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	if(obj_t(_v)==A2_TNIL || (obj_t(_v)==A2_TBOOL && !(obj_vX(_v, uinteger))))
 		jump(ir_gbx(curr_ir));
 	else
@@ -564,7 +641,7 @@ static inline void _vm_test(struct a2_vm* vm_p){
 
 // not 
 static inline void _vm_not(struct a2_vm* vm_p){
-	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	struct a2_obj* _v = _getvalue(vm_p, ir_gbx(curr_ir));
 
 	switch(obj_t(_v)){
@@ -583,7 +660,7 @@ static inline void _vm_not(struct a2_vm* vm_p){
 
 // neg
 static inline void _vm_neg(struct a2_vm* vm_p){
-	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	struct a2_obj* _v = _getvalue(vm_p, ir_gbx(curr_ir));
 
 	if(obj_t(_v)!=A2_TNUMBER)
@@ -594,19 +671,39 @@ static inline void _vm_neg(struct a2_vm* vm_p){
 
 // getupvalue
 static inline void _vm_get_upvalue(struct a2_vm* vm_p){
-	struct a2_obj* _uv = a2_closure_upvalue(curr_cls, ir_gbx(curr_ir));
-	struct a2_obj* _d = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_upvalue* _uv = a2_closure_upvalue(curr_cls, ir_gbx(curr_ir));
+	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 
-	*_d = *_uv;
+	switch(_uv->type){
+		case uv_stack:
+			*_d = *sf_reg(_uv->v.sf_idx);
+			break;
+		case uv_gc:
+			*_d = *a2_gcobj2upvalue(_uv->v.uv_obj);
+			break;
+		default:
+			assert(0);
+	}
 	curr_pc++;
 }
 
 // set upvalue
 static inline void _vm_set_upvalue(struct a2_vm* vm_p){
 	struct a2_obj* _v = _getvalue(vm_p, ir_gbx(curr_ir));
-	struct a2_obj* _ud = a2_closure_upvalue(curr_cls, ir_ga(curr_ir));
-	
-	*_ud = *_v;
+	struct a2_upvalue* _uv_d = a2_closure_upvalue(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _ud = NULL;
+
+	switch(_uv_d->type){
+		case uv_stack:
+			*sf_reg(_uv_d->v.sf_idx) = *_v;
+			break;
+		case uv_gc:
+			_ud = a2_gcobj2upvalue(_uv_d->v.uv_obj);
+			*_ud = *_v;
+			break;
+		default:
+			assert(0);
+	}
 	curr_pc++;
 }
 
@@ -627,9 +724,9 @@ static inline void _vm_cat(struct a2_vm* vm_p){
 	curr_pc++;
 }
 
-// call
+// TODO: call
 static inline void _vm_call(struct a2_vm* vm_p){
-	struct a2_obj* _func = a2_closure_arg(curr_cls, ir_ga(curr_ir));
+	struct a2_obj* _func = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	switch(obj_t(_func)){
 		case A2_TCLOSURE:
 			__vm_call_function(vm_p, _func);
@@ -656,7 +753,7 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 
 	// closure arg to cstack
 	for(i=ir_ga(curr_ir)+1; i<=ir_ga(curr_ir)+ir_gb(curr_ir); i++){
-		_obj = a2_closure_arg(curr_cls, i);
+		_obj = callinfo_sfreg(curr_ci, i);
 		a2_pushstack(vm_p->env_p, _obj);
 	}
 
@@ -670,12 +767,12 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 	for(i=_retb, j=ir_ga(curr_ir); 
 		i<ret+_retb && j<ir_ga(curr_ir)+ir_gc(curr_ir);
 		j++,i++){
-		_obj = a2_closure_arg(curr_cls, j);
+		_obj = callinfo_sfreg(curr_ci, j);
 		*_obj = *a2_getcstack(vm_p->env_p, i);
 	}
 
 	for(; j<ir_ga(curr_ir)+ir_gc(curr_ir); j++){
-		_obj = a2_closure_arg(curr_cls, j);
+		_obj = callinfo_sfreg(curr_ci, j);
 		obj_setX(_obj, A2_TNIL, point, NULL);
 	}
 
@@ -684,7 +781,7 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 	curr_pc++;
 }
 
-// call a2 function
+// TODO: call a2 function
 static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func){
 	assert(obj_t(_func)==A2_TCLOSURE);
 	struct a2_obj* _obj = NULL;
@@ -692,26 +789,27 @@ static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func){
 
 	//TODO not allow ...
 	assert(params>=0);
+	
+	struct vm_callinfo* _ci = curr_ci;
+	ir _ir = curr_ir;
+	// new call info
+	int b = ir_ga(curr_ir), n=ir_gc(curr_ir);
+	curr_pc++;
+	callinfo_new(vm_p, a2_gcobj2closure(obj_vX(_func, obj)), b, n);
 
 	// set params
-	for(i=ir_ga(curr_ir)+1, j=0; 
-		i<=ir_ga(curr_ir)+ir_gb(curr_ir) && j<params; 
+	for(i=ir_ga(_ir)+1, j=0; 
+		i<=ir_ga(_ir)+ir_gb(_ir) && j<params; 
 		j++, i++){
-		_obj = a2_closure_arg(a2_gcobj2closure(obj_vX(_func, obj)), j);
-		*_obj = *a2_closure_arg(curr_cls, i);
+		_obj = callinfo_sfreg(curr_ci, j);
+		*_obj = *callinfo_sfreg(_ci, i);
 	}
 	
 	// set clear params
 	for( ;j<params; j++){
-		_obj = a2_closure_arg(a2_gcobj2closure(obj_vX(_func, obj)), j);
+		_obj = callinfo_sfreg(curr_ci, j);
 		obj_setX(_obj, A2_TNIL, point, NULL);
 	}
-	
-	// new call info
-	int b = ir_ga(curr_ir), n=ir_gc(curr_ir);
-
-	curr_pc++; 
-	callinfo_new(vm_p, a2_gcobj2closure(obj_vX(_func, obj)), b, n);
 }
 
 // return
@@ -740,10 +838,11 @@ static inline int __vm_return_cfunction(struct a2_vm* vm_p){
 
 	// return to c stack
 	for(i=ir_ga(curr_ir); i<ir_ga(curr_ir)+ir_gbx(curr_ir); i++){
-		_obj = a2_closure_arg(curr_cls, i);
+		_obj = callinfo_sfreg(curr_ci, i);
 		a2_pushstack(vm_p->env_p, _obj);
 	}
 	ret = ir_gbx(curr_ir);
+	a2_closure_return(curr_cls, vm_p->env_p);
 	callinfo_free(vm_p);
 	return ret;
 }
@@ -752,24 +851,24 @@ static inline int __vm_return_cfunction(struct a2_vm* vm_p){
 static inline int __vm_return_function(struct a2_vm* vm_p){
 	struct a2_obj* _obj = NULL;
 	struct vm_callinfo* call_ci = curr_ci->next;
-	struct a2_closure* call_cls = call_ci->cls;
 	int i, j, ret;
 
 	// set return
 	for(i=ir_ga(curr_ir), j=curr_ci->retbegin; 
 		i<ir_ga(curr_ir)+ir_gbx(curr_ir) && j<curr_ci->retbegin+curr_ci->retnumber;
 		 j++, i++){
-		_obj = a2_closure_arg(call_cls, j);
-		*_obj = *a2_closure_arg(curr_cls, i);
+		_obj = callinfo_sfreg(call_ci, j);
+		*_obj = *callinfo_sfreg(curr_ci, i);
 	}
 
 	// set clear
 	for( ; j<curr_ci->retbegin+curr_ci->retnumber; j++){
-		_obj = a2_closure_arg(call_ci->cls, j);
+		_obj = callinfo_sfreg(call_ci, j);
 		obj_setX(_obj, A2_TNIL, point, NULL);
 	}
 
 	ret = curr_ci->retnumber;
+	a2_closure_return(curr_cls, vm_p->env_p);
 	callinfo_free(vm_p);
 	return ret;
 }
