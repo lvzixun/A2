@@ -26,7 +26,13 @@ struct a2_parse{
 #define _node_set(n, f) do{size_t _n=(f); (n)=_n;}while(0)
 
 #define is_end		(parse_p->t_idx>=parse_p->len)	
-#define parse_error(s)	a2_error("[parse error@line: %d]: %s\n", (is_end)?(parse_p->token_chain[parse_p->t_idx-1].line):(cur_token.line), (s))
+#define parse_error(s)	a2_error("[parse error@line: %d]: %s\n", \
+						(is_end)?(parse_p->token_chain[parse_p->t_idx-1].line):(cur_token.line), (s))
+
+#define error_expect(token)	do{ \
+								char ts_buf[64] = {0};	\
+								a2_error("[parse error@line: %d]: the token \' %s \' is do not expect.\n",	\
+									(token)->line, a2_token2str((token), ts_buf));}while(0)
 
 static void _init_node(struct a2_parse* parse_p);
 
@@ -200,12 +206,8 @@ static size_t parse_segcontent(struct a2_parse* parse_p){
 			goto ERROR_TOKEN;
 	}
 
-ERROR_TOKEN:{
-	char ts_buf[64] = {0};
-	a2_error("[parse error@line: %d]: the token \'%s \'is do not expect.\n", 
-		cur_token.line, 
-		a2_token2str(&(cur_token), ts_buf));
-	}	
+ERROR_TOKEN:
+	error_expect(&cur_token);
 	assert(0);
 	return 0;
 }
@@ -855,11 +857,8 @@ BASE_DEF:
 			}
 		}
 			break;
-		default:{
-			char ts_buf[64] = {0};
-			a2_error("[parse error@line: %d]: the token \' %s \' is do not expect`.\n",
-				cur_token.line, a2_token2str(&cur_token, ts_buf));
-		}
+		default:
+			error_expect(&cur_token);
 	}
 	return 0;
 }
@@ -945,30 +944,18 @@ static size_t parse_cargs(struct a2_parse* parse_p){
 
 	for(; !is_end; ){
 		tp = parse_attoken(parse_p);
-		if( tk_mask(tk_op, "...")==tp->tt ){
-			parse_readtoken(parse_p); // JUMP ...
-			if(!is_end && tt2op(parse_readtoken(parse_p)->tt)==')' ){
-				if(!head)	
-					head = new_node(parse_p, tp, args_node);
-				else{
-					_node_set(node_p(back)->next, new_node(parse_p, tp, args_node));
-				} 
-				return head;
-			}else
-				parse_error("the variable parameters list must be last arg.");
-		}else{
-			if(!head)
-				head = back = parse_exp(parse_p);
-			else{
-				_node_set(node_p(back)->next, parse_exp(parse_p));
-				back = node_p(back)->next;
-			}
-			tp = parse_readtoken(parse_p);
-			if(!tp) goto CARGS_END;
-			if(tt2op(tp->tt)==')') return head;
-			else if(tt2op(tp->tt)==',') continue;
-			else parse_error("the parameters is lost \' , \'.");
+		if(!head)
+			head = back = parse_exp(parse_p);
+		else{
+			_node_set(node_p(back)->next, parse_exp(parse_p));
+			back = node_p(back)->next;
 		}
+		tp = parse_readtoken(parse_p);
+		if(!tp) goto CARGS_END;
+		if(!back) error_expect(tp);
+		if(tt2op(tp->tt)==')') return head;
+		else if(tt2op(tp->tt)==',') continue;
+		else parse_error("the parameters is lost \' , \'.");
 	}
 
 CARGS_END:
@@ -1040,8 +1027,12 @@ static  size_t parse_for(struct a2_parse* parse_p){
 
 	head = new_node(parse_p, tp, for_node);
 	tp = parse_attoken(parse_p);
-	if(!tp || tt2tk(tp->tt)!=tk_ide || tt2op(parse_matchtoken(parse_p, 1)->tt)!='=') 
+	if(!tp || tt2tk(tp->tt)!=tk_ide){ 
 		parse_error("the first operation is must variable at for loop.");
+	}else if(tt2op(parse_matchtoken(parse_p, 1)->tt)!='='){
+		parse_error("the '=' is expected.");
+	}
+
 	_node_set(node_p(head)->childs[0], parse_exp(parse_p));
 	
 	if(match_op(parse_p, ',')==a2_fail) 

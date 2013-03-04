@@ -1,0 +1,9 @@
+
+local al = [11, 22, 33]
+
+local map  = {
+	'a' = 1, 
+	bb = 2
+}
+
+print(map['a'])

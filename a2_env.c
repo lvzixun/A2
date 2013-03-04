@@ -77,12 +77,12 @@ void a2_env_load(struct a2_env* env_p, struct a2_io* stream){
 	dump_xclosure(env_p->ir_p, xcls);
 	#endif
 
+	a2_lex_clear(env_p->lex_p);
+	a2_parse_clear(env_p->parse_p);
+
 	struct a2_closure* cls = a2_closure_newrun(xcls);
 	a2_gcadd(env_p, a2_closure2gcobj(cls)); 
 	a2_vm_load(env_p->vm_p, cls);
-
-	a2_lex_clear(env_p->lex_p);
-	a2_parse_clear(env_p->parse_p);
 }
 
 inline struct a2_state* a2_env2state(struct a2_env* env_p){

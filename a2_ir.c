@@ -514,7 +514,7 @@ static inline int a2_ir_function(struct a2_ir* ir_p, size_t root, int des){
 				struct a2_obj _args = a2_env_addstr(ir_p->env_p, "_args");
 				assert(obj_t(&_args)==A2_TSTRING);
 				add_lsymbol(ir_p, &_args, arg);
-				assert(params>0);
+				assert(params>=0);
 				params = -1 -params;
 				goto ARG_FUNC;
 			}

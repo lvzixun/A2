@@ -398,7 +398,7 @@ static inline void _vm_newmap(struct a2_vm* vm_p){
 	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
 	struct a2_gcobj* _gcobj = a2_map2gcobj(a2_map_new());
 	a2_gcadd(vm_p->env_p, _gcobj);
-	obj_setX(_d, A2_TARRAY, obj, _gcobj);
+	obj_setX(_d, A2_TMAP, obj, _gcobj);
 	curr_pc++;
 }
 
@@ -456,13 +456,13 @@ static inline void _vm_getvalue(struct a2_vm* vm_p){
 			*_d = *__d;
 			break;
 		default:
-			vm_error("the varable is not container.");
+			vm_error("the varable is not map or array.");
 	}
 
  	curr_pc++;
  	return;
 GVALUE_ERROR:
- 	vm_error("the key is overfllow at get array.");
+ 	vm_error("the key is overfllow.");
 }
 
 // set value
@@ -487,13 +487,13 @@ static inline void _vm_setvalue(struct a2_vm* vm_p){
 			*__d = *_v;
 			break;
 		default:
-			vm_error("the varable is not container.");
+			vm_error("the varable is not map or array.");
 	}
 
  	curr_pc++;
  	return;
  SVALUE_ERROR:
- 	vm_error("the key is overfllow at set array.");
+ 	vm_error("the key is overfllow.");
 }
 
 #define jump(idx)	do{struct a2_obj* _oa = a2_closure_const(curr_cls, (idx)); \
@@ -554,7 +554,7 @@ static inline void _vm_foreachprep(struct a2_vm* vm_p){
 	struct a2_obj* __v = NULL;
 
 	if(obj_t(_c)!=A2_TMAP && obj_t(_c)!=A2_TARRAY)
-		vm_error("the varable is not container.");
+		vm_error("the varable is not map or array.");
 
 	// set init varable
 	switch(obj_t(_c)){
@@ -591,7 +591,7 @@ static inline void _vm_foreachloop(struct a2_vm* vm_p){
 	struct a2_obj* __v = NULL;
 
 	if(obj_t(_c)!=A2_TMAP && obj_t(_c)!=A2_TARRAY)
-		vm_error("the varable is not container.");
+		vm_error("the varable is not map or array.");
 
 	// dump next
 	switch(obj_t(_c)){
@@ -724,7 +724,7 @@ static inline void _vm_cat(struct a2_vm* vm_p){
 	curr_pc++;
 }
 
-// TODO: call
+// call
 static inline void _vm_call(struct a2_vm* vm_p){
 	struct a2_obj* _func = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	switch(obj_t(_func)){
@@ -781,21 +781,33 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 	curr_pc++;
 }
 
-// TODO: call a2 function
+// call a2 function
 static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func){
 	assert(obj_t(_func)==A2_TCLOSURE);
 	struct a2_obj* _obj = NULL;
 	int i, j, params = a2_closure_params(a2_gcobj2closure(obj_vX(_func, obj)));
-
-	//TODO not allow ...
-	assert(params>=0);
-	
+	struct a2_array* _args = NULL;
 	struct vm_callinfo* _ci = curr_ci;
 	ir _ir = curr_ir;
+
 	// new call info
 	int b = ir_ga(curr_ir), n=ir_gc(curr_ir);
 	curr_pc++;
 	callinfo_new(vm_p, a2_gcobj2closure(obj_vX(_func, obj)), b, n);
+
+	// if is mutableargs
+	if(params<0){ 
+		params = -1 - params;
+		_obj = callinfo_sfreg(curr_ci, params);
+		if(ir_gb(_ir)>params){	// set _args list
+			_args = a2_array_new();
+			struct a2_gcobj* _array_gcobj = a2_array2gcobj(_args);
+			a2_gcadd(vm_p->env_p, _array_gcobj);
+			obj_setX(_obj, A2_TARRAY, obj, _array_gcobj);
+		}else{
+			obj_setX(_obj, A2_TNIL, point, NULL);
+		}
+	}
 
 	// set params
 	for(i=ir_ga(_ir)+1, j=0; 
@@ -809,6 +821,11 @@ static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func){
 	for( ;j<params; j++){
 		_obj = callinfo_sfreg(curr_ci, j);
 		obj_setX(_obj, A2_TNIL, point, NULL);
+	}
+
+	// if mutable args
+	for(j=0; i<=ir_ga(_ir)+ir_gb(_ir) && _args; i++, j++){
+		a2_array_add(_args, callinfo_sfreg(_ci, i));
 	}
 }
 

@@ -1,0 +1,26 @@
+
+function func(...){
+	foreach(i,v in _args){
+		print(i, v)
+	}
+}
+
+function func2(a, b, ...){
+	print (a, b, _args[0], _args[1])
+}
+
+function dump_array(array){
+	foreach(i, v in array){
+		print(i, v)
+	}
+}
+
+function func3(...){
+	dump_array(_args)
+}
+
+func(1, 2, 3)
+
+func2(11, 22, 33, 44)
+
+func3(66, 77)
