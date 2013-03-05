@@ -156,6 +156,19 @@ inline struct a2_obj* a2_getcstack(struct a2_env* env_p, int idx){
 	return &(env_p->cstack.stk_p[idx+env_p->bottom]);
 }
 
+inline void a2_setcstack(struct a2_env* env_p, int idx, struct a2_obj* obj){
+	assert(env_p);
+	assert(obj);
+	assert(idx>=0 && (idx+env_p->bottom)<env_p->cstack.top);
+	env_p->cstack.stk_p[idx+env_p->bottom] = *obj;
+}
+
+inline struct a2_obj* a2_getcstk_top(struct a2_env* env_p){
+	assert(env_p);
+	assert(env_p->cstack.top>0);
+	return &(env_p->cstack.stk_p[env_p->cstack.top-1]);
+}
+
 
 inline struct a2_obj* a2_get_envglobal(struct a2_env* env_p, struct a2_obj* k){
 	return a2_map_query(env_p->g_var, k);

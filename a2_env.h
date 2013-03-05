@@ -17,6 +17,8 @@ void a2_env_load(struct a2_env* env_p, struct a2_io* stream);
 inline struct a2_state* a2_env2state(struct a2_env* env_p);
 
 // c <-> a2 stack
+inline void a2_setcstack(struct a2_env* env_p, int idx, struct a2_obj* obj);
+inline struct a2_obj* a2_getcstk_top(struct a2_env* env_p);
 inline void a2_pushstack(struct a2_env* env_p, struct a2_obj* v);
 inline void a2_setbottom(struct a2_env* env_p, int bottom);
 inline int a2_getbottom(struct a2_env* env_p);

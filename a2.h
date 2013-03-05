@@ -28,6 +28,7 @@ A2_API inline void a2_topset(struct  a2_state* state, int idx);
 
 A2_API inline const char* a2_typeinfo(struct a2_state* state, int idx);
 A2_API inline int a2_type(struct a2_state* state, int idx);
+A2_API inline void a2_len(struct a2_state* state, int idx);
 A2_API inline void* a2_topoint(struct a2_state* state, int idx);
 
 A2_API inline int a2_tobool(struct a2_state* state, int idx);
@@ -39,6 +40,7 @@ A2_API inline char* a2_tostring(struct a2_state* state, int idx);
 A2_API inline void a2_pushfunction(struct a2_state* state, a2_cfunction func);
 A2_API inline a2_cfunction a2_tocfunction(struct a2_state* state, int idx);
 A2_API inline void a2_pushvalue(struct a2_state* state, int idx);
+A2_API inline void a2_setvalue(struct a2_state* state, int idx);
 A2_API inline void a2_reg(struct a2_state* state, char* func_name, a2_cfunction func);
 A2_API inline void a2_getglobal(struct a2_state* state);
 A2_API inline void a2_setglobal(struct a2_state* state);

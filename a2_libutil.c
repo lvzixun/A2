@@ -14,13 +14,15 @@ int a2_libprint(struct a2_state* state);
 int a2_libadd(struct a2_state* state);
 int a2_libt_time(struct a2_state* state);
 int a2_libtype(struct a2_state* state);
+int a2_liblen(struct a2_state* state);
 
 void a2_openutil(struct a2_state* state){
 	struct kf _reg_func[] = {
 		{"print", a2_libprint},
 		{"add", a2_libadd},
 		{"t_time", a2_libt_time},
-		{"type", a2_libtype}
+		{"type", a2_libtype},
+		{"len", a2_liblen}
 	};
 	
 	int i;
@@ -33,8 +35,19 @@ void a2_openutil(struct a2_state* state){
 int a2_libtype(struct a2_state* state){
 	int args = a2_top(state);
 	if(args==0)
-		a2_err(state, "the anumber of args is error.[exp: type(varable)]");
+		a2_err(state, "the number of args is error.[exp: type(varable)]");
 	a2_pushstring(state, (char*)(a2_typeinfo(state, 0)));
+	a2_setvalue(state, 0);
+	return 1;
+}
+
+
+int a2_liblen(struct a2_state* state){
+	int args = a2_top(state);
+	if(args==0)
+		a2_err(state, "the number of args is error.[exp: len(varable)]");
+	a2_len(state, 0);
+	a2_setvalue(state, 0);
 	return 1;
 }
 

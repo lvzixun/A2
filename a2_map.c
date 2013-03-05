@@ -64,6 +64,10 @@ void a2_map_clear(struct a2_map* map_p){
 	map_p->cap = 0;
 }
 
+inline size_t a2_map_len(struct a2_map* map_p){
+	assert(map_p);
+	return map_p->cap;
+}
 
 static void map_resize(struct a2_map* map_p){
 	size_t i, new_size = map_p->size<<1, hash;

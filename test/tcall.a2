@@ -1,0 +1,5 @@
+
+a, b, c = type('1111')
+
+
+print(a, b, c)

@@ -41,6 +41,24 @@ A2_API inline int a2_type(struct a2_state* state, int idx){
 	return obj_t(obj);
 }
 
+A2_API inline void a2_len(struct a2_state* state, int idx){
+	struct a2_obj* obj = a2_getcstack(state->env_p, idx);
+	size_t len =0;
+	struct a2_obj len_obj;
+	switch(obj_t(obj)){
+		case A2_TMAP:
+			len = a2_map_len(a2_gcobj2map(obj_vX(obj, obj)));
+			break;
+		case A2_TARRAY:
+			len = a2_array_len(a2_gcobj2array(obj_vX(obj, obj)));
+			break;
+		default:
+			a2_error("the type is not map or array at len function.");
+	}
+	len_obj = a2_number2obj((a2_number)len);
+	a2_pushstack(state->env_p, &len_obj);
+}	
+
 A2_API inline const char* a2_typeinfo(struct a2_state* state, int idx){
 	return a2_type2string(a2_type(state, idx));
 }
@@ -115,6 +133,11 @@ A2_API inline a2_cfunction a2_tocfunction(struct a2_state* state, int idx){
 A2_API inline void a2_pushvalue(struct a2_state* state, int idx){
 	struct a2_obj* _v = a2_getcstack(state->env_p, idx);
 	a2_pushstack(state->env_p, _v);
+}
+
+A2_API inline void a2_setvalue(struct a2_state* state, int idx){
+	struct a2_obj* obj = a2_getcstk_top(state->env_p);
+	a2_setcstack(state->env_p, idx, obj);
 }
 
 

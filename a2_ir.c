@@ -1056,8 +1056,9 @@ static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root){
 		case cfunc_node:
 			a2_ir_funccall(ir_p, rn, lcount);
 			rcount=lcount;
-			assert(curr_arg-_vb==1);
-			_vb = top_arg;
+			set_arg(_vb);
+			// assert(curr_arg-_vb==1);
+			//_vb = top_arg;
 			break;
 		case comma_node:
 			rn = node_p(rn)->childs[0];
