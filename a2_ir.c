@@ -151,7 +151,6 @@ struct a2_ir* a2_ir_open(struct a2_env* env){
 	ret->cur_line = 0;
 	ret->cls_sym_chain = NULL;
 	_init_op_modle(ret);
-	new_clssym(ret);
 	return ret;
 }
 
@@ -166,6 +165,10 @@ void a2_ir_close(struct a2_ir* ir_p){
 	free(ir_p);
 }
 
+inline void a2_ir_newxcls(struct a2_ir* ir_p){
+	new_clssym(ir_p);
+}
+
 void a2_ir_clear(struct a2_ir* ir_p){
 	ir_p->cur_line = 0;
 	while(ir_p->cls_sym_chain){
@@ -174,7 +177,6 @@ void a2_ir_clear(struct a2_ir* ir_p){
 		ir_p->cls_sym_chain = np;
 	}
 	ir_p->cls_sym_chain = NULL;
-	new_clssym(ir_p);
 }
 
 static void _init_op_modle(struct a2_ir* ir_p){

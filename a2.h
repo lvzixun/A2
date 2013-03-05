@@ -20,6 +20,7 @@ typedef int (*a2_cfunction)(struct a2_state*);
 A2_API struct a2_state* a2_open();
 A2_API void a2_close(struct a2_state* state);	
 A2_API void a2_loadfile(struct a2_state* state, const char* file);
+A2_API void a2_dostring(struct a2_state* state, const char* str, size_t len);
 A2_API void a2_err(struct a2_state* state, const char* f, ...);
 
 // a2 <-> c stack

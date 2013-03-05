@@ -247,6 +247,10 @@ static inline void lex_string(struct a2_lex* lex_p, struct a2_io* io_p){
 					c = '\n';
 					a2_io_readchar(io_p);
 					break;
+				case '\'':
+					c = '\'';
+					a2_io_readchar(io_p);
+					break;
 				case '\\':
 					c = '\\';
 					a2_io_readchar(io_p);

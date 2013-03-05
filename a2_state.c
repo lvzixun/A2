@@ -30,6 +30,12 @@ A2_API void a2_loadfile(struct a2_state* state, const char* file){
 	a2_io_close(io_p);
 }
 
+A2_API void a2_dostring(struct a2_state* state, const char* str, size_t len){
+	struct a2_io* io_p = a2_io_openS(str, len);
+	a2_env_load(state->env_p,io_p);
+	a2_io_closeS(io_p);
+}
+
 A2_API void a2_err(struct a2_state* state, const char* f, ...){
 	va_list args;
 	va_start(args, f);

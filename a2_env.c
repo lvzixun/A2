@@ -70,6 +70,7 @@ void a2_env_free(struct a2_env* env_p){
 
 void a2_env_load(struct a2_env* env_p, struct a2_io* stream){
 	size_t len = 0;
+	a2_ir_newxcls(env_p->ir_p);
 	struct a2_token* tk = a2_lex_read(env_p->lex_p, stream, &len);
 	struct a2_xclosure* xcls = a2_parse_run(env_p->parse_p, tk, len);
 	
@@ -79,6 +80,7 @@ void a2_env_load(struct a2_env* env_p, struct a2_io* stream){
 
 	a2_lex_clear(env_p->lex_p);
 	a2_parse_clear(env_p->parse_p);
+	a2_ir_clear(env_p->ir_p);
 
 	struct a2_closure* cls = a2_closure_newrun(xcls);
 	a2_gcadd(env_p, a2_closure2gcobj(cls)); 

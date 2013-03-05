@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS += -D _DEBUG_ -g -Wall
+CFLAGS += -O2 -g -Wall
 AR = ar rcu
 
 ifeq ($(OS), Windows_NT)

@@ -3,6 +3,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <string.h>
 
 struct kf{
 	char* key;
@@ -15,6 +16,7 @@ int a2_libadd(struct a2_state* state);
 int a2_libt_time(struct a2_state* state);
 int a2_libtype(struct a2_state* state);
 int a2_liblen(struct a2_state* state);
+int a2_libdostring(struct a2_state* state);
 
 void a2_openutil(struct a2_state* state){
 	struct kf _reg_func[] = {
@@ -22,7 +24,8 @@ void a2_openutil(struct a2_state* state){
 		{"add", a2_libadd},
 		{"t_time", a2_libt_time},
 		{"type", a2_libtype},
-		{"len", a2_liblen}
+		{"len", a2_liblen},
+		{"eve", a2_libdostring}
 	};
 	
 	int i;
@@ -49,6 +52,15 @@ int a2_liblen(struct a2_state* state){
 	a2_len(state, 0);
 	a2_setvalue(state, 0);
 	return 1;
+}
+
+int a2_libdostring(struct a2_state* state){
+	int args = a2_top(state);
+	if(args==0 || a2_type(state, 0)!=TSTRING)
+		a2_err(state, "the arg must string type.");
+	const char* str = a2_tostring(state, 0);
+	a2_dostring(state, str, strlen(str));
+	return 0;
 }
 
 // add
@@ -82,17 +94,6 @@ int a2_libt_time(struct a2_state* state){
  	a2_pushnumber(state, (a2_number)((st.tv_sec*1000000+st.tv_usec)/1000000.0));
  	return 1;
 }
-
-// sleep
-/*
-int a2_libsleep(struct a2_state* state){
-	if(a2_type(state, 0)!=TNUMBER)
-		a2_err(state, "the arg must number.");
-	a2_number t = a2_tonumber(state, 0);
-	sleep(t);
-	return 0;
-}
-*/
 
 // print 
 int a2_libprint(struct a2_state* state){
