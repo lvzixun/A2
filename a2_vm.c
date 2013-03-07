@@ -121,7 +121,7 @@ static inline size_t up_stack_frame(struct a2_vm* vm_p, int size){
 			vm_p->stack_frame.size *=2;
 		}while(vm_p->stack_frame.size-vm_p->stack_frame.cap<size);
 		vm_p->stack_frame.sf_p = (struct a2_obj*)realloc(vm_p->stack_frame.sf_p,
-			vm_p->stack_frame.size);
+			vm_p->stack_frame.size*sizeof(struct a2_obj));
 	}
 
 	size_t ret = vm_p->stack_frame.cap;
@@ -168,6 +168,7 @@ void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 }
 
 #define _getvalue(vm_p, idx)	( ((idx)<0)?(a2_closure_const((curr_cls), (idx))):(callinfo_sfreg((curr_ci), (idx))) )
+
 
 #define _vm_op(op)	 		__vm_op(op, a2_number2obj)
 #define _vm_oplimit(op) 	__vm_op(op, a2_bool2obj)
