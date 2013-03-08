@@ -947,12 +947,17 @@ void a2_vm_gc(struct a2_vm* vm_p){
 	}
 
 STACK_FRAME_END:
+	#ifdef _DEBUG_
 	printf("\n---gc mark----\n");
 	dump_gc(a2_envgc(vm_p->env_p));
+	#endif
 	// clear
 	a2_gc_clear(a2_envgc(vm_p->env_p));
+	
+	#ifdef _DEBUG_
 	printf("----gc clear-----\n");
 	dump_gc(a2_envgc(vm_p->env_p));
+	#endif
 }
 
 
