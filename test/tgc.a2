@@ -1,0 +1,16 @@
+
+function func(a, b, n){
+	if(n>30)
+		return
+	local c = [a, b]
+	func(a+1, b+1, n+1)
+}
+
+
+func(1, 2, 0)
+
+
+for(i=0, 40, 1){
+	local mp = {}
+}
+

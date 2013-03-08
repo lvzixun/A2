@@ -4,3 +4,4 @@ print('kiss')
 eve('a = 123')
 
 print('goddess', a)
+

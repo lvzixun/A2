@@ -105,8 +105,8 @@ void a2_free(void* p){
 
 
 void mem_print(){
-	printf("\nmem = %zd\n", mc);
 	#ifdef _DEBUG_
+		printf("\nmem = %zd\n", mc);
 		int i;
 		for(i=0; i<MEM_SIZE; i++){
 			if(_mi[i].p){

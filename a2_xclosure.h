@@ -32,7 +32,6 @@ struct a2_xclosure{
 
 	// // intermediate representation chain
 	ir* ir_chain; 
-	// the linenumber of ir
 	size_t* lines;
 	size_t len;
 	size_t size;

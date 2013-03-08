@@ -6,27 +6,6 @@
 
 typedef void(* _obj_free)(struct a2_obj*);
 
-static void _obj_strfree(struct a2_obj* obj_p);
-
-static _obj_free obj_free_func[] = {
-	NULL,
-
-	NULL,
-	_obj_strfree,  // string
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,  // closure
-	NULL,
-	NULL,
-	
-	NULL,
-	NULL,
-	NULL
-};
-
-
 static const char* type_info[] = {
 	"_null",
 	
@@ -105,14 +84,6 @@ struct a2_obj a2_addr2obj(size_t addr){
 	return ret;
 }
 
-void a2_obj_free(struct a2_obj* obj_p){
-	assert(obj_p && obj_t(obj_p) <=4);
-	int t = obj_t(obj_p);
-	if(obj_free_func[t])
-		obj_free_func[t](obj_p);
-	obj_setX(obj_p, _A2_TNULL, point, NULL);
-}
-
 // get data size from a2_obj
 size_t a2_obj_size(struct a2_obj* obj_p){
 	assert(obj_p);
@@ -150,10 +121,6 @@ byte* a2_obj_bytes(struct a2_obj* obj_p){
 			assert(0);
 			return NULL;
 	}
-}
-
-static void _obj_strfree(struct a2_obj* obj_p){
-	a2_gcobj_stringfree(obj_vX(obj_p, obj));
 }
 
 int a2_obj_cmp(struct a2_obj* obj1, struct a2_obj* obj2){

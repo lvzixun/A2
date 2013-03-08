@@ -8,16 +8,26 @@
 #include "a2_map.h"
 #include "a2_string.h"
 
+#include <stdio.h>
+
+
+#define ci_ir(ci)	a2_closure_ir((ci)->cls, (ci)->pc)
+#define ci_op(ci)  (ir_gop(ci_ir(ci)))
+
 #define curr_ci    (vm_p->call_chain)
 #define curr_pc    (curr_ci->pc)
 #define curr_cls   (curr_ci->cls)
 #define curr_ir    a2_closure_ir(curr_cls, curr_pc)
 #define curr_op    (ir_gop(curr_ir))
+
+#define curr_irdes2sfi()	(curr_ci->reg_stack.sf_idx+ir_ga(curr_ir)+ir_gb(curr_ir))
 #define curr_line  a2_closure_line(curr_cls, curr_pc)
 
 #define callinfo_sfi(ci, idx)	(assert((ci) && (idx)<(ci)->reg_stack.len), (ci)->reg_stack.sf_idx+(idx))
 #define sf_reg(sf_idx)			(assert((sf_idx)<vm_p->stack_frame.cap), &(vm_p->stack_frame.sf_p[sf_idx]))				
 #define callinfo_sfreg(ci, idx)	(&(vm_p->stack_frame.sf_p[callinfo_sfi(ci, idx)]))
+
+#define ci_iscls(ci)	((ci)->cls!=NULL)
 
 #define DEF_STACK_FRAME_SIZE	64
 
@@ -115,6 +125,8 @@ inline struct a2_obj* vm_sf_index(struct a2_vm* vm_p, size_t sf_idx){
 }
 
 // get slice from stack_frame
+// the size is max  for move stack.
+
 static inline size_t up_stack_frame(struct a2_vm* vm_p, int size){
 	if(vm_p->stack_frame.cap+size > vm_p->stack_frame.size){
 		do{
@@ -124,8 +136,12 @@ static inline size_t up_stack_frame(struct a2_vm* vm_p, int size){
 			vm_p->stack_frame.size*sizeof(struct a2_obj));
 	}
 
-	size_t ret = vm_p->stack_frame.cap;
 	vm_p->stack_frame.cap+=size;
+	if(curr_ci==NULL)
+		return 0;
+
+	assert(curr_op == CALL);
+	size_t ret = curr_irdes2sfi()+1;
 	return ret;
 }
 
@@ -216,7 +232,7 @@ void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 // vm 
 static int a2_vm_run(struct a2_vm* vm_p){
 	int ret = 0;
-	
+
 	for(;;){
 		switch(curr_op){
 			case LOAD:
@@ -792,8 +808,9 @@ static inline void __vm_call_function(struct a2_vm* vm_p, struct a2_obj* _func){
 
 	// new call info
 	int b = ir_ga(curr_ir), n=ir_gc(curr_ir);
-	curr_pc++;
 	callinfo_new(vm_p, a2_gcobj2closure(obj_vX(_func, obj)), b, n);
+	// jump call
+	_ci->pc++;
 
 	// if is mutableargs
 	if(params<0){ 
@@ -889,4 +906,54 @@ static inline int __vm_return_function(struct a2_vm* vm_p){
 	callinfo_free(vm_p);
 	return ret;
 }
+
+// mark and clear gc
+void a2_vm_gc(struct a2_vm* vm_p){
+	if(curr_ci==NULL)
+		goto STACK_FRAME_END;
+
+	struct vm_callinfo* cip = curr_ci;
+
+	while(!ci_iscls(cip)){
+		cip = cip->next;
+	}
+
+	size_t i, end;
+	struct a2_obj* obj = NULL;
+	switch(ci_op(cip)){
+		case NEWLIST:
+		case NEWMAP:
+		case CAT:
+		case CLOSURE:
+			end = ir_ga(ci_ir(cip))+cip->reg_stack.sf_idx;
+			break;
+		case RETURN:
+			end = ir_ga(ci_ir(cip)) + ir_gbx(ci_ir(cip)) + cip->reg_stack.sf_idx;
+			break;
+		default:
+			assert(cip->pc>0);
+			ir per_ir = a2_closure_ir(cip->cls, cip->pc-1);
+			assert(ir_gop(per_ir) == CALL);
+			end = ir_ga(per_ir)+ir_gb(per_ir)+cip->reg_stack.sf_idx + 1;
+			return;
+	}
+
+	assert(end <= vm_p->stack_frame.cap);
+
+	// mark the stack frame
+	for(i=0; i<end; i++){
+		obj = &(vm_p->stack_frame.sf_p[i]);
+		a2_gc_markit(a2_envgc(vm_p->env_p), obj, mark_black);
+	}
+
+STACK_FRAME_END:
+	printf("\n---gc mark----\n");
+	dump_gc(a2_envgc(vm_p->env_p));
+	// clear
+	a2_gc_clear(a2_envgc(vm_p->env_p));
+	printf("----gc clear-----\n");
+	dump_gc(a2_envgc(vm_p->env_p));
+}
+
+
 

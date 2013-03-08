@@ -46,7 +46,7 @@ struct a2_env* a2_env_new(struct a2_state* state){
 	obj_stack_init(&ret->cstack);
 	ret->lex_p = a2_lex_open(ret);
 	ret->parse_p = a2_parse_open(ret);
-	ret->gc_p = a2_gc_new();
+	ret->gc_p = a2_gc_new(ret);
 	ret->vm_p = a2_vm_new(ret);
 	ret->ir_p = a2_ir_open(ret);
 	ret->_forge_gcobj = a2_nil2gcobj();
@@ -55,14 +55,14 @@ struct a2_env* a2_env_new(struct a2_state* state){
 
 void a2_env_free(struct a2_env* env_p){
 	assert(env_p);
-	a2_map_free(env_p->g_str);
-	a2_map_free(env_p->g_var);
 	obj_stack_destory(&env_p->cstack);
 	a2_lex_close(env_p->lex_p);
 	a2_parse_close(env_p->parse_p);
 	a2_gc_free(env_p->gc_p);
 	a2_ir_close(env_p->ir_p);
 	a2_vm_free(env_p->vm_p);
+	a2_map_free(env_p->g_str);
+	a2_map_free(env_p->g_var);
 	a2_gcobj_nilfree(env_p->_forge_gcobj);
 	free(env_p);
 }
@@ -70,6 +70,7 @@ void a2_env_free(struct a2_env* env_p){
 
 void a2_env_load(struct a2_env* env_p, struct a2_io* stream){
 	size_t len = 0;
+	a2_gc_close(env_p->gc_p);
 	a2_ir_newxcls(env_p->ir_p);
 	struct a2_token* tk = a2_lex_read(env_p->lex_p, stream, &len);
 	struct a2_xclosure* xcls = a2_parse_run(env_p->parse_p, tk, len);
@@ -83,8 +84,17 @@ void a2_env_load(struct a2_env* env_p, struct a2_io* stream){
 	a2_ir_clear(env_p->ir_p);
 
 	struct a2_closure* cls = a2_closure_newrun(xcls);
-	a2_gcadd(env_p, a2_closure2gcobj(cls)); 
+	struct a2_gcobj* gcobj = a2_closure2gcobj(cls);
+	struct a2_obj obj;
+	obj_setX(&obj, A2_TCLOSURE, obj, gcobj);
+	a2_gc_markit(env_p->gc_p, &obj, mark_blue);
+	a2_gcadd(env_p, gcobj); 
+	a2_gc_open(env_p->gc_p);
+
+	// load it
 	a2_vm_load(env_p->vm_p, cls);
+
+	a2_gc_markit(env_p->gc_p, &obj, mark_white);
 }
 
 inline struct a2_state* a2_env2state(struct a2_env* env_p){
@@ -171,13 +181,38 @@ inline struct a2_obj* a2_getcstk_top(struct a2_env* env_p){
 	return &(env_p->cstack.stk_p[env_p->cstack.top-1]);
 }
 
+inline void a2_vmgc(struct a2_env* env_p){
+	a2_vm_gc(env_p->vm_p);
+}
 
 inline struct a2_obj* a2_get_envglobal(struct a2_env* env_p, struct a2_obj* k){
 	return a2_map_query(env_p->g_var, k);
 }
 
 inline struct a2_obj* a2_set_envglobal(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v){
-	return a2_map_set(env_p->g_var, k, v);
+	struct a2_obj* ret = a2_map_query(env_p->g_var, k);
+	
+	a2_gc_markit(env_p->gc_p, k, mark_blue);
+
+	// mark value
+	if(is_gcobj(v)){
+		a2_gc_markit(env_p->gc_p, v, mark_blue);
+	}
+
+	if(ret==NULL){
+		struct a2_kv kv = {
+			k, v
+		};
+		a2_map_add(env_p->g_var, &kv);
+		return v;
+	}
+	
+	//  clear old value
+	if(is_gcobj(ret)){
+		a2_gc_markit(env_p->gc_p, ret, mark_white);
+	}
+	*ret = *v;
+	return v;
 }
 
 inline void a2_irexec(struct a2_env* env_p, size_t root){
@@ -245,7 +280,12 @@ inline int a2_ktislocal(struct a2_env* env_p, struct a2_token* token){
 	return a2_tokenislocal(env_p->lex_p, token);
 }
 
-// for test 
+void a2_env_clear_itstring(struct a2_env* env_p, struct a2_gcobj* str_gcobj){
+	struct a2_obj k;
+	obj_setX(&k, A2_TSTRING, obj, str_gcobj);
+	a2_map_del(env_p->g_str, &k);
+}
+
 inline struct a2_lex* a2_envlex(struct a2_env* env_p){
 	return env_p->lex_p;
 }
@@ -258,3 +298,6 @@ inline struct a2_ir* a2_envir(struct a2_env* env_p){
 	return env_p->ir_p;
 }
 
+inline struct a2_gc* a2_envgc(struct a2_env* env_p){
+	return env_p->gc_p;
+}

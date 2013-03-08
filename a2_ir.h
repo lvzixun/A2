@@ -70,7 +70,7 @@ struct a2_xclosure;
 #define ir_gbx(i)		  _ir_sig(_ir_gbx(i), BX_SIZE)
 
 enum ir_op{
-	NIL, // nil
+	NIL, 		// nil
 	GETGLOBAL,  // get global variable,   modle is abx
 	SETGLOBAL,  // set global variable,  modle is abc
 	GETUPVALUE,	// get upvalue, modle is abx

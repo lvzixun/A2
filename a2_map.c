@@ -56,8 +56,8 @@ void a2_map_free(struct a2_map* map_p){
 void a2_map_clear(struct a2_map* map_p){
 	size_t i;
 	for(i=0; i<map_p->size; i++){
-		a2_obj_free(&map_p->slot_p[i].key);
-		a2_obj_free(&map_p->slot_p[i].value);
+		obj_setX(&map_p->slot_p[i].key, _A2_TNULL, point, NULL);
+		obj_setX(&map_p->slot_p[i].value, _A2_TNULL, point, NULL);
 	}
 	
 	memset(map_p->slot_p, 0, sizeof(struct a2_slot)*map_p->size);
@@ -210,8 +210,8 @@ int a2_map_del(struct a2_map* map_p, struct a2_obj* key){
 	if(vp==NULL)
 		return a2_fail;
 	else{
-		a2_obj_free(vp);
-		a2_obj_free(kp);
+		obj_setX(kp, _A2_TNULL, point, NULL);
+		obj_setX(vp, _A2_TNULL, point, NULL);
 		return a2_true;
 	}
 }

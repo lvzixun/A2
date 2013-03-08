@@ -33,6 +33,10 @@ inline struct a2_obj* a2_set_envglobal(struct a2_env* env_p, struct a2_obj* k, s
 // global string
 inline struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s);
 inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str);
+void a2_env_clear_itstring(struct a2_env* env_p, struct a2_gcobj* str_gcobj);
+
+//  gc it
+inline void a2_vmgc(struct a2_env* env_p);
 
 // ir operation function
 inline void a2_irexec(struct a2_env* env_p, size_t root);
@@ -58,10 +62,11 @@ inline int a2_ktisnil(struct a2_env* env_p, struct a2_token* token);
 inline int a2_ktisin(struct a2_env* env_p, struct a2_token* token);
 inline int a2_ktislocal(struct a2_env* env_p, struct a2_token* token);
 
-// for test
+
 inline struct a2_lex* a2_envlex(struct a2_env* env_p);
 inline struct a2_parse* a2_envparse(struct a2_env* env_p);
 inline struct a2_ir* a2_envir(struct a2_env* env_p);
+inline struct a2_gc* a2_envgc(struct a2_env* env_p);
 
 #endif
 

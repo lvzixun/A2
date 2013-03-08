@@ -82,6 +82,9 @@ enum{
 	#define obj_setNum(p, n)	((p)->__v.number=(n))
 #endif
 
+#define is_gcobj(obj)	(obj_t(obj)== A2_TMAP || obj_t(obj)==A2_TARRAY || \
+						obj_t(obj)==A2_TCLOSURE || obj_t(obj)==A2_TSTRING )
+
 
 size_t a2_obj_size(struct a2_obj* obj_p);
 byte* a2_obj_bytes(struct a2_obj* obj_p);
