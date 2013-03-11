@@ -49,3 +49,6 @@ send me an email: lvzixun@gmail.com
 
 ## wiki
 home wiki: https://github.com/lvzixun/A2/wiki
+
+## PS
+英语老师死得早，各位就凑合这看吧  -_-!
