@@ -14,3 +14,23 @@ for(i=0, 40, 1){
 	local mp = {}
 }
 
+map = {
+	key1 = 1,
+	key2 = 2,
+	2 = 3
+}
+
+print(map[2], map.key1, map['key2'])
+
+
+print(type(1), 
+	type('str'), 
+	type([11,22]), 
+	type({}),
+ 	type(function(){return})
+)
+
+
+print('kiss')
+eve('print(\'hello eve!\')')
+print('goddess')

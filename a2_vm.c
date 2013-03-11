@@ -20,7 +20,8 @@
 #define curr_ir    a2_closure_ir(curr_cls, curr_pc)
 #define curr_op    (ir_gop(curr_ir))
 
-#define curr_irdes2sfi()	(curr_ci->reg_stack.sf_idx+ir_ga(curr_ir)+ir_gb(curr_ir))
+#define ci_irdes2sfi(ci)	( (ci)->reg_stack.sf_idx+ir_ga(ci_ir(ci))+ir_gb(ci_ir(ci)) )
+// #define curr_irdes2sfi()	(curr_ci->reg_stack.sf_idx+ir_ga(curr_ir)+ir_gb(curr_ir))
 #define curr_line  a2_closure_line(curr_cls, curr_pc)
 
 #define callinfo_sfi(ci, idx)	(assert((ci) && (idx)<(ci)->reg_stack.len), (ci)->reg_stack.sf_idx+(idx))
@@ -140,8 +141,14 @@ static inline size_t up_stack_frame(struct a2_vm* vm_p, int size){
 	if(curr_ci==NULL)
 		return 0;
 
-	assert(curr_op == CALL);
-	size_t ret = curr_irdes2sfi()+1;
+	struct vm_callinfo* cip = curr_ci;
+	while(cip->cls == NULL){
+		cip = cip->next;
+		if(cip==NULL)
+			return 0;
+	}
+	assert(ci_op(cip) == CALL);
+	size_t ret = ci_irdes2sfi(cip)+1;
 	return ret;
 }
 
@@ -916,6 +923,8 @@ void a2_vm_gc(struct a2_vm* vm_p){
 
 	while(!ci_iscls(cip)){
 		cip = cip->next;
+		if(cip==NULL)
+			goto STACK_FRAME_END;
 	}
 
 	size_t i, end;

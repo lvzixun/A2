@@ -69,4 +69,3 @@ logic 		::= var_op logic_op var_op | '(' var_op logic_op var_op ')'
 func_call	::=var _call
 ass 		::=var_write{',' var_write} '=' var{',', var}
 
-exp :=  func_call | if | for | foreach 
