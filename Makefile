@@ -18,8 +18,9 @@ a2_obj.o a2_gc.o a2_parse.o a2_ir.o a2_array.o a2_state.o a2_xclosure.o a2_vm.o\
 a2_libutil.o
 
 #TEST_OBJ = ./test/test_io.o ./test/test_string.o ./test/test_lex.o ./test/test_map.o ./test/test_parse.o ./test/test_ir.o
+A2_OBJ_O = $(foreach s, $(A2_OBJ), .$(N)src$(N)$(s))
 TEST_OBJ = .$(N)test$(N)test_a2.o
-OBJ = $(A2_OBJ) $(TEST_OBJ)
+OBJ = $(A2_OBJ_O) $(TEST_OBJ)
 
 TEST =  $(foreach s, $(TEST_OBJ), $(basename $(s)))
 
@@ -36,7 +37,7 @@ $(OBJ):
 
 .PHONY : clean
 clean:
-	$(RM) $(A2_OBJ)
+	$(RM) $(A2_OBJ_O)
 	$(RM) $(TEST_OBJ)
 	$(RM) $(TEST)
 	$(RM) $(A2)

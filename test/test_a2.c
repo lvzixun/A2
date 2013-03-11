@@ -1,6 +1,6 @@
 
-#include "../a2.h"
-#include "../a2_libutil.h"
+#include "../src/a2.h"
+#include "../src/a2_libutil.h"
 #include <stdio.h>
 
 int main(int argc, char const *argv[])
