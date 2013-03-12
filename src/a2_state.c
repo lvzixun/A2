@@ -24,22 +24,25 @@ A2_API void a2_close(struct a2_state* state){
 	free(state);
 }
 
-A2_API void a2_loadfile(struct a2_state* state, const char* file){
-	struct a2_io* io_p = a2_io_open(file);
-	a2_env_load(state->env_p,io_p);
+A2_API int a2_loadfile(struct a2_state* state, const char* file){
+	struct a2_io* io_p = a2_io_open(state->env_p, file);
+	int ret = a2_env_load(state->env_p,io_p);
 	a2_io_close(io_p);
+	return ret;
 }
 
-A2_API void a2_dostring(struct a2_state* state, const char* str, size_t len){
+
+A2_API int a2_dostring(struct a2_state* state, const char* str, size_t len){
 	struct a2_io* io_p = a2_io_openS(str, len);
-	a2_env_load(state->env_p,io_p);
+	int ret = a2_env_load(state->env_p,io_p);
 	a2_io_closeS(io_p);
+	return ret;
 }
 
 A2_API void a2_err(struct a2_state* state, const char* f, ...){
 	va_list args;
 	va_start(args, f);
-	a2_vserror(f, &args);
+	a2_vserror(state->env_p, e_run_error, f, &args);
 }
 
 A2_API inline int a2_type(struct a2_state* state, int idx){
@@ -59,7 +62,8 @@ A2_API inline void a2_len(struct a2_state* state, int idx){
 			len = a2_array_len(a2_gcobj2array(obj_vX(obj, obj)));
 			break;
 		default:
-			a2_error("the type is not map or array at len function.");
+			a2_error(state->env_p, e_run_error,
+			 "the type is not map or array at len function.");
 	}
 	len_obj = a2_number2obj((a2_number)len);
 	a2_pushstack(state->env_p, &len_obj);
@@ -117,7 +121,8 @@ A2_API inline void a2_pushbool(struct a2_state* state, int b){
 A2_API inline int a2_tobool(struct a2_state* state, int idx){
 	struct a2_obj* obj = a2_getcstack(state->env_p, idx);
 	if(obj_t(obj)!=A2_TBOOL)
-		a2_error("the type is not bool.");
+		a2_error(state->env_p, e_run_error, 
+			"the type is not bool.");
 	else
 		return  (int)(obj_vX(obj, uinteger));
 	return 0;
@@ -156,16 +161,16 @@ A2_API inline void a2_reg(struct a2_state* state, char* func_name, a2_cfunction 
 
 
 #define check_num(num)	if(obj_t(num)!=A2_TNUMBER) \
-							a2_error("the key is not number.");
+							a2_error(state->env_p, e_run_error, "the key is not number.");
 
 #define check_key(k)	if(obj_t(k)!=A2_TSTRING && obj_t(k)!=A2_TNUMBER) \
-							a2_error("the key is not number or string.\n"); 
+							a2_error(state->env_p, e_run_error, "the key is not number or string.\n"); 
 
 #define check_map(map)  if(obj_t(map)!=A2_TMAP) \
-							a2_error("the varable is not map type."); 
+							a2_error(state->env_p, e_run_error, "the varable is not map type."); 
 
 #define check_array(array)	if(obj_t(array)!=A2_TARRAY) \
-							 a2_error("the varable is not array type.");
+							 a2_error(state->env_p, e_run_error, "the varable is not array type.");
 
 // get global
 A2_API inline void a2_getglobal(struct a2_state* state){
@@ -232,7 +237,8 @@ A2_API inline void a2_setarray(struct a2_state* state){
 	check_num(k);
 	_v  = a2_array_get(a2_gcobj2array(obj_vX(array, obj)), k);
 	if(_v==NULL)
-		a2_error("the error index at array.\n");
+		a2_error(state->env_p, e_run_error, 
+			"the error index at array.\n");
 	*_v = *v;
 	a2_topset(state, top-1);
 }

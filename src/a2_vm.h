@@ -11,7 +11,7 @@ void a2_vm_free(struct a2_vm* vm_p);
 
 void a2_vm_gc(struct a2_vm* vm_p);
 
-void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls);
+int a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls);
 
 inline size_t vm_callinfo_sfi(struct vm_callinfo* ci, size_t reg_idx);
 inline struct a2_closure* vm_callinfo_cls(struct vm_callinfo* ci);

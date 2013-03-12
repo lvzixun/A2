@@ -59,7 +59,9 @@ int a2_libdostring(struct a2_state* state){
 	if(args==0 || a2_type(state, 0)!=TSTRING)
 		a2_err(state, "the arg must string type.");
 	const char* str = a2_tostring(state, 0);
-	a2_dostring(state, str, strlen(str));
+	if(a2_dostring(state, str, strlen(str))){
+		printf("%s\n", a2_tostring(state, a2_top(state)-1));
+	}
 	return 0;
 }
 

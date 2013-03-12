@@ -22,7 +22,7 @@ static char cmask[] = {
 
 #define DEFAULT_TOKENS_LEVEL 8
 #define DEFAULT_TOKENS_LEN	(1<<DEFAULT_TOKENS_LEVEL)
-#define lex_error(s) a2_error("[lex error @line: %zd]:%s\n", lex_p->line, s)
+#define lex_error(s) a2_error(lex_p->env_p, e_lex_error, "[lex error @line: %zd]:%s\n", lex_p->line, s)
 #define _deep(l) (((size_t)1)<<(l))
 #define _mask(c)	(cmask[(uchar)(c)])
 //#define tk_mask(tk, v)	 ((((uint32)tk)<<24)|(v))
@@ -174,7 +174,9 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 				a2_io_readchar(io_p);
 				break;
 			default:			// error
-				a2_error("[lex error @line: %zd]: the character\' %c \' is not allow.\n", lex_p->line, c);
+				a2_error(lex_p->env_p, e_lex_error, 
+					"[lex error @line: %zd]: the character\' %c \' is not allow.\n",
+				 	lex_p->line, c);
 				break;
 		}
 	}

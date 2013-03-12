@@ -74,10 +74,10 @@ size_t xclosure_add_ir(struct a2_xclosure* xcls, ir i, size_t line);
 inline ir* xclosure_seek_ir(struct a2_xclosure* xcls, size_t idx);
 inline size_t xclosure_curr_iraddr(struct a2_xclosure* xcls);
 // const varable op
-int xclosure_push_cstack(struct a2_xclosure* xcls, struct a2_obj* obj);
+int xclosure_push_cstack(struct a2_env* env_p, struct a2_xclosure* xcls, struct a2_obj* obj);
 struct  a2_obj* xclosure_at_cstack(struct a2_xclosure* xcls, int idx);
 // xclosure op
-int xclosure_push_xcls(struct a2_xclosure* xcls, struct a2_xclosure* xcls_p);
+int xclosure_push_xcls(struct a2_env* env_p, struct a2_xclosure* xcls, struct a2_xclosure* xcls_p);
 // upvaluex op
 int xclosure_push_upvaluex(struct a2_xclosure* xcls, struct a2_xclosure* xcls_p,
 	enum upvaluex_type uvx_type, int idx);

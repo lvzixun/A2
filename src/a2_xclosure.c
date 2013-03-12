@@ -91,11 +91,12 @@ inline size_t xclosure_curr_iraddr(struct a2_xclosure* xcls){
 }
 
 // cont varable stack op 
-int xclosure_push_cstack(struct a2_xclosure* xcls, struct a2_obj* obj){
+int xclosure_push_cstack(struct a2_env* env_p, struct a2_xclosure* xcls, struct a2_obj* obj){
 	assert(xcls);
 	assert(obj);
 	if(xcls->c_stack.top>=BX_MAX)
-		a2_error("the constent stack is overfllow.\n");
+		a2_error(env_p, e_overfllow_error,
+		 "the constent stack is overfllow.\n");
 	return obj_stack_add(&(xcls->c_stack), obj);
 }
 
@@ -106,10 +107,11 @@ struct  a2_obj* xclosure_at_cstack(struct a2_xclosure* xcls, int idx){
 }
 
 // xclosure stack op
-int xclosure_push_xcls(struct a2_xclosure* xcls, struct a2_xclosure* xcls_p){
+int xclosure_push_xcls(struct a2_env* env_p, struct a2_xclosure* xcls, struct a2_xclosure* xcls_p){
 	assert(xcls && xcls_p);
 	if(xcls->xcls_stack.cap>=BX_MAX)
-		a2_error("the gc stack from closure is overfllow.\n");
+		a2_error(env_p, e_overfllow_error,
+		 "the gc stack from closure is overfllow.\n");
 	if(xcls->xcls_stack.cap>=xcls->xcls_stack.size){
 		xcls->xcls_stack.size *= 2;
 		xcls->xcls_stack.xcls_chain = (struct a2_xclosure**)realloc(

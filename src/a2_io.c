@@ -2,6 +2,7 @@
 #include "a2_conf.h"
 #include "a2_error.h"
 #include <string.h>
+#include "a2_io.h"
 
 #define MAX_IO_BUFFER 1024
 
@@ -13,6 +14,8 @@ struct a2_io{
 	size_t len;
 	size_t rsize;
 	byte* buf;
+
+	struct a2_env* env_p;
 };
 
 #define _is_end(p, n)		((p)->rsize+(p)->seek+(n)>=(p)->len)
@@ -21,16 +24,17 @@ struct a2_io{
 
 static void _a2_io_load(struct a2_io* io_p);
 
-struct a2_io*  a2_io_open(const char* file_name){
+struct a2_io*  a2_io_open(struct a2_env* env_p, const char* file_name){
 	struct a2_io* ret = NULL;
 	FILE* fp = NULL;
 	check_null(file_name, NULL);
 	fp  = fopen(file_name, "rb");
 	if(fp == NULL) {
-		a2_error("[io error]: the file is null!\n");
+		a2_error(env_p, e_io_error, "[io error]: the file is null!\n");
 		return NULL;
 	}
 	ret = (struct a2_io*)malloc(sizeof(*ret));
+	ret->env_p = env_p;
 	ret->size = MAX_IO_BUFFER;
 	ret->buf = (byte*)malloc(sizeof(byte)*MAX_IO_BUFFER);
 
@@ -42,7 +46,7 @@ struct a2_io*  a2_io_open(const char* file_name){
 	ret->rsize = 0;
 	size_t len = fread(ret->buf, sizeof(byte), ret->size, ret->fp);
 	if(len<=0)
-		a2_error("io error.\n");
+		a2_error(env_p, e_io_error, "io error.\n");
 	return ret;
 }
 
@@ -76,7 +80,7 @@ static void _a2_io_load(struct a2_io* io_p){
 	memcpy(io_p->buf, &(io_p->buf[io_p->seek]), io_p->size-io_p->seek);
 	size_t len= fread( &(io_p->buf[io_p->size-io_p->seek]), sizeof(byte), io_p->seek, io_p->fp);
 	if(len<=0)
-		a2_error("io error.\n");
+		a2_error(io_p->env_p, e_io_error, "io error.\n");
 	
 	io_p->rsize += io_p->seek;
 	io_p->seek = io_p->size-io_p->seek;

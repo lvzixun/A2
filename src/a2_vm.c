@@ -32,7 +32,8 @@
 
 #define DEF_STACK_FRAME_SIZE	64
 
-#define vm_error(s)  do{a2_error("[vm error@%zd]: %s\n", curr_line, s);}while(0)
+#define vm_error(s)  do{a2_error(vm_p->env_p, e_vm_error, \
+					"[vm error@%zd]: %s\n", curr_line, s);}while(0)
 
 
 struct vm_callinfo{
@@ -110,6 +111,7 @@ void a2_vm_free(struct a2_vm* vm_p){
 	free(vm_p);
 }
 
+
 inline size_t vm_callinfo_sfi(struct vm_callinfo* ci, size_t reg_idx){
 	return callinfo_sfi(ci, reg_idx);
 }
@@ -184,11 +186,28 @@ static inline void callinfo_free(struct a2_vm* vm_p){
 	curr_ci = b;
 }
 
-void a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
-	assert(vm_p && cls);
-	callinfo_new(vm_p, cls, 0, 0);
+static void _vm_run(struct a2_env* env_p, struct a2_vm* vm_p){
 	a2_vm_run(vm_p);
 }
+int a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
+	assert(vm_p && cls);
+	callinfo_new(vm_p, cls, 0, 0);
+	struct vm_callinfo* b_ci_p = curr_ci;
+
+	int ret = a2_xpcall(vm_p->env_p, (a2_pfunc)_vm_run, vm_p);
+	if(ret){
+		struct vm_callinfo* p = curr_ci;
+		while(p!=b_ci_p){
+			free(p);
+			p = p->next;
+		}
+		vm_p->call_chain = b_ci_p->next;
+		b_ci_p->front = NULL;
+		free(b_ci_p);
+	}
+	return ret;
+}
+
 
 #define _getvalue(vm_p, idx)	( ((idx)<0)?(a2_closure_const((curr_cls), (idx))):(callinfo_sfreg((curr_ci), (idx))) )
 
@@ -389,7 +408,8 @@ static inline void _vm_getglobal(struct a2_vm* vm_p){
 
 	if(_obj==NULL){
 		char _buf[64] = {0};
-		a2_error("[vm error@%zd]: the global \'%s\' is not find.\n", 
+		a2_error(vm_p->env_p, e_vm_error, 
+			"[vm error@%zd]: the global \'%s\' is not find.\n", 
 			curr_line, 
 			obj2str(_k, _buf, sizeof(_buf)));
 	}

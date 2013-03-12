@@ -19,7 +19,7 @@
 #define node_ct(n,i)  (node_p(node_p(n)->childs[i])->type)
 #define node_cp(n,i)  (node_p(node_p(n)->childs[i]))
 
-#define ir_error(i, s)  do{a2_error("[ir error@line: %zd]: %s\n",node_p(i)->token->line,s);}while(0)
+#define ir_error(i, s)  do{a2_error(ir_p->env_p, e_ir_error, "[ir error@line: %zd]: %s\n",node_p(i)->token->line,s);}while(0)
 #define curr_sym (ir_p->cls_sym_chain->sym.sym_chain[ir_p->cls_sym_chain->sym.cap-1])
 #define curr_csym (ir_p->cls_sym_chain->sym.sym_chain[0])
 //#define curr_gsym  (ir_p->cls_sym_chain->sym.sym_chain[1])
@@ -44,6 +44,8 @@
 #define v2vt(v)  ((v)>>(30)) 
 #define v2i(v)	 (((v)<<2)>>2)
 #define DEF_SYM_SIZE 4
+
+#define DEF_XCLS_SIZE	32
 
 // varable type
 enum var_type{
@@ -81,6 +83,11 @@ struct a2_ir{
 
 	size_t cur_line;
 	byte op_modle[ir_count];
+	struct {
+		struct a2_xclosure** xcls_chain;
+		size_t len;
+		size_t size;
+	} xcls_stack;
 };
 
 #define op_modle(op) (assert(op>=0 && op<ir_count), ir_p->op_modle[op])
@@ -100,7 +107,7 @@ static inline void free_symbol(struct a2_ir* ir_p);
 static inline void _a2_ir_exec(struct a2_ir* ir_p, struct cls_sym* cls_sp, size_t root);
 
 static struct cls_sym* cls_sym_new(struct a2_ir* ir_p);
-static void cls_sym_free(struct cls_sym* p);
+static void cls_sym_free(struct a2_ir* ir_p, struct cls_sym* p);
 
 static inline void  new_clssym(struct a2_ir* ir_p);
 static inline void free_clssym(struct a2_ir* ir_p);
@@ -151,6 +158,11 @@ struct a2_ir* a2_ir_open(struct a2_env* env){
 	ret->cur_line = 0;
 	ret->cls_sym_chain = NULL;
 	_init_op_modle(ret);
+
+	ret->xcls_stack.xcls_chain = (struct a2_xclosure**)malloc(
+		sizeof(struct a2_xclosure*)*DEF_XCLS_SIZE);
+	ret->xcls_stack.size = DEF_XCLS_SIZE;
+	ret->xcls_stack.len = 0;
 	return ret;
 }
 
@@ -158,11 +170,27 @@ void a2_ir_close(struct a2_ir* ir_p){
 	if(!ir_p) return;
 	while(ir_p->cls_sym_chain){
 		struct cls_sym* np = ir_p->cls_sym_chain->next;
-		cls_sym_free(ir_p->cls_sym_chain);
+		cls_sym_free(ir_p, ir_p->cls_sym_chain);
 		ir_p->cls_sym_chain = np;
 	}
 
+	free(ir_p->xcls_stack.xcls_chain);
 	free(ir_p);
+}
+
+static inline void _xcls_push(struct a2_ir* ir_p, struct a2_xclosure* xcls){
+	if(ir_p->xcls_stack.len>=ir_p->xcls_stack.size){
+		ir_p->xcls_stack.size *= 2;
+		ir_p->xcls_stack.xcls_chain = (struct a2_xclosure**)realloc(
+			ir_p->xcls_stack.xcls_chain,
+			 sizeof(struct a2_xclosure*)*ir_p->xcls_stack.size);
+	}
+
+	ir_p->xcls_stack.xcls_chain[ir_p->xcls_stack.len++] = xcls;
+}
+
+static inline void _xcls_clear(struct a2_ir* ir_p){
+	ir_p->xcls_stack.len = 0;
 }
 
 inline void a2_ir_newxcls(struct a2_ir* ir_p){
@@ -173,10 +201,17 @@ void a2_ir_clear(struct a2_ir* ir_p){
 	ir_p->cur_line = 0;
 	while(ir_p->cls_sym_chain){
 		struct cls_sym* np = ir_p->cls_sym_chain->next;
-		cls_sym_free(ir_p->cls_sym_chain);
+		cls_sym_free(ir_p, ir_p->cls_sym_chain);
 		ir_p->cls_sym_chain = np;
 	}
+
 	ir_p->cls_sym_chain = NULL;
+	// clear xclosure
+	int i;
+	for(i=0; i<ir_p->xcls_stack.len; i++){
+		a2_xclosure_free(ir_p->xcls_stack.xcls_chain[i]);
+	}
+	ir_p->xcls_stack.len =0;
 }
 
 static void _init_op_modle(struct a2_ir* ir_p){
@@ -206,6 +241,7 @@ static struct cls_sym* cls_sym_new(struct a2_ir* ir_p){
 	struct cls_sym* ret = (struct cls_sym*)malloc(sizeof(*ret));
 	ret->next = NULL;
 	ret->xcls = a2_xclosure_new();
+	_xcls_push(ir_p, ret->xcls);
 
 	ret->sym.cap=0;
 	ret->sym.size=DEF_SYM_SIZE;
@@ -216,11 +252,12 @@ static struct cls_sym* cls_sym_new(struct a2_ir* ir_p){
 	return ret;
 }
 
-static void cls_sym_free(struct cls_sym* p){
+static void cls_sym_free(struct a2_ir* ir_p, struct cls_sym* p){
 	int i;
 	for(i=0; i<p->sym.cap; i++){
 		a2_map_free(p->sym.sym_chain[i]);
 	}
+
 	_for_stack_destroy(&(p->fs));
 	_for_stack_destroy(&(p->fh));
 	free(p->sym.sym_chain);
@@ -230,7 +267,7 @@ static void cls_sym_free(struct cls_sym* p){
 
 static inline int _add_arg(struct a2_ir* ir_p){
 	if(curr_clssym->arg_cap>=(ARG_MAX-1))
-		a2_error("the varable more than %d at closure.\n", ARG_MAX);
+		a2_error(ir_p->env_p, e_ir_error, "the varable more than %d at closure.\n", ARG_MAX);
 	if(curr_clssym->arg_cap+1>curr_clssym->max_arg)
 		curr_clssym->max_arg = curr_clssym->arg_cap+1;
 	return curr_clssym->arg_cap++;
@@ -274,6 +311,7 @@ inline struct a2_xclosure* a2_ir_exend(struct a2_ir* ir_p){
 	assert(ir_p->cls_sym_chain->next==NULL);
 	xclosure_add_ir(curr_xcls, ir_abx(RETURN, 0, 0), curr_line);
 	a2_xclosure_setregs(curr_xcls, curr_clssym->max_arg);
+	_xcls_clear(ir_p);
 	return curr_xcls;
 }
 
@@ -352,7 +390,7 @@ static inline void new_clssym(struct a2_ir* ir_p){
 static inline void free_clssym(struct a2_ir* ir_p){
 	assert(ir_p->cls_sym_chain);
 	struct cls_sym* np = ir_p->cls_sym_chain->next;
-	cls_sym_free(ir_p->cls_sym_chain);
+	cls_sym_free(ir_p, ir_p->cls_sym_chain);
 	ir_p->cls_sym_chain = np;
 }
 
@@ -363,7 +401,7 @@ static inline int  add_csymbol(struct a2_ir* ir_p, struct a2_obj* k){
 
 	struct a2_obj* vp = a2_map_query(curr_csym, k);
 	if(!vp){  // not find
-		int idx = xclosure_push_cstack(curr_xcls, k); 
+		int idx = xclosure_push_cstack(ir_p->env_p, curr_xcls, k); 
 		struct a2_obj v = a2_uinteger2obj(idx);
 		struct a2_kv kv = {
 			k, &v
@@ -537,7 +575,7 @@ ARG_FUNC:
 	free_clssym(ir_p);
 
 	// set gc stack
-	int cls_gcidx = xclosure_push_xcls(curr_xcls, _xcls);
+	int cls_gcidx = xclosure_push_xcls(ir_p->env_p, curr_xcls, _xcls);
 	assert(cls_gcidx>=0);
 
 	xclosure_add_ir(curr_xcls, ir_abx(CLOSURE, des, cls_gcidx), func_line);

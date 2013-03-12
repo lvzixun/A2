@@ -26,12 +26,13 @@ struct a2_parse{
 #define _node_set(n, f) do{size_t _n=(f); (n)=_n;}while(0)
 
 #define is_end		(parse_p->t_idx>=parse_p->len)	
-#define parse_error(s)	a2_error("[parse error@line: %d]: %s\n", \
+#define parse_error(s)	a2_error(parse_p->env_p, e_parse_error, "[parse error@line: %d]: %s\n", \
 						(is_end)?(parse_p->token_chain[parse_p->t_idx-1].line):(cur_token.line), (s))
 
 #define error_expect(token)	do{ \
 								char ts_buf[64] = {0};	\
-								a2_error("[parse error@line: %d]: the token \' %s \' is do not expect.\n",	\
+								a2_error(parse_p->env_p, e_parse_error, \
+									"[parse error@line: %d]: the token \' %s \' is do not expect.\n",	\
 									(token)->line, a2_token2str((token), ts_buf));}while(0)
 
 static void _init_node(struct a2_parse* parse_p);
@@ -295,8 +296,9 @@ static   size_t _parse_expression(struct a2_parse* parse_p, parse_func pfunc){
 				}
 				default:{
 					char ts_buf[64] = {0};
-					a2_error("[parse error@line: %d]: at token \'%s\' is error grammar.\n",
-						tp->line, a2_token2str(tp, ts_buf));
+					a2_error(parse_p->env_p,e_parse_error,
+						 	"[parse error@line: %d]: at token \'%s\' is error grammar.\n",
+							tp->line, a2_token2str(tp, ts_buf));
 				}
 				break;
 			}
@@ -334,7 +336,8 @@ static   size_t _parse_expression(struct a2_parse* parse_p, parse_func pfunc){
 
 EXP_ERROR:{
 		char ts_buf[64] = {0};
-		a2_error("[parse error@line: %d]: the token \' %s \' is error grammar.\n", 
+		a2_error(parse_p->env_p, e_parse_error,
+			 "[parse error@line: %d]: the token \' %s \' is error grammar.\n", 
 			cur_token.line, a2_token2str(&cur_token, ts_buf));
 	}
 	return 0;
@@ -369,7 +372,8 @@ static size_t parse_map(struct a2_parse* parse_p){
 				break;
 			default:{
 				char ts_buf[64] = {0};
-				a2_error("[parse error@line: %d]: the token \' %s \' is can not set key.\n",
+				a2_error(parse_p->env_p, e_parse_error,
+				 "[parse error@line: %d]: the token \' %s \' is can not set key.\n",
 					cur_token.line, a2_token2str(&cur_token, ts_buf));
 			}
 		}
@@ -395,7 +399,8 @@ MAP_PASS:
 				return head;
 			default:{
 				char ts_buf[64] = {0};
-				a2_error("[parse error@line: %d]: you lost \' , \' or \' } \' before the token \' %s \'.\n",
+				a2_error(parse_p->env_p, e_parse_error,
+					"[parse error@line: %d]: you lost \' , \' or \' } \' before the token \' %s \'.\n",
 					tp->line, a2_token2str(tp, ts_buf));
 			}
 		}
@@ -420,7 +425,8 @@ static inline  size_t parse_op(struct a2_parse* parse_p){
 #define unexpect_token(tp) do{	\
 								assert(tp);  \
 								 char ts_buf[64] = {0}; \
-								a2_error("[parse error@line: %d]: unexpected symbol near token \' %s \'.\n", \
+								a2_error(parse_p->env_p, e_parse_error, \
+									"[parse error@line: %d]: unexpected symbol near token \' %s \'.\n", \
 								(tp)->line, a2_token2str((tp), ts_buf)); \
 							}while(0)
 
@@ -433,7 +439,8 @@ static inline  size_t parse_op(struct a2_parse* parse_p){
 
 #define CHECK_EXP12 	if(!exp1 || !exp2) { \
 							char ts_buf[64] = {0}; \
-							a2_error("[parse error@line: %d]: unexpected symbol near token \' %s \'.\n", \
+							a2_error(parse_p->env_p,e_parse_error,\
+							 "[parse error@line: %d]: unexpected symbol near token \' %s \'.\n", \
 							tp->line, a2_token2str(tp, ts_buf)); \
 						}else{ \
 							switch(tt2op(tp->tt)){ \
@@ -798,7 +805,8 @@ static size_t parse_base(struct a2_parse* parse_p){
 			if(!ntp || tt2tk(ntp->tt)==tk_end || tt2tk(ntp->tt)==tk_key) goto BASE_DEF;
 			if(tt2tk(ntp->tt)!=tk_op){
 				char ts_buf[64] = {0};
-				a2_error("[parse error@line: %d]: the token \'%s\' is not operation token.", 
+				a2_error(parse_p->env_p,e_parse_error,
+					"[parse error@line: %d]: the token \'%s\' is not operation token.", 
 					cur_token.line, a2_token2str(&cur_token,ts_buf));
 			}else{
 BASE_DEF:
@@ -848,7 +856,8 @@ BASE_DEF:
 					tp = parse_readtoken(parse_p);
 					if(!tp || tt2op(tp->tt)!=')'){
 						char ts_buf[64] = {0};
-						a2_error("[parse error@line: %d]: unexpected symbol  near \' %s \'.\n", tp->line,
+						a2_error(parse_p->env_p, e_parse_error,
+							"[parse error@line: %d]: unexpected symbol  near \' %s \'.\n", tp->line,
 							a2_token2str(tp, ts_buf));
 					}
 					else
@@ -998,7 +1007,8 @@ static size_t parse_args(struct a2_parse* parse_p){
 				break;
 			default:{
 				char ts_buf[64] = {0};
-				a2_error("[parse error@line: %d]: the token \' %s \' is ungrammatical. ", 
+				a2_error(parse_p->env_p, e_parse_error,
+					"[parse error@line: %d]: the token \' %s \' is ungrammatical. ", 
 					cur_token.line, a2_token2str(&cur_token, ts_buf));
 			}
 		}

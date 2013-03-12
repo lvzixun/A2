@@ -11,6 +11,8 @@
 #include "a2_vm.h"
 #include "a2.h"
 
+#include "a2_error.h"
+
 struct a2_env{
 	struct a2_lex* lex_p;
 	struct a2_gc*  gc_p;
@@ -31,6 +33,11 @@ struct a2_env{
 	// stack bottom
 	int bottom;
 
+	// expection 
+	struct a2_longjump* jp;
+	panic_func panic;
+
+
 	// private forge a2_obj
 	struct a2_obj _forge_obj;
 	struct a2_gcobj* _forge_gcobj;			
@@ -43,6 +50,7 @@ struct a2_env* a2_env_new(struct a2_state* state){
 	ret->g_var = a2_map_new();
 	ret->state = state;
 	ret->bottom = 0;
+	ret->jp = NULL;
 	obj_stack_init(&ret->cstack);
 	ret->lex_p = a2_lex_open(ret);
 	ret->parse_p = a2_parse_open(ret);
@@ -67,34 +75,50 @@ void a2_env_free(struct a2_env* env_p){
 	free(env_p);
 }
 
+struct _a2_ld_args{
+	struct a2_io* stream;
+	struct a2_xclosure** xcls_p;
+};
 
-void a2_env_load(struct a2_env* env_p, struct a2_io* stream){
+static void _a2_load(struct a2_env* env_p, struct _a2_ld_args* ud){
 	size_t len = 0;
-	a2_gc_close(env_p->gc_p);
 	a2_ir_newxcls(env_p->ir_p);
-	struct a2_token* tk = a2_lex_read(env_p->lex_p, stream, &len);
-	struct a2_xclosure* xcls = a2_parse_run(env_p->parse_p, tk, len);
+	struct a2_token* tk = a2_lex_read(env_p->lex_p, ud->stream, &len);
+	*(ud->xcls_p) = a2_parse_run(env_p->parse_p, tk, len);
 	
 	#ifdef _DEBUG_	
-	dump_xclosure(env_p->ir_p, xcls);
+	dump_xclosure(env_p->ir_p, *(ud->xcls_p));
 	#endif
+}
 
+
+int a2_env_load(struct a2_env* env_p, struct a2_io* stream){
+	struct a2_xclosure* xcls = NULL;
+	struct _a2_ld_args args = {
+		stream, &xcls
+	};
+	a2_gc_close(env_p->gc_p);
+	int ret = a2_xpcall(env_p, (a2_pfunc)_a2_load, &args);
+	
 	a2_lex_clear(env_p->lex_p);
 	a2_parse_clear(env_p->parse_p);
 	a2_ir_clear(env_p->ir_p);
 
-	struct a2_closure* cls = a2_closure_newrun(xcls);
-	struct a2_gcobj* gcobj = a2_closure2gcobj(cls);
-	struct a2_obj obj;
-	obj_setX(&obj, A2_TCLOSURE, obj, gcobj);
-	a2_gc_markit(env_p->gc_p, &obj, mark_blue);
-	a2_gcadd(env_p, gcobj); 
-	a2_gc_open(env_p->gc_p);
+	if(ret == 0){
+		struct a2_closure* cls = a2_closure_newrun(xcls);
+		struct a2_gcobj* gcobj = a2_closure2gcobj(cls);
+		struct a2_obj obj;
+		obj_setX(&obj, A2_TCLOSURE, obj, gcobj);
+		a2_gc_markit(env_p->gc_p, &obj, mark_blue);
+		a2_gcadd(env_p, gcobj); 
+		a2_gc_open(env_p->gc_p);
 
-	// load it
-	a2_vm_load(env_p->vm_p, cls);
+		// load it
+		ret = a2_vm_load(env_p->vm_p, cls);
+		a2_gc_markit(env_p->gc_p, &obj, mark_white);
+	}
 
-	a2_gc_markit(env_p->gc_p, &obj, mark_white);
+	return ret;
 }
 
 inline struct a2_state* a2_env2state(struct a2_env* env_p){
@@ -300,4 +324,24 @@ inline struct a2_ir* a2_envir(struct a2_env* env_p){
 
 inline struct a2_gc* a2_envgc(struct a2_env* env_p){
 	return env_p->gc_p;
+}
+
+inline struct a2_longjump** a2_envjp(struct a2_env* env_p){
+	return &(env_p->jp);
+}
+
+inline panic_func a2_envpanic(struct a2_env* env_p){
+	return env_p->panic;
+}
+
+inline void a2_setpanic(struct a2_env* env_p, panic_func panic){
+	env_p->panic = panic;
+}
+
+inline int a2_callpanic(struct a2_env* env_p){
+	if(env_p->panic == NULL)
+		return a2_fail;
+	else
+		env_p->panic(env_p->state);
+	return a2_true;
 }

@@ -13,7 +13,7 @@ struct a2_env* a2_env_new(struct a2_state* state);
 void a2_env_free(struct a2_env* env_p);
 
 // load
-void a2_env_load(struct a2_env* env_p, struct a2_io* stream);
+int a2_env_load(struct a2_env* env_p, struct a2_io* stream);
 inline struct a2_state* a2_env2state(struct a2_env* env_p);
 
 // c <-> a2 stack
@@ -67,6 +67,13 @@ inline struct a2_lex* a2_envlex(struct a2_env* env_p);
 inline struct a2_parse* a2_envparse(struct a2_env* env_p);
 inline struct a2_ir* a2_envir(struct a2_env* env_p);
 inline struct a2_gc* a2_envgc(struct a2_env* env_p);
+inline struct a2_longjump** a2_envjp(struct a2_env* env_p);
+
+
+typedef void(*panic_func)(struct a2_state*);
+inline panic_func a2_envpanic(struct a2_env* env_p);
+inline void a2_setpanic(struct a2_env* env_p, panic_func panic);
+inline int a2_callpanic(struct a2_env* env_p);
 
 #endif
 
