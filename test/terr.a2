@@ -2,6 +2,6 @@
 
 print('kiss')
 
-len()
+eve('local a = 1 \n  local b = \'tttt\' \n c = a+b  ' )
 
 print('end')

@@ -13,7 +13,6 @@ int main(int argc, char const *argv[])
 	struct a2_state* as = a2_open();
 	a2_openutil(as);
 	if(a2_loadfile(as, argv[1])){
-		printf("find error! top = %d\n", a2_top(as));
 		printf("%s\n", a2_tostring(as, a2_top(as)-1));
 	}
 

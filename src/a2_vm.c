@@ -197,13 +197,10 @@ int a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 	int ret = a2_xpcall(vm_p->env_p, (a2_pfunc)_vm_run, vm_p);
 	if(ret){
 		struct vm_callinfo* p = curr_ci;
-		while(p!=b_ci_p){
-			free(p);
+		while(p!=b_ci_p->next){
+			callinfo_free(vm_p);
 			p = p->next;
 		}
-		vm_p->call_chain = b_ci_p->next;
-		b_ci_p->front = NULL;
-		free(b_ci_p);
 	}
 	return ret;
 }
