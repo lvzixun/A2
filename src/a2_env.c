@@ -13,6 +13,8 @@
 
 #include "a2_error.h"
 
+#include <stdio.h>
+
 struct a2_env{
 	struct a2_lex* lex_p;
 	struct a2_gc*  gc_p;
@@ -328,6 +330,10 @@ inline struct a2_gc* a2_envgc(struct a2_env* env_p){
 
 inline struct a2_longjump** a2_envjp(struct a2_env* env_p){
 	return &(env_p->jp);
+}
+
+inline struct a2_vm* a2_envvm(struct a2_env* env_p){
+	return env_p->vm_p;
 }
 
 inline panic_func a2_envpanic(struct a2_env* env_p){

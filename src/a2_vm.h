@@ -13,6 +13,8 @@ void a2_vm_gc(struct a2_vm* vm_p);
 
 int a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls);
 
+int a2_vm_pcall(struct a2_vm* vm_p, struct a2_obj* cls_obj, struct a2_obj* args_obj, int args);
+
 inline size_t vm_callinfo_sfi(struct vm_callinfo* ci, size_t reg_idx);
 inline struct a2_closure* vm_callinfo_cls(struct vm_callinfo* ci);
 inline struct a2_obj* vm_sf_index(struct a2_vm* vm_p, size_t sf_idx);

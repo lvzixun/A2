@@ -23,8 +23,11 @@ void a2_vserror(struct a2_env* env_p, enum error_code ec, const char* f, va_list
 
 	vsnprintf(buf, sizeof(buf)-1, f, *args);
 	va_end(*args);
-
-//	printf("|find error:| %s", buf);
+	
+	#ifdef _DEBUG_
+	printf("|find error:| %s", buf);
+	#endif
+	
 	struct a2_longjump** curr_jpp = a2_envjp(env_p);
 	if(*curr_jpp == NULL || is_intererror(ec)){
 		a2_callpanic(env_p); // call panic

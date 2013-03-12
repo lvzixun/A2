@@ -8,6 +8,7 @@
 #include "a2_array.h"
 #include "a2_io.h"
 #include "a2_error.h"
+#include "a2_vm.h"
 
 struct a2_state{
 	struct a2_env* env_p;
@@ -31,6 +32,15 @@ A2_API int a2_loadfile(struct a2_state* state, const char* file){
 	return ret;
 }
 
+A2_API int a2_pcall(struct a2_state* state, int args){
+	struct a2_obj* cls_obj = a2_getcstack(state->env_p, a2_top(state)-args-1);
+	struct a2_obj* args_obj = a2_getcstack(state->env_p, a2_top(state)-args);
+
+	if(obj_t(cls_obj) !=A2_TCLOSURE)
+		a2_error(state->env_p, e_run_error, "the type is not closure at pcall.\n");
+
+	return a2_vm_pcall(a2_envvm(state->env_p), cls_obj, args_obj, args);
+}
 
 A2_API int a2_dostring(struct a2_state* state, const char* str, size_t len){
 	struct a2_io* io_p = a2_io_openS(str, len);

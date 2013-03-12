@@ -34,6 +34,19 @@ void a2_openutil(struct a2_state* state){
 	}
 }
 
+/*
+int a2_libpcall(struct a2_state* state){
+	int args = a2_top(state);
+	if(args==0)
+		a2_err(state, "the number of args is error.[exp: pcall(func, ...)]");
+	if(a2_pcall(state, args-1)){
+		a2_err(state, "%s", a2_tostring(state, a2_top(state)-1));
+	}
+	int _args = a2_top(state);
+	return _args-args;
+}
+*/
+
 // type
 int a2_libtype(struct a2_state* state){
 	int args = a2_top(state);

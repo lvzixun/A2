@@ -1,7 +1,7 @@
 
+function func(a, b){
+	print(a, b)
+	return a+b
+}
 
-print('kiss')
-
-eve('local a = 1 \n  local b = \'tttt\' \n c = a+b  ' )
-
-print('end')
+eve(' print(pcall(func, 1, 2))  ')

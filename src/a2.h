@@ -22,6 +22,7 @@ A2_API void a2_close(struct a2_state* state);
 A2_API int  a2_loadfile(struct a2_state* state, const char* file);
 A2_API int a2_dostring(struct a2_state* state, const char* str, size_t len);
 A2_API void a2_err(struct a2_state* state, const char* f, ...);
+A2_API int a2_pcall(struct a2_state* state, int args);
 
 // a2 <-> c stack
 A2_API inline int a2_top(struct a2_state* state);
