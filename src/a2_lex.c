@@ -20,18 +20,12 @@ static char cmask[] = {
 	'\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'
 };
 
-#define DEFAULT_TOKENS_LEVEL 8
-#define DEFAULT_TOKENS_LEN	(1<<DEFAULT_TOKENS_LEVEL)
+
+#define DEFAULT_TOKENS_LEN	128
 #define lex_error(s) a2_error(lex_p->env_p, e_lex_error, "[lex error @line: %zd]:%s\n", lex_p->line, s)
-#define _deep(l) (((size_t)1)<<(l))
 #define _mask(c)	(cmask[(uchar)(c)])
 //#define tk_mask(tk, v)	 ((((uint32)tk)<<24)|(v))
 
-struct _tokens{
-	size_t len;
-	byte level;
-	struct a2_token token_p[1];
-};
 
 #define LEX_MAP_DEEP 32
 struct a2_lex{
@@ -40,12 +34,15 @@ struct a2_lex{
 	byte  lex_str2hash[sizeof(_key)/sizeof(char*)];
 	size_t line;
 	char*  a2_s_num_bufs;
-	struct _tokens* ts_p;			// tokens buffer
+	struct{
+		size_t cap;
+		size_t size;
+		struct a2_token* token_p;
+	}ts;
 };
 
 static void _init_lex(struct a2_lex* lex_p);
-static struct _tokens* _lex_resize(struct _tokens* ts_p);
-inline struct _tokens* _lex_addtoken(struct _tokens* ts_p, struct a2_token* token);
+inline void _lex_addtoken(struct a2_lex* lex_p, struct a2_token* token);
 static inline void lex_string(struct a2_lex* lex_p, struct a2_io* io_p);
 static inline void lex_number(struct a2_lex* lex_p, struct a2_io* io_p);
 static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p);
@@ -59,14 +56,17 @@ struct a2_lex* a2_lex_open(struct a2_env* env_p){
 	memset(ret, 0, sizeof(*ret));
 	_init_lex(ret);
 	ret->env_p = env_p;
-	ret->ts_p = _lex_resize(NULL);
+
+	ret->ts.cap = 0;
+	ret->ts.size = DEFAULT_TOKENS_LEN;
+	ret->ts.token_p = (struct a2_token*)malloc(sizeof(struct a2_token)*DEFAULT_TOKENS_LEN);
 	ret->a2_s_num_bufs = a2_str_new;
 	return ret;
 }
 
 void a2_lex_close(struct a2_lex* lex_p){
 	if(lex_p==NULL) return;
-	free(lex_p->ts_p);
+	free(lex_p->ts.token_p);
 	a2_string_free(lex_p->a2_s_num_bufs);
 	free(lex_p);
 }
@@ -111,7 +111,7 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 						a2_io_readchar(io_p);
 					}
 				}
-				lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
+				_lex_addtoken(lex_p, &token);
 			}
 				break;
 			case '{':
@@ -132,7 +132,7 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 				token.line = lex_p->line;
 				_ts[0] = c;
 				token.tt = tk_mask(tk_op, _ts);
-				lex_p->ts_p = _lex_addtoken(lex_p->ts_p,&token);
+				_lex_addtoken(lex_p, &token);
 				a2_io_readchar(io_p);
 			}
 				break;
@@ -152,21 +152,21 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 				}
 				else
 					token.tt = tk_mask(tk_op, _ts);
-				lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
+				_lex_addtoken(lex_p, &token);
 			}	
 				break;
 
 			case '\n':			// next line
 				(lex_p->line)++;
 			case ';':{
-				struct a2_token* tp = &(lex_p->ts_p->token_p[lex_p->ts_p->len-1]);
+				struct a2_token* tp = &(lex_p->ts.token_p[lex_p->ts.cap-1]);
 					uint32 up_tt = tp->tt;
-					if(lex_p->ts_p->len>0 && tt2tk(up_tt) != tk_end 
+					if(lex_p->ts.cap>0 && tt2tk(up_tt) != tk_end 
 					   && tt2tk(up_tt)!=tk_op && (tt2tk(up_tt)!=tk_key || a2_ktisreturn(lex_p->env_p, tp)==a2_true)){
 						struct a2_token token;
 						token.line = lex_p->line-1;
 						token.tt = tk_mask(tk_end, 0);
-						lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
+						_lex_addtoken(lex_p, &token);
 					}
 				}
 			case '\t':
@@ -182,13 +182,13 @@ struct a2_token* a2_lex_read(struct a2_lex* lex_p, struct a2_io* io_p, size_t* t
 	}
 
 	// set return
-	*token_len = lex_p->ts_p->len;
-	return lex_p->ts_p->token_p;
+	*token_len = lex_p->ts.cap;
+	return lex_p->ts.token_p;
 }
 
 void a2_lex_clear(struct a2_lex* lex_p){
 	if(!lex_p) return;
-	lex_p->ts_p->len = 0;
+	lex_p->ts.cap = 0;
 }
 
 inline  size_t _lex_hash(char* s){
@@ -207,25 +207,14 @@ static void _init_lex(struct a2_lex* lex_p){
 	}
 }
 
-static struct _tokens* _lex_resize(struct _tokens* ts_p){
-	struct _tokens* ret = NULL;
-	if(!ts_p){
-		ret = (struct _tokens*)malloc(sizeof(*ret)+ sizeof(struct a2_token)*DEFAULT_TOKENS_LEN);
-		ret->len=0;
-		ret->level = DEFAULT_TOKENS_LEVEL;
-	}else{
-		ts_p->level++;
-		ret = (struct _tokens*)realloc(ts_p, _deep(ts_p->level)*sizeof(struct a2_token));
+
+inline void _lex_addtoken(struct a2_lex* lex_p, struct a2_token* token){
+	if(lex_p->ts.cap >= lex_p->ts.size){
+		lex_p->ts.size *= 2;
+		lex_p->ts.token_p = (struct a2_token*)realloc(lex_p->ts.token_p, 
+			sizeof(struct a2_token)*lex_p->ts.size);
 	}
-	return ret;
-}
-
-inline struct _tokens* _lex_addtoken(struct _tokens* ts_p, struct a2_token* token){
-	if(ts_p->len>=_deep(ts_p->level))
-		ts_p = _lex_resize(ts_p);
-
-	ts_p->token_p[ts_p->len++] = *token;
-	return ts_p;
+	lex_p->ts.token_p[lex_p->ts.cap++] = *token;
 }
 
 // analysis string
@@ -267,7 +256,7 @@ READ_C:
 			lex_p->a2_s_num_bufs = a2_string_append(lex_p->a2_s_num_bufs, c);
 		}else{
 			token.v.obj = a2_env_addstrobj(lex_p->env_p, lex_p->a2_s_num_bufs);
-			lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
+			_lex_addtoken(lex_p, &token);
 			return;
 		}
 	}
@@ -315,7 +304,7 @@ static inline void lex_number(struct a2_lex* lex_p, struct a2_io* io_p){
 		token.v.number = atonum(lex_p->a2_s_num_bufs);
 	}
 
-	lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
+	_lex_addtoken(lex_p, &token);
 }
 
 // analysis identifier
@@ -350,7 +339,7 @@ static inline void lex_identifier(struct a2_lex* lex_p, struct a2_io* io_p){
 	else
 		token.tt = tk_mask(tk_ide, 0);
 	token.v.obj = a2_env_addstrobj(lex_p->env_p, lex_p->a2_s_num_bufs);
-	lex_p->ts_p = _lex_addtoken(lex_p->ts_p, &token);
+	_lex_addtoken(lex_p, &token);
 }
 
 static inline a2_number _hex2number(char* a2_s){

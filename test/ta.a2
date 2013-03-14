@@ -1,0 +1,15 @@
+
+
+local A = {
+	a =  111,
+	b = 'string_tt',
+	c = 222,
+
+	func = function (){
+		return A.a + A.c
+	}
+}
+
+
+
+print(A.func())
