@@ -16,7 +16,6 @@ enum upvaluex_type{
 
 // the upvalue index at a2_xclosure
 struct upvaluex_idx{
-	struct a2_xclosure* xcls_p;
 	enum upvaluex_type uvx_type;
 	union{
 		int regs_idx;
@@ -80,8 +79,7 @@ struct  a2_obj* xclosure_at_cstack(struct a2_xclosure* xcls, int idx);
 // xclosure op
 int xclosure_push_xcls(struct a2_env* env_p, struct a2_xclosure* xcls, struct a2_xclosure* xcls_p);
 // upvaluex op
-int xclosure_push_upvaluex(struct a2_xclosure* xcls, struct a2_xclosure* xcls_p,
-	enum upvaluex_type uvx_type, int idx);
+int xclosure_push_upvaluex(struct a2_xclosure* xcls, enum upvaluex_type uvx_type, int idx);
 inline struct a2_xclosure* a2_xclosure_upvaluexaddr(struct a2_xclosure* xcls, int up_idx, int* ret_idx);
 
 // stack operation

@@ -139,10 +139,8 @@ void xcls_del_refs(struct a2_xclosure* xcls_p){
 }
 
 // upvaluex op
-int xclosure_push_upvaluex(struct a2_xclosure* xcls, struct a2_xclosure* xcls_p, 
-		enum upvaluex_type uvx_type, int idx){
+int xclosure_push_upvaluex(struct a2_xclosure* xcls, enum upvaluex_type uvx_type, int idx){
 	assert(xcls);
-	assert(xcls_p);
 	assert(idx>=0);
 
 	// resize
@@ -152,7 +150,6 @@ int xclosure_push_upvaluex(struct a2_xclosure* xcls, struct a2_xclosure* xcls_p,
 		  xcls->upvaluex.size*sizeof(*(xcls->upvaluex.upvaluex_chain)));
 	}
 	struct upvaluex_idx* uvx_idx = &(xcls->upvaluex.upvaluex_chain[xcls->upvaluex.len]);
-	uvx_idx->xcls_p = xcls_p;
 	uvx_idx->uvx_type = uvx_type;
 	switch(uvx_type){
 		case uvx_reg:
@@ -199,9 +196,8 @@ void dump_upvalue(struct a2_xclosure* xcls){
 		NULL
 	};
 	for(i=0; i<xcls->upvaluex.len; i++){
-		printf("upvalue@[%p] [%d] xcls = %p  type=%s  idx= %d\n", 
+		printf("upvalue@[%p] [%d] type=%s  idx= %d\n", 
 			xcls, i, 
-			xcls->upvaluex.upvaluex_chain[i].xcls_p, 
 			_ts[xcls->upvaluex.upvaluex_chain[i].uvx_type],
 			xcls->upvaluex.upvaluex_chain[i].idx.regs_idx);
 	}

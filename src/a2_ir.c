@@ -481,8 +481,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 				}
 				
 				while(_p->next!=p){
-					uv_idx = xclosure_push_upvaluex(_p->xcls, _p->next->xcls, 
-						uvx_upvalue, xcls_cur_uvx_count(_p->next->xcls));
+					uv_idx = xclosure_push_upvaluex(_p->xcls, uvx_upvalue, xcls_cur_uvx_count(_p->next->xcls));
 					if(idx<=-1)
 						idx = uv_idx;
 					v = a2_uinteger2obj(sym_v(var_upvalue, uv_idx));
@@ -493,8 +492,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 				}
 
 				assert(_p->next == p);
-				uv_idx = xclosure_push_upvaluex(_p->xcls, p->xcls, 
-					_uvx, v2i(obj_vX(vp, uinteger)));
+				uv_idx = xclosure_push_upvaluex(_p->xcls, _uvx, v2i(obj_vX(vp, uinteger)));
 				if(idx<=-1)
 					idx = uv_idx;
 				v = a2_uinteger2obj(sym_v(var_upvalue, uv_idx));

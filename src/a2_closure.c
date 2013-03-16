@@ -32,7 +32,6 @@ struct a2_closure* a2_closure_new(struct vm_callinfo* ci, int idx){
 	int i;
 	for(i=0; i<xcls_p->upvaluex.len; i++){
 		struct upvaluex_idx* uvx_idx = &(xcls_p->upvaluex.upvaluex_chain[i]);
-		assert(_cls->xcls_p == uvx_idx->xcls_p);
 		switch(uvx_idx->uvx_type){
 			case uvx_reg:{
 					// set upvalue
