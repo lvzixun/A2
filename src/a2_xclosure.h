@@ -55,7 +55,8 @@ struct a2_xclosure{
 };
 
 #define xcls_add_refs(xcls)			((xcls)->refs++)
-#define xcls_del_refs(xcls) 		(assert((xcls)->refs>0), (xcls)->refs--)
+void xcls_del_refs(struct a2_xclosure* xcls_p);
+
 #define xcls_cur_uvx_count(xcls)	((xcls)->upvaluex.len)
 #define xcls_const(xcls, idx)		(assert((idx)<0 && (-1-(idx))<(xcls)->c_stack.top), \
 										&((xcls)->c_stack.stk_p[-1-(idx)]))

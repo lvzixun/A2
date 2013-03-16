@@ -7,7 +7,7 @@
 #include "a2_env.h"
 #include <stdio.h>
 
-#define DEF_THRESHOLD_VALUE		128
+#define DEF_THRESHOLD_VALUE		8
 
 #define  mask(m)	((m) & 0x02)
 
@@ -59,6 +59,11 @@ struct a2_gc* a2_gc_new(struct a2_env* env_p){
 void a2_gc_free(struct a2_gc* gc_p){
 	assert(gc_p);
 	struct a2_gcobj* p;
+	#ifdef _DEBUG_
+	printf("------gc free ----\n");
+	dump_gc(gc_p);
+	#endif
+
 	while(gc_p->chain){
 		p = gc_p->chain->next;
 		a2_gc_clearit(gc_p, gc_p->chain);

@@ -19,6 +19,7 @@ struct a2_xclosure* a2_xclosure_new(){
 	xcls->lines = (size_t*)malloc(sizeof(size_t)*DEF_IR_SIZE);
 	xcls->size = DEF_IR_SIZE;
 	xcls->len = 0;
+	xcls->refs = 0;
 	xcls->regs = 0;
 
 	// init constent stack
@@ -120,9 +121,22 @@ int xclosure_push_xcls(struct a2_env* env_p, struct a2_xclosure* xcls, struct a2
 	}
 	int ret = xcls->xcls_stack.cap;
 	xcls->xcls_stack.xcls_chain[xcls->xcls_stack.cap++] = xcls_p;
+	assert(xcls_p->refs == 0);
+	xcls_add_refs(xcls_p);
 	return ret;
 }
 
+void xcls_del_refs(struct a2_xclosure* xcls_p){
+	assert(xcls_p->refs >0);
+	xcls_p->refs --;
+	if(xcls_p->refs == 0){
+		int i;
+		for(i=0; i < xcls_p->xcls_stack.cap; i++){
+			xcls_del_refs(xcls_p->xcls_stack.xcls_chain[i]);
+		}
+		a2_xclosure_free(xcls_p);
+	}
+}
 
 // upvaluex op
 int xclosure_push_upvaluex(struct a2_xclosure* xcls, struct a2_xclosure* xcls_p, 

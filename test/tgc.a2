@@ -1,36 +1,15 @@
 
-function func(a, b, n){
-	if(n>30)
-		return
-	local c = [a, b]
-	func(a+1, b+1, n+1)
+eve(' 
+	local func0 = function (a, b){
+		return function (){
+			print(a, b)
+		}
+	}
+
+	func0(1, 2)()  
+')
+
+
+for(i=0, 10, 1){
+	local a = []
 }
-
-
-func(1, 2, 0)
-
-
-for(i=0, 40, 1){
-	local mp = {}
-}
-
-map = {
-	key1 = 1,
-	key2 = 2,
-	2 = 3
-}
-
-print(map[2], map.key1, map['key2'])
-
-
-print(type(1), 
-	type('str'), 
-	type([11,22]), 
-	type({}),
- 	type(function(){return})
-)
-
-
-print('kiss')
-eve('print(\'hello eve!\')')
-print('goddess')

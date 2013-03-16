@@ -81,8 +81,6 @@ struct a2_closure* a2_closure_newrun(struct a2_xclosure* xcls){
 
 void a2_closure_free(struct a2_closure* cls){
 	xcls_del_refs(cls->xcls_p);
-	if(cls->xcls_p->refs == 0)
-		a2_xclosure_free(cls->xcls_p);
 	if(cls->uped_chain)
 		free(cls->uped_chain);
 	free(cls);
