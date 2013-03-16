@@ -7,7 +7,6 @@ typedef uint32  ir;
 typedef int32   sir;
 struct a2_xclosure;
 
-// ir code is included 4 byte, the 4byte like that:
 //  thanks for lua
 #define IR_SIZE  32
 #define OP_SIZE 6

@@ -37,6 +37,7 @@ struct a2_closure* a2_closure_new(struct vm_callinfo* ci, int idx){
 			case uvx_reg:{
 					// set upvalue
 					cls->uv_chain[i].type = uv_stack;
+					cls->uv_chain[i].cls = _cls;
 					cls->uv_chain[i].v.sf_idx = vm_callinfo_sfi(ci, uvx_idx->idx.regs_idx);
 
 					// set uped 
@@ -44,9 +45,11 @@ struct a2_closure* a2_closure_new(struct vm_callinfo* ci, int idx){
 				}
 				break;
 			case uvx_upvalue:{
-					cls->uv_chain[i].type = uv_gc;
 					assert(uvx_idx->idx.upvalue_idx < _cls->uv_size);
 					cls->uv_chain[i] = _cls->uv_chain[uvx_idx->idx.upvalue_idx];
+					// set uped
+					if(cls->uv_chain[i].type == uv_stack)
+						_closure_add_uped(cls->uv_chain[i].cls, &(cls->uv_chain[i]));
 				}
 				break;
 			default:
@@ -93,6 +96,7 @@ void a2_closure_return(struct a2_closure* cls, struct a2_env* env_p){
 		assert(cls->uped_chain[i]);
 		assert(cls->uped_chain[i]->type == uv_stack);
 		cls->uped_chain[i]->type = uv_gc;
+		cls->uped_chain[i]->cls = NULL;
 		
 		struct a2_obj* obj = a2_sfidx(env_p, cls->uped_chain[i]->v.sf_idx);
 		struct a2_gcobj* _gcobj = a2_upvalue2gcobj(obj);

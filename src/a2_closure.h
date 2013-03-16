@@ -12,6 +12,8 @@ enum uv_type{
 
 struct a2_upvalue{
 	enum uv_type type;
+	struct a2_closure* cls;
+	
 	union{
 		size_t sf_idx; // the index of stack frame.
 		struct a2_gcobj* uv_obj; // the upvalue is added gc chain.

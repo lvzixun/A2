@@ -1,0 +1,20 @@
+
+
+function func(a, b, c, d, e, f){
+	return function (){
+		print(a, b, c, d)
+		return function (){
+			local g
+			return function (){
+				return function (){
+					return function (){
+						print(b, d, g)
+					}
+				}
+			}
+		}
+	}
+}
+
+
+func(1, 2, 3, 4, 5, 6)

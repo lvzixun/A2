@@ -468,49 +468,41 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 				struct a2_kv kv;
 				struct cls_sym* _p = curr_clssym;
 				int idx = -1;
+				int _uvx;
 				switch(v2vt(obj_vX(vp, uinteger))){  // set upvalue
-					case var_local:{ 
-							while(_p->next!=p){
-								uv_idx = xclosure_push_upvaluex(_p->xcls, _p->next->xcls, 
-									uvx_upvalue, xcls_cur_uvx_count(_p->next->xcls));
-								if(idx<=-1)
-									idx = uv_idx;
-								v = a2_uinteger2obj(sym_v(var_upvalue, uv_idx));
-								kv.key = k;
-								kv.vp = &v;
-								a2_map_add(_p->sym.sym_chain[1], &kv);
-								_p = _p->next;
-							}
-
-							assert(_p->next == p);
-							uv_idx = xclosure_push_upvaluex(_p->xcls, p->xcls, 
-								uvx_reg, v2i(obj_vX(vp, uinteger)));
-							if(idx<=-1)
-								idx = uv_idx;
-							v = a2_uinteger2obj(sym_v(var_upvalue, uv_idx));
-							kv.key = k;
-							kv.vp = &v;
-							a2_map_add(_p->sym.sym_chain[1], &kv);
-							assert(idx>=0);
-						}
+					case var_local:
+						_uvx = uvx_reg;
 						break;
-					case var_upvalue:{
-							while(_p!=p){
-								uv_idx = xclosure_push_upvaluex(_p->xcls, _p->next->xcls, 
-									uvx_upvalue, xcls_cur_uvx_count(_p->next->xcls));
-								if(idx<=-1)
-									idx = uv_idx;
-								v = a2_uinteger2obj(sym_v(var_upvalue, uv_idx));
-								kv.key = k;
-								kv.vp = &v;
-								a2_map_add(_p->sym.sym_chain[1], &kv);
-								_p = _p->next;
-							}
-						}
+					case var_upvalue:
+						_uvx = uvx_upvalue;
 						break;
 					default:
 						assert(0);
 				}
+				
+				while(_p->next!=p){
+					uv_idx = xclosure_push_upvaluex(_p->xcls, _p->next->xcls, 
+						uvx_upvalue, xcls_cur_uvx_count(_p->next->xcls));
+					if(idx<=-1)
+						idx = uv_idx;
+					v = a2_uinteger2obj(sym_v(var_upvalue, uv_idx));
+					kv.key = k;
+					kv.vp = &v;
+					a2_map_add(_p->sym.sym_chain[1], &kv);
+					_p = _p->next;
+				}
+
+				assert(_p->next == p);
+				uv_idx = xclosure_push_upvaluex(_p->xcls, p->xcls, 
+					_uvx, v2i(obj_vX(vp, uinteger)));
+				if(idx<=-1)
+					idx = uv_idx;
+				v = a2_uinteger2obj(sym_v(var_upvalue, uv_idx));
+				kv.key = k;
+				kv.vp = &v;
+				a2_map_add(_p->sym.sym_chain[1], &kv);
+				assert(idx>=0);
+
 				*vt_p = var_upvalue;
 				assert(idx>=0);
 				return idx+1;
