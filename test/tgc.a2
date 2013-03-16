@@ -13,3 +13,12 @@ eve('
 for(i=0, 10, 1){
 	local a = []
 }
+
+
+function func(a, b, c){
+	ttt function(){
+		return function (){
+			print(a, b)
+		}
+	}
+}

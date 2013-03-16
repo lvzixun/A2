@@ -251,7 +251,9 @@ static inline void lex_string(struct a2_lex* lex_p, struct a2_io* io_p){
 					break;
 			}
 			goto READ_C;
-		}else if( c!='\'' ){
+		}else if(c == '\n'){
+			lex_p->line++;
+		} else if( c!='\'' ){
 READ_C:	
 			lex_p->a2_s_num_bufs = a2_string_append(lex_p->a2_s_num_bufs, c);
 		}else{
