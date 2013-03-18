@@ -249,7 +249,8 @@ A2_API inline void a2_setarray(struct a2_state* state){
 	if(_v==NULL)
 		a2_error(state->env_p, e_run_error, 
 			"the error index at array.\n");
-	*_v = *v;
+	else
+		*_v = *v;
 	a2_topset(state, top-1);
 }
 

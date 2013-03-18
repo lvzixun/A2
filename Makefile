@@ -1,4 +1,4 @@
-CC = gcc
+CC = gcc 
 CFLAGS += -D _DEBUG_ -g -Wall
 AR = ar rcu
 
@@ -24,7 +24,7 @@ OBJ = $(A2_OBJ_O) $(TEST_OBJ)
 
 TEST =  $(foreach s, $(TEST_OBJ), $(basename $(s)))
 
-all: $(A2) $(TEST)
+all: $(A2) 
 
 $(TEST):
 	$(CC) $(CFLAGS) -o $@ $? $(basename $@).o  $(A2)

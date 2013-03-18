@@ -25,7 +25,7 @@ struct a2_parse{
 #define node_t(i)    (node_p(i)->type)
 #define _node_set(n, f) do{size_t _n=(f); (n)=_n;}while(0)
 
-#define is_end		(parse_p->t_idx>=parse_p->len)	
+#define is_end		(assert(parse_p->len>0), parse_p->t_idx>=parse_p->len)	
 #define parse_error(s)	a2_error(parse_p->env_p, e_parse_error, "[parse error@line: %d]: %s\n", \
 						(is_end)?(parse_p->token_chain[parse_p->t_idx-1].line):(cur_token.line), (s))
 
@@ -617,7 +617,7 @@ static size_t parse_interval(struct a2_parse* parse_p){
 // root = '>' '<' '>=' '<='
 static size_t parse_limits(struct a2_parse* parse_p){
 	size_t head, exp1, exp2;
-	head = exp1 = parse_arithmetic(parse_p);
+	exp1 = parse_arithmetic(parse_p);
 	struct a2_token* tp = parse_attoken(parse_p);
 
 	if(!tp || tt2tk(tp->tt)==tk_end) return exp1;
@@ -950,7 +950,7 @@ static size_t parse_cargs(struct a2_parse* parse_p){
 	}
 
 	for(; !is_end; ){
-		tp = parse_attoken(parse_p);
+	//	tp = parse_attoken(parse_p);
 		if(!head)
 			head = back = parse_exp(parse_p);
 		else{

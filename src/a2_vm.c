@@ -993,7 +993,7 @@ void a2_vm_gc(struct a2_vm* vm_p){
 			ir per_ir = a2_closure_ir(cip->cls, cip->pc-1);
 			assert(ir_gop(per_ir) == CALL);
 			end = ir_ga(per_ir)+ir_gb(per_ir)+cip->reg_stack.sf_idx + 1;
-			return;
+			break;
 	}
 
 	assert(end <= vm_p->stack_frame.cap);

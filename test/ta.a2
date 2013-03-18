@@ -1,34 +1,12 @@
 
-function func0(a, b){
-	local _a = function (){
-		print(a, b)
-		return function (){
-			print(a+1, b+1)
-		}
-	}
-	return _a()
+local a , b
+
+a = 11
+function (a, b){
+	print(a, b)
 }
 
-local f = func0(1, 2)
-local f2 = func0(3, 4)
+b = 22
 
-f()
-f2()
+local c = 33
 
-
-
-function func1(a, b){
-	return function (){
-		return function (){
-			print(a, b)
-			a, b = 11, 22
-		}
-	}
-}
-
-
-print('---------')
-local f3 = func1(5, 6)
-
-f3()()
-f3()()
