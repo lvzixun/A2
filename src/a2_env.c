@@ -351,3 +351,4 @@ inline int a2_callpanic(struct a2_env* env_p){
 		env_p->panic(env_p->state);
 	return a2_true;
 }
+

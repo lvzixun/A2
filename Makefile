@@ -24,7 +24,7 @@ OBJ = $(A2_OBJ_O) $(TEST_OBJ)
 
 TEST =  $(foreach s, $(TEST_OBJ), $(basename $(s)))
 
-all: $(A2) 
+all: $(A2) $(TEST)
 
 $(TEST):
 	$(CC) $(CFLAGS) -o $@ $? $(basename $@).o  $(A2)

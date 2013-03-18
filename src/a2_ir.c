@@ -478,6 +478,7 @@ static inline int get_symbol(struct a2_ir* ir_p, struct a2_obj* k, int* vt_p){
 						break;
 					default:
 						assert(0);
+						return 0;
 				}
 				
 				while(_p->next!=p){
@@ -946,7 +947,7 @@ static inline int a2_ir_wvar(struct a2_ir* ir_p, size_t root, rv_func _rv_func, 
 	switch(node_t(root)){
 		case var_node:{
 			struct a2_obj k = node2obj(ir_p, root);
-			int vt;
+			int vt = var_global;
 			int idx = get_symbol(ir_p, &k, &vt);
 			assert(idx);
 			if(vt==var_global){	// not find it

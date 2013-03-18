@@ -47,3 +47,4 @@ void a2_closure_free(struct a2_closure* cls);
 inline int a2_closure_params(struct a2_closure* cls);
 void a2_closure_return(struct a2_closure* cls, struct a2_env* env_p);
 #endif
+
