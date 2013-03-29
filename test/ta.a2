@@ -1,12 +1,3 @@
 
-local a , b
 
-a = 11
-function (a, b){
-	print(a, b)
-}
-
-b = 22
-
-local c = 33
-
+print(kiss())

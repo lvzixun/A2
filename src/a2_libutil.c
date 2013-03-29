@@ -17,6 +17,7 @@ int a2_libt_time(struct a2_state* state);
 int a2_libtype(struct a2_state* state);
 int a2_liblen(struct a2_state* state);
 int a2_libdostring(struct a2_state* state);
+int a2_libkiss(struct a2_state* state);
 
 void a2_openutil(struct a2_state* state){
 	struct kf _reg_func[] = {
@@ -25,7 +26,8 @@ void a2_openutil(struct a2_state* state){
 		{"t_time", a2_libt_time},
 		{"type", a2_libtype},
 		{"len", a2_liblen},
-		{"eve", a2_libdostring}
+		{"eve", a2_libdostring},
+		{"kiss", a2_libkiss}
 	};
 	
 	int i;
@@ -46,6 +48,11 @@ int a2_libpcall(struct a2_state* state){
 	return _args-args;
 }
 */
+
+int a2_libkiss(struct a2_state* state){
+	a2_pushstring(state, "\nalex-2 powered by zixun.\n\n:eve is not eve.\n:Ann, do not forget your dreams.\n");
+	return 1;
+}
 
 // type
 int a2_libtype(struct a2_state* state){
