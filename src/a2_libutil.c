@@ -50,7 +50,7 @@ int a2_libpcall(struct a2_state* state){
 */
 
 int a2_libkiss(struct a2_state* state){
-	a2_pushstring(state, "\nalex-2 powered by zixun.\n\n:eve is not eve.\n:Ann, do not forget your dreams.\n");
+	a2_pushstring(state, "\nalex-2 powered by zixun.\n\n:eve is not eve.\n:Ang, do not forget your dreams.\n");
 	return 1;
 }
 
