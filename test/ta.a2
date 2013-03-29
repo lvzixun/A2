@@ -1,3 +1,5 @@
 
 
 print(kiss())
+
+print('len = '..len('123456'))

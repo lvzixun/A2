@@ -9,6 +9,7 @@
 #include "a2_io.h"
 #include "a2_error.h"
 #include "a2_vm.h"
+#include "a2_string.h"
 
 struct a2_state{
 	struct a2_env* env_p;
@@ -70,6 +71,9 @@ A2_API inline void a2_len(struct a2_state* state, int idx){
 			break;
 		case A2_TARRAY:
 			len = a2_array_len(a2_gcobj2array(obj_vX(obj, obj)));
+			break;
+		case A2_TSTRING:
+			len = a2_string_len(a2_gcobj2string(obj_vX(obj, obj)));
 			break;
 		default:
 			a2_error(state->env_p, e_run_error,
