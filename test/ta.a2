@@ -1,5 +1,2 @@
 
-
-print(kiss())
-
-print('len = '..len('123456'))
+print('hello')

@@ -59,6 +59,8 @@ struct  a2_vm{
 		size_t size;
 	}stack_frame;
 	struct vm_callinfo* call_chain;
+
+	const void* dispath_addr[ir_count];
 };
 
 
@@ -283,7 +285,28 @@ int a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 						*_d = a2_bool2obj( obj_vX(_v1, uinteger) op obj_vX(_v2, uinteger)); \
 						curr_pc++;}while(0)
 
-// vm 
+
+#define jump(idx)	do{struct a2_obj* _oa = a2_closure_const(curr_cls, (idx)); \
+						assert(obj_t(_oa) == _A2_TADDR); \
+						curr_pc = obj_vX(_oa, addr);}while(0)
+
+// vm
+
+// for token  op dispath
+/*
+static int a2_vm_run(struct a2_vm* vm_p){
+	int ret = 0;
+	dispath_init(_dis_ptr);
+
+	dispath_begin
+	dispath_goto(_dis_ptr, curr_op);
+	#include "a2_vm_dispath.inc"
+
+	return ret;
+}
+*/
+
+ 
 static int a2_vm_run(struct a2_vm* vm_p){
 	int ret = 0;
 
@@ -406,7 +429,7 @@ static int a2_vm_run(struct a2_vm* vm_p){
 		}
 	}
 	return ret;
-}	
+}
 
 
 // load
@@ -567,10 +590,6 @@ static inline void _vm_setvalue(struct a2_vm* vm_p){
  SVALUE_ERROR:
  	vm_error("the key is overfllow.");
 }
-
-#define jump(idx)	do{struct a2_obj* _oa = a2_closure_const(curr_cls, (idx)); \
-						assert(obj_t(_oa) == _A2_TADDR); \
-						curr_pc = obj_vX(_oa, addr);}while(0)
 
 // TODO: closure
 static inline void _vm_closure(struct a2_vm* vm_p){
