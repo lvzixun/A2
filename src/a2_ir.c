@@ -278,12 +278,19 @@ static inline int _del_arg(struct a2_ir* ir_p){
 	return curr_clssym->arg_cap--;
 }
 
-static inline int _set_arg(struct a2_ir* ir_p, int i){
-	assert(i>=0&&i<ARG_MAX);
+
+static inline void _set_maxarg(struct a2_ir* ir_p, int i){
+	assert(i>0&&i<ARG_MAX);
 	if(i>curr_clssym->max_arg)
 		curr_clssym->max_arg = i;
+}
+
+static inline int _set_arg(struct a2_ir* ir_p, int i){
+	assert(i>=0&&i<ARG_MAX);
+	_set_maxarg(ir_p, i);
 	return curr_clssym->arg_cap = i;
 }
+
 
 static inline void _for_stack_init(struct for_stack* fs){
 	fs->size = 8;
@@ -436,7 +443,7 @@ static inline int add_lsymbol(struct a2_ir* ir_p, struct a2_obj* k, size_t root)
 	}else{
 		a2_map_add(curr_sym, &kv);
 	}
-	return curr_clssym->arg_cap++;
+	return _add_arg(ir_p);
 }
 
 // get varable symbol return is closure idx+1, vt_p is return enum var_type
