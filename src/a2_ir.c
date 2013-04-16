@@ -279,15 +279,10 @@ static inline int _del_arg(struct a2_ir* ir_p){
 }
 
 
-static inline void _set_maxarg(struct a2_ir* ir_p, int i){
-	assert(i>0&&i<ARG_MAX);
-	if(i>curr_clssym->max_arg)
-		curr_clssym->max_arg = i;
-}
-
 static inline int _set_arg(struct a2_ir* ir_p, int i){
 	assert(i>=0&&i<ARG_MAX);
-	_set_maxarg(ir_p, i);
+	if(i>curr_clssym->max_arg)
+		curr_clssym->max_arg = i;
 	return curr_clssym->arg_cap = i;
 }
 
