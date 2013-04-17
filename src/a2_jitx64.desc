@@ -1,0 +1,235 @@
+// the A2 JIT for x64 CPU.
+
+|.arch x64
+|.actionlist actions
+
+|// a2_vm struct  map 
+|.type A2_VM, struct a2_vm,  r11 // struct a2_vm 
+|.type SF_P, struct a2_obj, rbx  // the stack frame addr
+
+
+|// set a2_vm addr
+|.macro set_vm, p
+|	mov64 A2_VM, (uintptr_t)p
+|.endmacro
+
+|// get stack frame head addr
+|.macro get_sf
+|	mov SF_P, A2_VM->stack_frame.sf_p
+|.endmacro
+
+|.define OBJ_SIZE, sizeof(struct a2_obj)
+
+|// copy object
+|.macro copy_obj, D, S, R1, R2
+|	mov R1, S.type; mov64 R2, (uintptr_t)(S.value.point)
+|	mov D.type, R1; mov D.value.point, R2 
+|.endmacro
+|.macro copy_obj, D, S; copy_obj D, S, ecx, rdx; .endmacro
+
+|// copy register object
+|.macro copy_Robj, D, S, R1, R2
+| mov R1, S.type; mov R2, S.value.point
+| mov D.type, R1; mov D.value.point, R2 
+|.endmacro
+|.macro copy_Robj, D, S; copy_Robj D, S, ecx, rdx; .endmacro
+
+|// copy a2 object to stack frame by sf index
+|.macro obj2sf, sf_idx, obj_p
+|	copy_obj SF_P[sf_idx], (*obj_p)
+|.endmacro
+
+
+|.macro reg_obj2sf, sf_idx, R1
+|.type R_OBJ, struct a2_obj, R1
+| copy_Robj SF_P[sf_idx], R_OBJ[0]
+|.endmacro
+
+// set nil for a2 object
+|.macro nil4obj, obj
+| mov ecx, A2_TNIL; mov64 rdx, (uintptr_t)NULL
+| mov obj->type, ecx; mov obj->value.point, rdx
+|.endmacro
+
+// get a a2_obj address with sf_idx from stack frame
+// the address will save R1 register
+|.macro sf_obj, sf_idx, R1
+| mov R1, SF_P; add R1, sf_idx*OBJ_SIZE
+|.endmacro
+
+// get a value from stack frame or const stack
+// the address will save R1 register
+|.macro get_value, idx, R1
+|| if(idx<0){ // the const value
+||   struct a2_obj* obj = a2_closure_const((curr_cls), (idx));
+|    mov64 R1, (uintptr_t)obj
+|| }else{  // the stack frame 
+||   size_t sf_idx = callinfo_sfi(curr_ci, idx);
+|    sf_obj sf_idx, R1
+|| }
+|.endmacro
+
+// get a a2_obj address with key from global map
+// the address will save R2 register
+|.macro get_envglobal, K, R2
+| mov rdi, A2_VM->env_p // set env_p
+| mov rsi, K
+| callp a2_get_envglobal
+| mov R2, rax
+|.endmacro
+
+// call a function with a arg
+|.macro callp, addr
+| mov64  rax, (uintptr_t)addr
+| call   rax
+|.endmacro
+
+//----------- dynasm operator function ------------
+// dynasm struct 
+#include <sys/mman.h>
+static dasm_State *state = NULL;
+size_t maxpc = 0;
+#define Dst &state
+typedef void(*dynasm_func)();
+
+void a2_dynasm_new(dasm_State **state, const void *actionlist);
+void a2_dynasm_free(dasm_State **state);
+
+dynasm_func a2_jitcode_new(dasm_State **state);
+void a2_jitcode_free(dynasm_func code);
+
+void a2_dynasm_new(dasm_State **state, const void *actionlist){
+  dasm_init(state, 1);
+  dasm_setup(state, actionlist);
+}
+
+void a2_dynasm_free(dasm_State **state){
+	dasm_free(state);
+  maxpc = 0;
+}
+
+dynasm_func a2_jitcode_new(dasm_State **state) {
+  size_t size;
+  a2_assert(dasm_link(state, &size), ==, DASM_S_OK);
+
+  // Allocate memory readable and writable so we can
+  // write the encoded instructions there.
+  char *mem = (char*)mmap(NULL, size + sizeof(size_t),
+		   PROT_READ | PROT_WRITE,
+                   MAP_ANON | MAP_PRIVATE, -1, 0);
+  assert(mem != MAP_FAILED);
+
+  // Store length at the beginning of the region, so we
+  // can free it without additional context.
+  *(size_t*)mem = size;
+  void *ret = mem + sizeof(size_t);
+
+  dasm_encode(state, ret);
+
+  // Adjust the memory permissions so it is executable
+  // but no longer writable.
+  a2_assert(mprotect(mem, size, PROT_EXEC | PROT_READ), ==, 0);
+  return ret;
+}
+
+void a2_jitcode_free(dynasm_func code){
+  void *mem = (char*)code - sizeof(size_t);
+  a2_assert(munmap(mem, *(size_t*)mem), ==, 0);
+}
+//----------- dynasm operator function----------------
+
+// for test
+void pt(void* p){
+  printf("point = %p\n", p);
+}
+
+void look(){
+  printf("look here!\n");
+}
+
+static void _per(struct a2_vm* vm_p){
+  a2_dynasm_new(&state, actions);
+
+  // init vm & stack frame
+  | set_vm, vm_p
+  | get_sf
+}
+
+static void _end(){
+  | ret
+
+  // call dynasm func
+  dynasm_func fptr = a2_jitcode_new(&state);
+  fptr();
+
+  a2_jitcode_free(fptr);
+  a2_dynasm_free(&state);
+}
+
+// load
+static inline void _jit_load(struct a2_vm* vm_p){
+	size_t sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
+	struct a2_obj* src_obj = a2_closure_const(curr_cls, ir_gbx(curr_ir));
+
+  _per(vm_p);
+	| obj2sf sf_idx, src_obj
+  _end();
+  curr_pc++;
+}
+
+// load nil 
+static inline void _jit_loadnil(struct a2_vm* vm_p){
+  size_t begin_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
+  size_t end_sf_idx = begin_sf_idx+ir_gbx(curr_ir);
+
+  _per(vm_p);
+  // add label
+  dasm_growpc(&state, maxpc+=2);
+  |.type SF_TP, struct a2_obj, r14 // set stack frame pointer
+  |.define  END_TP, r13   
+  | mov64 END_TP, (uintptr_t)(vm_p->stack_frame.sf_p+end_sf_idx)  // end ptr
+  | mov SF_TP, SF_P
+  | add SF_TP, OBJ_SIZE*begin_sf_idx  // begin ptr
+  |=>(maxpc-2):           // loop begin
+  | cmp SF_TP, END_TP
+  | je  =>(maxpc-1)       // if end, so break
+  | nil4obj SF_TP         // set nil for object 
+  | add SF_TP, OBJ_SIZE
+  | jmp =>(maxpc-2)       // next loop
+  |=>(maxpc-1): 
+  _end();
+
+  curr_pc++;
+}
+
+// get global
+static void _jit_getglobal_error(struct a2_vm* vm_p, struct a2_obj* k){
+  char _buf[64] = {0};
+  a2_error(vm_p->env_p, e_vm_error, 
+    "[vm error@%zd]: the global \'%s\' is not find.\n", 
+    curr_line, 
+    obj2str(k, _buf, sizeof(_buf)));
+}
+
+static inline void _jit_getglobal(struct a2_vm* vm_p){
+  size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
+  int idx = ir_gbx(curr_ir);
+
+  _per(vm_p);
+  dasm_growpc(&state, maxpc+=1);
+  | get_value, idx, r12      // get key obj
+  | get_envglobal, r12, r13  // get global obj
+  | cmp r13, 0              
+  | jne =>(maxpc-1)
+  | mov rdi, A2_VM           // not find the key 
+  | mov rsi, r12 
+  | callp _jit_getglobal_error
+  |=>(maxpc-1):
+  | reg_obj2sf des_sf_idx, r13   // set global value
+  _end();
+
+  curr_pc++;
+}
+
+
+
