@@ -10,6 +10,8 @@
 // object map
 |.type R_OBJ1, struct a2_obj, r14 
 |.type R_OBJ2, struct a2_obj, r13
+|.type R_OBJ3, struct a2_obj, r12
+|.type R_UV1, struct a2_upvalue, r11
 
 
 |// set a2_vm addr
@@ -59,6 +61,13 @@
 |.macro sf_obj, sf_idx, R1
 | mov R1, SF_P; add R1, sf_idx*OBJ_SIZE
 |.endmacro
+
+// compare the a2_obj type
+|.macro cmp_type, R_OBJ, t
+| mov eax, R_OBJ->type
+| cmp eax, t
+|.endmacro
+
 
 // get a value from stack frame or const stack
 // the address will save R1 register
@@ -270,22 +279,21 @@ static void _jit_setglobal(struct a2_vm* vm_p){
 static void _jit_getupvalue(struct a2_vm* vm_p){
   struct a2_upvalue* _uv = a2_closure_upvalue(curr_cls, ir_gbx(curr_ir));
   size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
-  struct a2_obj* obj = NULL;
 
   _per(vm_p);
-  switch(_uv->type){
-    case uv_stack:
-    | sf_obj _uv->v.sf_idx, R_OBJ1
-    | reg_obj2sf des_sf_idx, R_OBJ1      // internal copy from stack frame
-      break;
-    case uv_gc:
-      obj = a2_gcobj2upvalue(_uv->v.uv_obj);
-    | mov64 R_OBJ1, (uintptr_t)obj
-    | reg_obj2sf des_sf_idx, R_OBJ1      // copy to stack frame from upvalue
-      break;
-    default:
-      assert(0);
-  }
+  dasm_growpc(&state, maxpc+=2);
+  | mov eax, _uv->type
+  | cmp eax, uv_stack
+  | jne =>(maxpc-1)
+  | sf_obj _uv->v.sf_idx, R_OBJ1
+  | reg_obj2sf des_sf_idx, R_OBJ1      // internal copy from stack frame
+  | jmp =>(maxpc-2)
+  |=>(maxpc-1):
+  | cmp eax, uv_gc
+  | jne =>(maxpc-2) 
+  | gcobj2upvalue _uv->v.uv_obj, R_OBJ1
+  | reg_obj2sf des_sf_idx, R_OBJ1      // copy to stack frame from upvalue
+  |=>(maxpc-2):
   _end();
 
   curr_pc++;
@@ -295,29 +303,52 @@ static void _jit_getupvalue(struct a2_vm* vm_p){
 static void _jit_setupvalue(struct a2_vm* vm_p){
   struct a2_upvalue* _uv_d = a2_closure_upvalue(curr_cls, ir_ga(curr_ir));
   int idx = ir_gbx(curr_ir);
-  struct a2_obj* obj = NULL;
 
   _per(vm_p);
+  dasm_growpc(&state, maxpc+=2);
   | get_value idx, R_OBJ1  // get value
-  switch(_uv_d->type){
-    case uv_stack:
-    | reg_obj2sf _uv_d->v.sf_idx, R_OBJ1 // set stack frame value 
-      break;
-    case uv_gc:
-      obj = a2_gcobj2upvalue(_uv_d->v.uv_obj);
-    | mov64, R_OBJ2, (uintptr_t)obj
-    | copy_Robj R_OBJ2[0], R_OBJ1[0]
-      break;
-  }
+  | mov eax, _uv_d->type
+  | cmp eax, uv_gc
+  | jne =>(maxpc-1)
+  | gcobj2upvalue _uv_d->v.uv_obj, R_OBJ2
+  | copy_Robj R_OBJ2[0], R_OBJ1[0]
+  | jmp =>(maxpc-2)
+  |=>(maxpc-1):
+  | cmp eax, uv_stack
+  | jne =>(maxpc-2)
+  | reg_obj2sf _uv_d->v.sf_idx, R_OBJ1 // set stack frame value   
+  |=>(maxpc-2):
   _end();
 
   curr_pc++;
 }
 
 
-// get value jit
+// TODO: get value jit
+static void _gv_type_error(struct a2_vm* vm_p){
+  vm_error("the varable is not map or array.");
+}
+
 static void _jit_getvalue(struct a2_vm* vm_p){
-  
+  size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
+  size_t c_sf_idx = callinfo_sfi(curr_ci, ir_gb(curr_ir));
+  int k_idx = ir_gc(curr_ir);
+
+  _per(vm_p);
+  | sf_obj c_sf_idx, R_OBJ1     // get container
+  | cmp_type R_OBJ1, A2_TARRAY  // if array
+  | jne =>(maxpc-1)
+  |
+  |=>(maxpc-1):
+  | cmp_type R_OBJ1, A2_TMAP // if map
+  | jne =>(maxpc-2)
+  |
+  |=>(maxpc-2):
+  | mov rdi, A2_VM          // if the type not array and map 
+  | callp _gv_type_error
+  _end();
+
+  curr_pc++;
 }
 
 
