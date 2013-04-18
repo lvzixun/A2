@@ -120,12 +120,6 @@ size_t maxpc = 0;
 #define Dst &state
 typedef void(*dynasm_func)();
 
-void a2_dynasm_new(dasm_State **state, const void *actionlist);
-void a2_dynasm_free(dasm_State **state);
-
-dynasm_func a2_jitcode_new(dasm_State **state);
-void a2_jitcode_free(dynasm_func code);
-
 void a2_dynasm_new(dasm_State **state, const void *actionlist){
   dasm_init(state, 1);
   dasm_setup(state, actionlist);
@@ -179,17 +173,19 @@ static void _per(struct a2_vm* vm_p){
   a2_dynasm_new(&state, actions);
 
   // init vm & stack frame
+  | push rbp
+  | mov rbp, rsp 
   | set_vm, vm_p
   | get_sf
 }
 
 static void _end(){
+  | pop rbp
   | ret
 
   // call dynasm func
   dynasm_func fptr = a2_jitcode_new(&state);
   fptr();
-
   a2_jitcode_free(fptr);
   a2_dynasm_free(&state);
 }
@@ -323,34 +319,123 @@ static void _jit_setupvalue(struct a2_vm* vm_p){
   curr_pc++;
 }
 
+|.macro obj2container, func, R_OBJ, R2
+| mov rdi, R_OBJ->value.obj
+| callp func
+| mov R2, rax
+|.endmacro
+
+|.macro container_get, func, R_C, R_K, R2
+| mov rdi, R_C
+| mov rsi, R_K
+| callp func
+| mov R2, rax
+|.endmacro
+
+// get array with index
+|.macro get_array, R_C, R_K, R2
+| obj2container a2_gcobj2array, R_C, R_C
+| container_get a2_array_get, R_C, R_K, R2
+|.endmacro
+
+// get map with index
+|.macro get_map, R_C, R_K, R2
+| obj2container a2_gcobj2map, R_C, R_C
+| container_get a2_map_query, R_C, R_K, R2
+|.endmacro
+
+// call error
+|.macro call_error, func
+| mov rdi, A2_VM
+| callp func
+| callp look
+|.endmacro
+
 
 // TODO: get value jit
 static void _gv_type_error(struct a2_vm* vm_p){
   vm_error("the varable is not map or array.");
 }
+static void _gk_array_error(struct a2_vm* vm_p){
+  vm_error("the key is must number at array.");
+}
+static void _gk_map_error(struct a2_vm* vm_p){
+  vm_error("the key is must number or string at map.");
+}
+
+static void _gv_error(struct a2_vm* vm_p){
+  vm_error("the key is overfllow.");
+}
+
+// the container operator
+|.macro container_oper, c_sf_idx, k_idx, op_macro
+|| dasm_growpc(&state, maxpc+=6); 
+| sf_obj c_sf_idx,   R_OBJ2       // get container
+| get_value  k_idx,  R_OBJ3       // get key
+| cmp_type R_OBJ2, A2_TARRAY      // if array
+| jne =>(maxpc-1)
+| cmp_type R_OBJ3, A2_TNUMBER 
+| je =>(maxpc-3)
+| call_error _gk_array_error    // if key not number
+|=>(maxpc-3):
+|  get_array R_OBJ2, R_OBJ3, R_OBJ1
+| cmp R_OBJ1, NULL
+| je =>(maxpc-4)
+| op_macro
+| jmp =>(maxpc-5)
+|=>(maxpc-1):
+| cmp_type R_OBJ2, A2_TMAP      // if map
+| jne =>(maxpc-2)
+| cmp_type R_OBJ3, A2_TNUMBER
+| je =>(maxpc-6)
+| cmp_type R_OBJ3, A2_TSTRING
+| je =>(maxpc-6)
+| call_error _gk_map_error   // if key not number & string
+|=>(maxpc-6):
+| get_map R_OBJ2, R_OBJ3, R_OBJ1
+| cmp R_OBJ1, 0
+| je =>(maxpc-4)
+| op_macro
+| jmp =>(maxpc-5)
+|=>(maxpc-2):
+| call_error _gv_type_error    // if the type not array and map 
+|=>(maxpc-4):
+| call_error _gv_error // not get value
+|=>(maxpc-5):
+|.endmacro
 
 static void _jit_getvalue(struct a2_vm* vm_p){
   size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
   size_t c_sf_idx = callinfo_sfi(curr_ci, ir_gb(curr_ir));
   int k_idx = ir_gc(curr_ir);
 
+  |.macro get_op
+  | reg_obj2sf des_sf_idx, R_OBJ1
+  |.endmacro
+
   _per(vm_p);
-  | sf_obj c_sf_idx, R_OBJ1     // get container
-  | cmp_type R_OBJ1, A2_TARRAY  // if array
-  | jne =>(maxpc-1)
-  |
-  |=>(maxpc-1):
-  | cmp_type R_OBJ1, A2_TMAP // if map
-  | jne =>(maxpc-2)
-  |
-  |=>(maxpc-2):
-  | mov rdi, A2_VM          // if the type not array and map 
-  | callp _gv_type_error
+  | container_oper c_sf_idx, k_idx, get_op
   _end();
 
   curr_pc++;
 }
 
+static void _jit_setvalue(struct a2_vm* vm_p){
+  size_t c_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
+  int k_idx = ir_gb(curr_ir);
+  int v_idx = ir_gc(curr_ir);
+
+  |.macro set_op
+  | get_value v_idx, R_OBJ2
+  | copy_Robj R_OBJ1[0], R_OBJ2[0]
+  |.endmacro
+
+  _per(vm_p);
+  | container_oper c_sf_idx, k_idx, set_op
+  _end();
+
+  curr_pc++;
+}
 
 typedef void(*inter_func)(struct a2_vm*);
 static void _njit_func(struct a2_vm* vm_p, inter_func func){
