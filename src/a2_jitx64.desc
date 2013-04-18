@@ -3,6 +3,9 @@
 |.arch x64
 |.actionlist actions
 
+//-----------------------------------------------------------------------
+// the vm and a2_obj struct operation
+//-----------------------------------------------------------------------
 |// a2_vm struct  map 
 |.type A2_VM, struct a2_vm, r15  // struct a2_vm 
 |.type SF_P, struct a2_obj, rbx  // the stack frame addr
@@ -44,7 +47,6 @@
 |.macro obj2sf, sf_idx, obj_p
 |	copy_obj SF_P[sf_idx], (*obj_p)
 |.endmacro
-
 
 |.macro reg_obj2sf, sf_idx, R1
 | copy_Robj SF_P[sf_idx], R1[0]
@@ -158,8 +160,11 @@ void a2_jitcode_free(dynasm_func code){
   void *mem = (char*)code - sizeof(size_t);
   a2_assert(munmap(mem, *(size_t*)mem), ==, 0);
 }
-//----------- dynasm operator function----------------
 
+
+//-----------------------------------------------------------------------
+// dynasm operator function for test 
+//-----------------------------------------------------------------------
 // for test
 void pt(void* p){
   printf("point = %p\n", p);
@@ -190,6 +195,9 @@ static void _end(){
   a2_dynasm_free(&state);
 }
 
+//-----------------------------------------------------------------------
+// the load opcode 
+//-----------------------------------------------------------------------
 // load
 static void _jit_load(struct a2_vm* vm_p){
 	size_t sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
@@ -226,6 +234,9 @@ static void _jit_loadnil(struct a2_vm* vm_p){
   curr_pc++;
 }
 
+//-----------------------------------------------------------------------
+// the get /set global
+//-----------------------------------------------------------------------
 // get global
 static void _jit_getglobal_error(struct a2_vm* vm_p, struct a2_obj* k){
   char _buf[64] = {0};
@@ -271,6 +282,9 @@ static void _jit_setglobal(struct a2_vm* vm_p){
   curr_pc++;
 }
 
+//-----------------------------------------------------------------------
+// the get / set upvalue 
+//-----------------------------------------------------------------------
 // get upvalue
 static void _jit_getupvalue(struct a2_vm* vm_p){
   struct a2_upvalue* _uv = a2_closure_upvalue(curr_cls, ir_gbx(curr_ir));
@@ -319,6 +333,36 @@ static void _jit_setupvalue(struct a2_vm* vm_p){
   curr_pc++;
 }
 
+
+//-----------------------------------------------------------------------
+// the error list 
+//-----------------------------------------------------------------------
+static void _gv_type_error(struct a2_vm* vm_p){
+  vm_error("the varable is not map or array.");
+}
+static void _gk_array_error(struct a2_vm* vm_p){
+  vm_error("the key is must number at array.");
+}
+static void _gk_map_error(struct a2_vm* vm_p){
+  vm_error("the key is must number or string at map.");
+}
+static void _gv_error(struct a2_vm* vm_p){
+  vm_error("the key is overfllow.");
+}
+static void _opt_error(struct a2_vm* vm_p){
+  vm_error("the varable is not number.");
+}
+
+// call error
+|.macro call_error, func
+| mov rdi, A2_VM
+| callp func
+| callp look
+|.endmacro
+
+//-----------------------------------------------------------------------
+//  get / set value
+//-----------------------------------------------------------------------
 |.macro obj2container, func, R_OBJ, R2
 | mov rdi, R_OBJ->value.obj
 | callp func
@@ -338,34 +382,17 @@ static void _jit_setupvalue(struct a2_vm* vm_p){
 | container_get a2_array_get, R_C, R_K, R2
 |.endmacro
 
+// set array with r_obj
+|.macro set_array, R_C, R_OBJ
+| obj2container a2_gcobj2array, R_C, R_C
+| 
+|.endmacro
+
 // get map with index
 |.macro get_map, R_C, R_K, R2
 | obj2container a2_gcobj2map, R_C, R_C
 | container_get a2_map_query, R_C, R_K, R2
 |.endmacro
-
-// call error
-|.macro call_error, func
-| mov rdi, A2_VM
-| callp func
-| callp look
-|.endmacro
-
-
-// TODO: get value jit
-static void _gv_type_error(struct a2_vm* vm_p){
-  vm_error("the varable is not map or array.");
-}
-static void _gk_array_error(struct a2_vm* vm_p){
-  vm_error("the key is must number at array.");
-}
-static void _gk_map_error(struct a2_vm* vm_p){
-  vm_error("the key is must number or string at map.");
-}
-
-static void _gv_error(struct a2_vm* vm_p){
-  vm_error("the key is overfllow.");
-}
 
 // the container operator
 |.macro container_oper, c_sf_idx, k_idx, op_macro
@@ -437,6 +464,92 @@ static void _jit_setvalue(struct a2_vm* vm_p){
   curr_pc++;
 }
 
+
+//-----------------------------------------------------------------------
+// arithmetical operatior 
+//-----------------------------------------------------------------------
+|.macro arithmetical_op, op_macro
+||size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
+||int a_idx = ir_gb(curr_ir);
+||int b_idx = ir_gc(curr_ir);
+||dasm_growpc(&state, maxpc+=2);
+| get_value a_idx, R_OBJ1
+| get_value b_idx, R_OBJ2
+| cmp_type R_OBJ1, A2_TNUMBER 
+| jne =>(maxpc-1)
+| cmp_type R_OBJ2, A2_TNUMBER
+| jne =>(maxpc-1)                  // if obj1 or obj2 not number type
+| mov rax, R_OBJ1->value.number
+| movd xmm0, rax
+| mov rax, R_OBJ2->value.number
+| movd xmm1, rax
+| op_macro xmm0, xmm1
+| movd rax, xmm0
+| sf_obj des_sf_idx, R_OBJ1       // get des obj ptr
+| mov ecx, A2_TNUMBER
+| mov R_OBJ1[0].type, ecx
+| mov R_OBJ1[0].value.number, rax // set add value
+| jmp =>(maxpc-2)
+|=>(maxpc-1):
+| call_error _opt_error
+|=>(maxpc-2):
+|.endmacro
+
+// jit add 
+static void _jit_add(struct a2_vm* vm_p){
+  |.macro add_op, X1, X2
+  | addsd X1, X2
+  |.endmacro
+
+  _per(vm_p);
+  | arithmetical_op add_op
+  _end();
+
+  curr_pc++;
+}
+
+// jit sub 
+static void _jit_sub(struct a2_vm* vm_p){
+  |.macro sub_op, X1, X2
+  | subsd X1, X2
+  |.endmacro
+
+  _per(vm_p);
+  | arithmetical_op sub_op
+  _end();
+
+  curr_pc++;
+}
+
+// jit div
+static void _jit_div(struct a2_vm* vm_p){
+  |.macro div_op, X1, X2
+  | divsd X1, X2
+  |.endmacro
+
+  _per(vm_p);
+  | arithmetical_op div_op
+  _end();
+
+  curr_pc++;
+}
+
+// jit mul
+static void _jit_mul(struct a2_vm* vm_p){
+  |.macro mul_op, X1, X2
+  | mulsd X1, X2
+  |.endmacro
+
+  _per(vm_p);
+  | arithmetical_op mul_op
+  _end();
+
+  curr_pc++;
+}
+
+//-----------------------------------------------------------------------
+// not jit opcode 
+//-----------------------------------------------------------------------
 typedef void(*inter_func)(struct a2_vm*);
 static void _njit_func(struct a2_vm* vm_p, inter_func func){
   _per(vm_p);
@@ -445,11 +558,21 @@ static void _njit_func(struct a2_vm* vm_p, inter_func func){
   _end();
 }
 
+// set list - not jit
+#define _njit_setlist(vm_p) _njit_func(vm_p, _vm_setlist)
+
+// set map - not jit
+#define _njit_setmap(vm_p) _njit_func(vm_p, _vm_setmap)
+
 // new list - not jit 
 #define _njit_newlist(vm_p) _njit_func(vm_p, _vm_newlist)
 
 // new map - not jit
-#define _njit_newmap(vm_p) _njit_func(vm_p, _vm_newmap) 
+#define _njit_newmap(vm_p) _njit_func(vm_p, _vm_newmap)
+
+// closure - not jit
+#define _njit_closure(vm_p) _njit_func(vm_p, _vm_closure) 
+
 
 
 
