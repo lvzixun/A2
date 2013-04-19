@@ -9,6 +9,7 @@
 |// a2_vm struct  map 
 |.type A2_VM, struct a2_vm, r15  // struct a2_vm 
 |.type SF_P, struct a2_obj, rbx  // the stack frame addr
+|.define CURR_PC, r10            // the current pc
 
 // object map
 |.type R_OBJ1, struct a2_obj, r14 
@@ -25,6 +26,21 @@
 |// get stack frame head addr
 |.macro get_sf
 |	mov SF_P, A2_VM->stack_frame.sf_p
+|.endmacro
+
+|// get curr_pc
+|.macro get_pc
+| mov64 CURR_PC, (uintptr_t)curr_pc
+|.endmacro
+
+ // inc curr_pc
+|.macro inc_pc
+| inc CURR_PC
+|.endmacro
+
+// write curr_pc
+|.macro write_pc
+| mov A2_VM[0].call_chain[0].pc, CURR_PC
 |.endmacro
 
 |.define OBJ_SIZE, sizeof(struct a2_obj)
@@ -165,7 +181,6 @@ void a2_jitcode_free(dynasm_func code){
 //-----------------------------------------------------------------------
 // dynasm operator function for test 
 //-----------------------------------------------------------------------
-// for test
 void pt(void* p){
   printf("point = %p\n", p);
 }
@@ -174,25 +189,58 @@ void look(){
   printf("look here!\n");
 }
 
+//-----------------------------------------------------------------------
+// dynasm operator function for head 
+//-----------------------------------------------------------------------
 static void _per(struct a2_vm* vm_p){
   a2_dynasm_new(&state, actions);
-
   // init vm & stack frame
   | push rbp
-  | mov rbp, rsp 
+  |//---------back register--------------
+  | push A2_VM
+  | push SF_P
+  | push CURR_PC
+  | push R_OBJ1
+  | push R_OBJ2
+  | push R_OBJ3
+  | push R_UV1
+  | push rax
+  | push rcx
+  | push rdx
+  | push rsi
+  | push rdi
+  | mov rbp, rsp
+  |//---------set vm register-------------
   | set_vm, vm_p
   | get_sf
+  | get_pc
 }
 
-static void _end(){
+static dynasm_func _end(struct a2_vm* vm_p){
+  |//---------recover register-----------
+  | pop rdi
+  | pop rsi
+  | pop rdx
+  | pop rcx
+  | pop rax
+  | pop R_UV1
+  | pop R_OBJ3
+  | pop R_OBJ2
+  | pop R_OBJ1
+  | pop CURR_PC
+  | pop SF_P
+  | pop A2_VM
   | pop rbp
+  |//---------write pc-----------------
+  | write_pc
   | ret
 
-  // call dynasm func
+  // get dynasm func
   dynasm_func fptr = a2_jitcode_new(&state);
-  fptr();
-  a2_jitcode_free(fptr);
   a2_dynasm_free(&state);
+  // fptr();
+  // a2_jitcode_free(fptr);
+  return fptr;
 }
 
 //-----------------------------------------------------------------------
@@ -203,10 +251,8 @@ static void _jit_load(struct a2_vm* vm_p){
 	size_t sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
 	struct a2_obj* src_obj = a2_closure_const(curr_cls, ir_gbx(curr_ir));
 
-  _per(vm_p);
   | obj2sf sf_idx, src_obj
-  _end();
-  curr_pc++;
+  | inc_pc
 }
 
 // load nil 
@@ -214,7 +260,6 @@ static void _jit_loadnil(struct a2_vm* vm_p){
   size_t begin_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
   size_t end_sf_idx = begin_sf_idx+ir_gbx(curr_ir);
 
-  _per(vm_p);
   // add label
   dasm_growpc(&state, maxpc+=2);
   |.define  SF_TP, R_OBJ1   // set stack frame pointer
@@ -229,9 +274,7 @@ static void _jit_loadnil(struct a2_vm* vm_p){
   | add SF_TP, OBJ_SIZE
   | jmp =>(maxpc-2)       // next loop
   |=>(maxpc-1): 
-  _end();
-
-  curr_pc++;
+  | inc_pc
 }
 
 //-----------------------------------------------------------------------
@@ -250,20 +293,19 @@ static void _jit_getglobal(struct a2_vm* vm_p){
   size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
   int idx = ir_gbx(curr_ir);
 
-  _per(vm_p);
   dasm_growpc(&state, maxpc+=1);
   | get_value idx, R_OBJ1      // get key obj
   | get_envglobal R_OBJ1, R_OBJ2  // get global obj
   | cmp R_OBJ2, 0              
   | jne =>(maxpc-1)
   | mov rdi, A2_VM           // not find the key 
-  | mov rsi, R_OBJ1 
+  | mov rsi, R_OBJ1
+  | write_pc 
   | callp _jit_getglobal_error
   |=>(maxpc-1):
   | reg_obj2sf des_sf_idx, R_OBJ2   // set global value
-  _end();
+  | inc_pc
 
-  curr_pc++;
 }
 
 // set global
@@ -272,14 +314,11 @@ static void _jit_setglobal(struct a2_vm* vm_p){
   int v_idx = ir_gc(curr_ir);
   size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
 
-  _per(vm_p);
   | get_value k_idx, R_OBJ1        // get key obj
   | get_value v_idx, R_OBJ2        // get value obj
   | set_envglobal R_OBJ1, R_OBJ2      // set global 
   | reg_obj2sf des_sf_idx, R_OBJ2  // copy to stack frame
-  _end();
-
-  curr_pc++;
+  | inc_pc
 }
 
 //-----------------------------------------------------------------------
@@ -290,7 +329,6 @@ static void _jit_getupvalue(struct a2_vm* vm_p){
   struct a2_upvalue* _uv = a2_closure_upvalue(curr_cls, ir_gbx(curr_ir));
   size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
 
-  _per(vm_p);
   dasm_growpc(&state, maxpc+=2);
   | mov eax, _uv->type
   | cmp eax, uv_stack
@@ -304,9 +342,7 @@ static void _jit_getupvalue(struct a2_vm* vm_p){
   | gcobj2upvalue _uv->v.uv_obj, R_OBJ1
   | reg_obj2sf des_sf_idx, R_OBJ1      // copy to stack frame from upvalue
   |=>(maxpc-2):
-  _end();
-
-  curr_pc++;
+  | inc_pc
 }
 
 // set upvalue
@@ -314,7 +350,6 @@ static void _jit_setupvalue(struct a2_vm* vm_p){
   struct a2_upvalue* _uv_d = a2_closure_upvalue(curr_cls, ir_ga(curr_ir));
   int idx = ir_gbx(curr_ir);
 
-  _per(vm_p);
   dasm_growpc(&state, maxpc+=2);
   | get_value idx, R_OBJ1  // get value
   | mov eax, _uv_d->type
@@ -328,9 +363,7 @@ static void _jit_setupvalue(struct a2_vm* vm_p){
   | jne =>(maxpc-2)
   | reg_obj2sf _uv_d->v.sf_idx, R_OBJ1 // set stack frame value   
   |=>(maxpc-2):
-  _end();
-
-  curr_pc++;
+  | inc_pc
 }
 
 
@@ -356,8 +389,8 @@ static void _opt_error(struct a2_vm* vm_p){
 // call error
 |.macro call_error, func
 | mov rdi, A2_VM
+| write_pc
 | callp func
-| callp look
 |.endmacro
 
 //-----------------------------------------------------------------------
@@ -380,12 +413,6 @@ static void _opt_error(struct a2_vm* vm_p){
 |.macro get_array, R_C, R_K, R2
 | obj2container a2_gcobj2array, R_C, R_C
 | container_get a2_array_get, R_C, R_K, R2
-|.endmacro
-
-// set array with r_obj
-|.macro set_array, R_C, R_OBJ
-| obj2container a2_gcobj2array, R_C, R_C
-| 
 |.endmacro
 
 // get map with index
@@ -440,11 +467,9 @@ static void _jit_getvalue(struct a2_vm* vm_p){
   | reg_obj2sf des_sf_idx, R_OBJ1
   |.endmacro
 
-  _per(vm_p);
-  | container_oper c_sf_idx, k_idx, get_op
-  _end();
 
-  curr_pc++;
+  | container_oper c_sf_idx, k_idx, get_op
+  | inc_pc
 }
 
 static void _jit_setvalue(struct a2_vm* vm_p){
@@ -457,11 +482,8 @@ static void _jit_setvalue(struct a2_vm* vm_p){
   | copy_Robj R_OBJ1[0], R_OBJ2[0]
   |.endmacro
 
-  _per(vm_p);
   | container_oper c_sf_idx, k_idx, set_op
-  _end();
-
-  curr_pc++;
+  | inc_pc
 }
 
 
@@ -501,11 +523,8 @@ static void _jit_add(struct a2_vm* vm_p){
   | addsd X1, X2
   |.endmacro
 
-  _per(vm_p);
   | arithmetical_op add_op, A2_TNUMBER
-  _end();
-
-  curr_pc++;
+  | inc_pc
 }
 
 // jit sub 
@@ -514,11 +533,8 @@ static void _jit_sub(struct a2_vm* vm_p){
   | subsd X1, X2
   |.endmacro
 
-  _per(vm_p);
   | arithmetical_op sub_op, A2_TNUMBER
-  _end();
-
-  curr_pc++;
+  | inc_pc
 }
 
 // jit div
@@ -527,11 +543,8 @@ static void _jit_div(struct a2_vm* vm_p){
   | divsd X1, X2
   |.endmacro
 
-  _per(vm_p);
   | arithmetical_op div_op, A2_TNUMBER
-  _end();
-
-  curr_pc++;
+  | inc_pc
 }
 
 // jit mul
@@ -540,11 +553,8 @@ static void _jit_mul(struct a2_vm* vm_p){
   | mulsd X1, X2
   |.endmacro
 
-  _per(vm_p);
   | arithmetical_op mul_op, A2_TNUMBER
-  _end();
-
-  curr_pc++;
+  | inc_pc
 }
 
 // jit big
@@ -557,11 +567,8 @@ static void _jit_big(struct a2_vm* vm_p){
   | movd X1, rax
   |.endmacro
 
-  _per(vm_p);
   |  arithmetical_op big_op, A2_TBOOL
-  _end();
-
-  curr_pc++;
+  | inc_pc
 } 
 
 // jit lite
@@ -574,11 +581,8 @@ static void _jit_lite(struct a2_vm* vm_p){
   | movd X1, rax
   |.endmacro
 
-  _per(vm_p);
   |  arithmetical_op lite_op, A2_TBOOL
-  _end();
-
-  curr_pc++;  
+  | inc_pc
 }
 
 
@@ -592,11 +596,8 @@ static void _jit_bige(struct a2_vm* vm_p){
   | movd X1, rax
   |.endmacro
 
-  _per(vm_p);
   |  arithmetical_op bige_op, A2_TBOOL
-  _end(); 
-
-  curr_pc++;
+  | inc_pc
 }
 
 
@@ -610,11 +611,9 @@ static void _jit_litee(struct a2_vm* vm_p){
   | movd X1, rax
   |.endmacro
 
-  _per(vm_p);
-  |  arithmetical_op litee_op, A2_TBOOL
-  _end(); 
 
-  curr_pc++;
+  |  arithmetical_op litee_op, A2_TBOOL
+  | inc_pc
 }
 
 //-----------------------------------------------------------------------
@@ -624,12 +623,9 @@ static void _jit_move(struct a2_vm* vm_p){
   size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
   size_t src_sf_idx = callinfo_sfi(curr_ci, ir_gbx(curr_ir));
 
-  _per(vm_p);
   | sf_obj src_sf_idx, R_OBJ1
   | reg_obj2sf des_sf_idx, R_OBJ1
-  _end();
-
-  curr_pc++;
+  | inc_pc
 }
 
 
@@ -638,10 +634,9 @@ static void _jit_move(struct a2_vm* vm_p){
 //-----------------------------------------------------------------------
 typedef void(*inter_func)(struct a2_vm*);
 static void _njit_func(struct a2_vm* vm_p, inter_func func){
-  _per(vm_p);
   | mov64 rdi, (uintptr_t)vm_p
+  | write_pc
   | callp func   // call interpreter function 
-  _end();
 }
 
 static void _njit_or(struct a2_vm* vm_p){
@@ -689,6 +684,114 @@ static void _njit_nequ(struct a2_vm* vm_p){
 #define _njit_closure(vm_p) _njit_func(vm_p, _vm_closure) 
 
 
+//-----------------------------------------------------------------------
+// jit build, the treace is function  
+//-----------------------------------------------------------------------
 
+static dynasm_func _jit_build(struct a2_vm* vm_p){
+  size_t i;
+  _per(vm_p);
+  for(i=0; i<a2_closure_ircount(curr_cls); i++){
+    ir _ir = a2_closure_ir(curr_cls, i);
+    switch(ir_gop(_ir)){
+      case LOAD:
+        _jit_load(vm_p);
+        break;
+      case LOADNIL:
+        _jit_loadnil(vm_p);
+        break;
+      case GETGLOBAL:
+        _jit_getglobal(vm_p);
+        break;
+      case SETGLOBAL:
+        _jit_setglobal(vm_p);
+        break;
+      case GETUPVALUE:
+        _jit_getupvalue(vm_p);
+        break;
+      case SETUPVALUE:
+        _jit_setupvalue(vm_p);
+        break;
+      case NEWLIST:
+        _njit_newlist(vm_p);
+        break;
+      case NEWMAP:
+        _njit_newmap(vm_p);
+        break;
+      case GETVALUE:
+        _jit_getvalue(vm_p);
+        break;
+      case SETVALUE:
+        _jit_setvalue(vm_p);
+        break;
+      case SETLIST:
+        _njit_setlist(vm_p);
+        break;
+      case SETMAP:
+        _njit_setmap(vm_p);
+        break;
+      case CLOSURE:
+        _njit_closure(vm_p);
+        break;
+      case MOVE:
+        _vm_move(vm_p);
+        break;
+      case ADD:
+        _jit_add(vm_p);
+        break;
+      case SUB:
+        _jit_sub(vm_p);
+        break;
+      case DIV:
+        _jit_div(vm_p);
+        break;
+      case MUL:
+        _jit_mul(vm_p);
+        break;
+      case OR:
+        _njit_or(vm_p);
+        break;
+      case AND:
+        _njit_and(vm_p);
+        break;
+      case BIG:
+        _jit_big(vm_p);
+        break;
+      case LITE:
+        _jit_lite(vm_p);
+        break;
+      case BIGE:
+        _jit_bige(vm_p);
+        break;
+      case LITEE:
+        _jit_litee(vm_p);
+        break;
+      case EQU:
+        _njit_equ(vm_p);
+        break;
+      case NEQU:
+        _njit_nequ(vm_p);
+        break;
+      case NOT:
+        _njit_not(vm_p);
+        break;
+      case NEG:
+        _njit_neg(vm_p);
+        break;
+      case CAT:
+        _njit_cat(vm_p);
+        break;
+      default:
+        assert(0);
+    }
+  }
+
+  dynasm_func asm_func = _end(vm_p);
+  return asm_func;
+}
+
+static void _jit_clear(dynasm_func asm_func){
+  a2_jitcode_free(asm_func);
+}
 
 
