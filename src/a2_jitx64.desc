@@ -734,7 +734,7 @@ static dynasm_func _jit_build(struct a2_vm* vm_p){
         _njit_closure(vm_p);
         break;
       case MOVE:
-        _vm_move(vm_p);
+        _jit_move(vm_p);
         break;
       case ADD:
         _jit_add(vm_p);
