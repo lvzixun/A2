@@ -466,9 +466,9 @@ static void _jit_setvalue(struct a2_vm* vm_p){
 
 
 //-----------------------------------------------------------------------
-// arithmetical operatior 
+// arithmetical and > < >= <= operatior 
 //-----------------------------------------------------------------------
-|.macro arithmetical_op, op_macro
+|.macro arithmetical_op, op_macro, tt
 ||size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
 ||int a_idx = ir_gb(curr_ir);
 ||int b_idx = ir_gc(curr_ir);
@@ -486,7 +486,7 @@ static void _jit_setvalue(struct a2_vm* vm_p){
 | op_macro xmm0, xmm1
 | movd rax, xmm0
 | sf_obj des_sf_idx, R_OBJ1       // get des obj ptr
-| mov ecx, A2_TNUMBER
+| mov ecx, tt
 | mov R_OBJ1[0].type, ecx
 | mov R_OBJ1[0].value.number, rax // set add value
 | jmp =>(maxpc-2)
@@ -502,7 +502,7 @@ static void _jit_add(struct a2_vm* vm_p){
   |.endmacro
 
   _per(vm_p);
-  | arithmetical_op add_op
+  | arithmetical_op add_op, A2_TNUMBER
   _end();
 
   curr_pc++;
@@ -515,7 +515,7 @@ static void _jit_sub(struct a2_vm* vm_p){
   |.endmacro
 
   _per(vm_p);
-  | arithmetical_op sub_op
+  | arithmetical_op sub_op, A2_TNUMBER
   _end();
 
   curr_pc++;
@@ -528,7 +528,7 @@ static void _jit_div(struct a2_vm* vm_p){
   |.endmacro
 
   _per(vm_p);
-  | arithmetical_op div_op
+  | arithmetical_op div_op, A2_TNUMBER
   _end();
 
   curr_pc++;
@@ -541,11 +541,97 @@ static void _jit_mul(struct a2_vm* vm_p){
   |.endmacro
 
   _per(vm_p);
-  | arithmetical_op mul_op
+  | arithmetical_op mul_op, A2_TNUMBER
   _end();
 
   curr_pc++;
 }
+
+// jit big
+static void _jit_big(struct a2_vm* vm_p){
+  |.macro big_op, X1, X2
+  | ucomisd X1, X2
+  | seta al
+  | and al, 1
+  | movzx rax, al
+  | movd X1, rax
+  |.endmacro
+
+  _per(vm_p);
+  |  arithmetical_op big_op, A2_TBOOL
+  _end();
+
+  curr_pc++;
+} 
+
+// jit lite
+static void _jit_lite(struct a2_vm* vm_p){
+  |.macro lite_op, X1, X2
+  | ucomisd X2, X1
+  | seta al
+  | and al, 1
+  | movzx rax, al
+  | movd X1, rax
+  |.endmacro
+
+  _per(vm_p);
+  |  arithmetical_op lite_op, A2_TBOOL
+  _end();
+
+  curr_pc++;  
+}
+
+
+// jit bige
+static void _jit_bige(struct a2_vm* vm_p){
+  |.macro bige_op, X1, X2
+  | ucomisd X1, X2
+  | setae al
+  | and al, 1
+  | movzx rax, al
+  | movd X1, rax
+  |.endmacro
+
+  _per(vm_p);
+  |  arithmetical_op bige_op, A2_TBOOL
+  _end(); 
+
+  curr_pc++;
+}
+
+
+// jit litee
+static void _jit_litee(struct a2_vm* vm_p){
+  |.macro litee_op, X1, X2
+  | ucomisd X2, X1
+  | setae al
+  | and al, 1
+  | movzx rax, al
+  | movd X1, rax
+  |.endmacro
+
+  _per(vm_p);
+  |  arithmetical_op litee_op, A2_TBOOL
+  _end(); 
+
+  curr_pc++;
+}
+
+//-----------------------------------------------------------------------
+// jit move 
+//-----------------------------------------------------------------------
+static void _jit_move(struct a2_vm* vm_p){
+  size_t des_sf_idx = callinfo_sfi(curr_ci, ir_ga(curr_ir));
+  size_t src_sf_idx = callinfo_sfi(curr_ci, ir_gbx(curr_ir));
+
+  _per(vm_p);
+  | sf_obj src_sf_idx, R_OBJ1
+  | reg_obj2sf des_sf_idx, R_OBJ1
+  _end();
+
+  curr_pc++;
+}
+
 
 //-----------------------------------------------------------------------
 // not jit opcode 
@@ -557,6 +643,35 @@ static void _njit_func(struct a2_vm* vm_p, inter_func func){
   | callp func   // call interpreter function 
   _end();
 }
+
+static void _njit_or(struct a2_vm* vm_p){
+  _vm_opl(||);
+  curr_pc++;
+}
+
+static void _njit_and(struct a2_vm* vm_p){
+  _vm_opl(&&);
+  curr_pc++;
+}
+
+static void _njit_equ(struct a2_vm* vm_p){
+  _vm_ope(!=);
+  curr_pc++;
+}
+
+static void _njit_nequ(struct a2_vm* vm_p){
+  _vm_ope(!=);
+  curr_pc++;
+}
+
+// not - not jit
+#define _njit_not(vm_p)    _njit_func(vm_p, _vm_not)
+
+// neg - not jit
+#define _njit_neg(vm_p)    _njit_func(vm_p, _vm_neg)
+
+// cat - not jit
+#define _njit_cat(vm_p)   _njit_func(vm_p, _vm_cat)
 
 // set list - not jit
 #define _njit_setlist(vm_p) _njit_func(vm_p, _vm_setlist)
