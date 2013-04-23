@@ -1,5 +1,7 @@
 // the A2 JIT for x64 CPU.
 
+#define A2_JIT
+
 |.arch x64
 |.actionlist actions
 
@@ -10,6 +12,7 @@
 |.type A2_VM, struct a2_vm, r15                   // struct a2_vm 
 |.type SF_CIBASE, struct a2_obj, rbx              // the stack frame addr of call info
 |.define CURR_PC, r10                             // the current pc
+|.type CURR_CI, struct vm_callinfo, rax
 
 // object map
 |.type R_OBJ1, struct a2_obj, r14 
@@ -24,9 +27,14 @@
 |	mov64 A2_VM, (uintptr_t)p
 |.endmacro
 
+|.macro get_curr_ci
+| mov CURR_CI, A2_VM->call_chain
+|.endmacro
+
 // get base stack frame
 |.macro get_base_sf
-| mov SF_CIBASE, A2_VM->call_chain->reg_stack.sf_idx
+| get_curr_ci
+| mov SF_CIBASE, CURR_CI->reg_stack.sf_idx
 | imul SF_CIBASE, OBJ_SIZE
 | add SF_CIBASE, A2_VM->stack_frame.sf_p
 |.endmacro
@@ -48,7 +56,8 @@
 
 // write curr_pc
 |.macro write_pc
-| mov A2_VM[0].call_chain[0].pc, CURR_PC
+| get_curr_ci
+| mov CURR_CI[0].pc, CURR_PC
 |.endmacro
 
 
@@ -141,6 +150,7 @@
 //----------- dynasm operator function ------------
 // dynasm struct 
 #include <sys/mman.h>
+#include "a2_jitcode.h"
 static dasm_State *state = NULL;
 size_t maxpc = 0;
 struct {
@@ -151,9 +161,8 @@ struct {
 
 #define Dst &state
 #define DEF_PC_SIZE 64
-typedef int(*dynasm_func)();
 
-void a2_dynasm_new(dasm_State **state, const void *actionlist){
+static void a2_dynasm_new(dasm_State **state, const void *actionlist){
   pc_stack.cap = 0;
   pc_stack.size = DEF_PC_SIZE;
   pc_stack.label_pc = (size_t*)malloc(sizeof(size_t)*DEF_PC_SIZE);
@@ -162,14 +171,14 @@ void a2_dynasm_new(dasm_State **state, const void *actionlist){
   dasm_setup(state, actionlist);
 }
 
-void a2_dynasm_free(dasm_State **state){
+static void a2_dynasm_free(dasm_State **state){
   free(pc_stack.label_pc);
   pc_stack.cap = pc_stack.size = 0;
 	dasm_free(state);
   maxpc = 0;
 }
 
-size_t push_labelpc(size_t pc){
+static size_t push_labelpc(size_t pc){
   if(pc_stack.cap >= pc_stack.size){
     pc_stack.size*=2;
     pc_stack.label_pc = (size_t*)realloc(pc_stack.label_pc, pc_stack.size);
@@ -179,13 +188,13 @@ size_t push_labelpc(size_t pc){
   return pc;
 }
 
-size_t pop_labelpc(){
+static size_t pop_labelpc(){
   assert(pc_stack.cap>0);
   pc_stack.cap--;
   return pc_stack.label_pc[pc_stack.cap];
 }
 
-dynasm_func a2_jitcode_new(dasm_State **state) {
+static dynasm_func a2_jitcode_new(dasm_State **state) {
   size_t size;
   a2_assert(dasm_link(state, &size), ==, DASM_S_OK);
 
@@ -807,6 +816,21 @@ static void _njit_func(struct a2_vm* vm_p, inter_func func){
   | callp func   // call interpreter function 
 }
 
+static void _njit_vm_call(struct a2_vm* vm_p){
+  struct a2_obj* _func = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
+  switch(obj_t(_func)){
+    case A2_TCLOSURE:
+      __vm_call_function(vm_p, _func);
+      a2_vm_run(vm_p);
+      break;
+    case A2_TCFUNCTION:
+      __vm_call_cfunction(vm_p, _func);
+      break;
+    default:
+      vm_error("the varable is not function type.");
+  }
+}
+
 static void _njit_return(struct a2_vm* vm_p){ 
   |.macro _ret_0
   | xor eax, eax
@@ -816,16 +840,20 @@ static void _njit_return(struct a2_vm* vm_p){
   | get_base_sf
   |.endmacro
 
+  dasm_growpc(&state, maxpc+=2);
   |// the closure is end
-  | mov rax, A2_VM->call_chain->next  
+  | int3
+  | mov CURR_CI, A2_VM->call_chain
+  | mov rax, CURR_CI->next  
   | cmp rax, NULL
   | jne =>(maxpc-1)
   | dynasm_call callinfo_free
   | dynasm_ret _ret_0
-  |
   |=>(maxpc-1):
   | // if return to a2 function
-  | mov rax, A2_VM->call_chain->next->cls 
+  | mov CURR_CI, A2_VM->call_chain
+  | mov CURR_CI, CURR_CI->next
+  | mov rax, CURR_CI->cls
   | cmp rax, NULL
   | jne =>(maxpc-2)
   | dynasm_call __vm_return_function
@@ -879,8 +907,8 @@ static void _njit_nequ(struct a2_vm* vm_p){
 // closure - not jit
 #define _njit_closure(vm_p) _njit_func(vm_p, _vm_closure) 
 
- // call - not jit
- #define _njit_call(vm_p) _njit_func(vm_p, _vm_call)
+// call - not jit
+#define _njit_call(vm_p) _njit_func(vm_p, _njit_vm_call)
 
 //-----------------------------------------------------------------------
 // jit build, the treace is function  
@@ -888,6 +916,8 @@ static void _njit_nequ(struct a2_vm* vm_p){
 
 static dynasm_func _jit_build(struct a2_vm* vm_p){
   size_t i;
+  printf("vm_p = %p sf_p = %p curr_ci = %p base_ci=%p\n", vm_p, vm_p->stack_frame.sf_p, 
+        curr_ci, curr_ci->reg_stack.sf_idx+vm_p->stack_frame.sf_p);
   _per(vm_p);
   for(i=0; i<a2_closure_ircount(curr_cls); i++){
     ir _ir = a2_closure_ir(curr_cls, i);
@@ -994,8 +1024,5 @@ static dynasm_func _jit_build(struct a2_vm* vm_p){
   return asm_func;
 }
 
-static void _jit_clear(dynasm_func asm_func){
-  a2_jitcode_free(asm_func);
-}
 
 
