@@ -252,8 +252,7 @@ static void _per(struct a2_vm* vm_p){
   | push R_UV1
   | push rcx
   | push rdx
-  | push rsi
-  | push rdi
+  | push rbx  // the movaps is des address must 16 multiple.
   | mov rbp, rsp
   |//---------set vm register-------------
   | set_vm, vm_p
@@ -263,8 +262,7 @@ static void _per(struct a2_vm* vm_p){
 
 |.macro dynasm_ret, return_op
 |//---------recover register-----------
-| pop rdi
-| pop rsi
+| pop rbx
 | pop rdx
 | pop rcx
 | pop R_UV1
@@ -276,7 +274,6 @@ static void _per(struct a2_vm* vm_p){
 | pop A2_VM
 | pop rbp
 |//---------write pc-----------------
-| write_pc
 | ret
 |.endmacro
 
@@ -453,7 +450,9 @@ static void _opt_error(struct a2_vm* vm_p){
   vm_error("the varable is not number.");
 }
 static void _fp_error(struct a2_vm* vm_p){
+  printf("call here?\n");
   vm_error("the varable is not map or array.");
+  printf("end here?\n");
 }
 
 // call a function 
@@ -842,7 +841,6 @@ static void _njit_return(struct a2_vm* vm_p){
 
   dasm_growpc(&state, maxpc+=2);
   |// the closure is end
-  | int3
   | mov CURR_CI, A2_VM->call_chain
   | mov rax, CURR_CI->next  
   | cmp rax, NULL
@@ -913,11 +911,11 @@ static void _njit_nequ(struct a2_vm* vm_p){
 //-----------------------------------------------------------------------
 // jit build, the treace is function  
 //-----------------------------------------------------------------------
-
 static dynasm_func _jit_build(struct a2_vm* vm_p){
   size_t i;
   printf("vm_p = %p sf_p = %p curr_ci = %p base_ci=%p\n", vm_p, vm_p->stack_frame.sf_p, 
         curr_ci, curr_ci->reg_stack.sf_idx+vm_p->stack_frame.sf_p);
+
   _per(vm_p);
   for(i=0; i<a2_closure_ircount(curr_cls); i++){
     ir _ir = a2_closure_ir(curr_cls, i);
