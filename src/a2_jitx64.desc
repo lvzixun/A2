@@ -151,7 +151,7 @@ struct {
 
 #define Dst &state
 #define DEF_PC_SIZE 64
-typedef void(*dynasm_func)();
+typedef int(*dynasm_func)();
 
 void a2_dynasm_new(dasm_State **state, const void *actionlist){
   pc_stack.cap = 0;
@@ -241,7 +241,6 @@ static void _per(struct a2_vm* vm_p){
   | push R_OBJ2
   | push R_OBJ3
   | push R_UV1
-  | push rax
   | push rcx
   | push rdx
   | push rsi
@@ -253,24 +252,45 @@ static void _per(struct a2_vm* vm_p){
   | get_base_sf
 }
 
+|.macro dynasm_ret, return_op
+|//---------recover register-----------
+| pop rdi
+| pop rsi
+| pop rdx
+| pop rcx
+| pop R_UV1
+| pop R_OBJ3
+| pop R_OBJ2
+| pop R_OBJ1
+| pop SF_CIBASE
+| pop CURR_PC
+| pop A2_VM
+| pop rbp
+|//---------write pc-----------------
+| write_pc
+| ret
+|.endmacro
+
+|.macro _end_return_op
+| xor eax, eax
+|.endmacro  
+
+|.macro _end_return_ax
+|
+|.endmacro
+
+|.macro  dynasm_ret_void
+| dynasm_ret _end_return_op
+|.endmacro
+
+|.macro dynasm_ret_ax
+| dynasm_ret _end_return_ax
+|.endmacro
+
+
 static dynasm_func _end(struct a2_vm* vm_p){
-  |//---------recover register-----------
-  | pop rdi
-  | pop rsi
-  | pop rdx
-  | pop rcx
-  | pop rax
-  | pop R_UV1
-  | pop R_OBJ3
-  | pop R_OBJ2
-  | pop R_OBJ1
-  | pop SF_CIBASE
-  | pop CURR_PC
-  | pop A2_VM
-  | pop rbp
-  |//---------write pc-----------------
-  | write_pc
-  | ret
+
+  | dynasm_ret_void
 
   // get dynasm func
   dynasm_func fptr = a2_jitcode_new(&state);
@@ -427,8 +447,8 @@ static void _fp_error(struct a2_vm* vm_p){
   vm_error("the varable is not map or array.");
 }
 
-// call error
-|.macro call_error, func
+// call a function 
+|.macro dynasm_call, func
 | mov rdi, A2_VM
 | write_pc
 | callp func
@@ -483,7 +503,7 @@ static void _fp_error(struct a2_vm* vm_p){
 | jne =>(maxpc-1)
 | cmp_type R_OBJ3, A2_TNUMBER 
 | je =>(maxpc-3)
-| call_error _gk_array_error    // if key not number
+| dynasm_call _gk_array_error    // if key not number
 |=>(maxpc-3):
 |  get_array R_OBJ2, R_OBJ3, R_OBJ1
 | cmp R_OBJ1, NULL
@@ -497,7 +517,7 @@ static void _fp_error(struct a2_vm* vm_p){
 | je =>(maxpc-6)
 | cmp_type R_OBJ3, A2_TSTRING
 | je =>(maxpc-6)
-| call_error _gk_map_error   // if key not number & string
+| dynasm_call _gk_map_error   // if key not number & string
 |=>(maxpc-6):
 | get_map R_OBJ2, R_OBJ3, R_OBJ1
 | cmp R_OBJ1, 0
@@ -505,9 +525,9 @@ static void _fp_error(struct a2_vm* vm_p){
 | op_macro
 | jmp =>(maxpc-5)
 |=>(maxpc-2):
-| call_error _gv_type_error    // if the type not array and map 
+| dynasm_call _gv_type_error    // if the type not array and map 
 |=>(maxpc-4):
-| call_error _gv_error // not get value
+| dynasm_call _gv_error // not get value
 |=>(maxpc-5):
 |.endmacro
 
@@ -566,7 +586,7 @@ static void _jit_setvalue(struct a2_vm* vm_p, ir _ir){
 | mov R_OBJ1[0].value.number, rax // set add value
 | jmp =>(maxpc-2)
 |=>(maxpc-1):
-| call_error _opt_error
+| dynasm_call _opt_error
 |=>(maxpc-2):
 |.endmacro
 
@@ -701,7 +721,7 @@ static void _jit_foreach(struct a2_vm* vm_p, ir _ir){
   | je =>(maxpc-1)
   | cmp_type R_OBJ1, A2_TARRAY
   | je =>(maxpc-2)
-  | call_error _fp_error
+  | dynasm_call _fp_error
   |
   | //set init varable
   push_labelpc(maxpc);
@@ -748,7 +768,7 @@ static  void _jit_foreachloop(struct a2_vm* vm_p, ir _ir){
   | je =>(maxpc-1)
   | cmp_type R_OBJ1, A2_TARRAY
   | je =>(maxpc-2)
-  | call_error _fp_error
+  | dynasm_call _fp_error
   |
   | //set init varable
   |
@@ -779,11 +799,40 @@ static  void _jit_foreachloop(struct a2_vm* vm_p, ir _ir){
 //-----------------------------------------------------------------------
 // not jit opcode 
 //-----------------------------------------------------------------------
+
 typedef void(*inter_func)(struct a2_vm*);
 static void _njit_func(struct a2_vm* vm_p, inter_func func){
   | mov64 rdi, (uintptr_t)vm_p
   | write_pc
   | callp func   // call interpreter function 
+}
+
+static void _njit_return(struct a2_vm* vm_p){ 
+  |.macro _ret_0
+  | xor eax, eax
+  |.endmacro
+
+  |.macro _ret_1
+  | get_base_sf
+  |.endmacro
+
+  |// the closure is end
+  | mov rax, A2_VM->call_chain->next  
+  | cmp rax, NULL
+  | jne =>(maxpc-1)
+  | dynasm_call callinfo_free
+  | dynasm_ret _ret_0
+  |
+  |=>(maxpc-1):
+  | // if return to a2 function
+  | mov rax, A2_VM->call_chain->next->cls 
+  | cmp rax, NULL
+  | jne =>(maxpc-2)
+  | dynasm_call __vm_return_function
+  | dynasm_ret _ret_1
+  |=>(maxpc-2):
+  | dynasm_call __vm_return_cfunction
+  | dynasm_ret_ax
 }
 
 static void _njit_or(struct a2_vm* vm_p){
@@ -830,6 +879,8 @@ static void _njit_nequ(struct a2_vm* vm_p){
 // closure - not jit
 #define _njit_closure(vm_p) _njit_func(vm_p, _vm_closure) 
 
+ // call - not jit
+ #define _njit_call(vm_p) _njit_func(vm_p, _vm_call)
 
 //-----------------------------------------------------------------------
 // jit build, the treace is function  
@@ -927,6 +978,12 @@ static dynasm_func _jit_build(struct a2_vm* vm_p){
         break;
       case CAT:
         _njit_cat(vm_p);
+        break;
+      case CALL:
+        _njit_call(vm_p);
+        break;
+      case RETURN:
+        _njit_return(vm_p);
         break;
       default:
         assert(0);
