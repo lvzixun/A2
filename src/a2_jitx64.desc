@@ -41,7 +41,8 @@
 
 |// get curr_pc
 |.macro get_pc
-| mov64 CURR_PC, (uintptr_t)curr_pc
+| get_curr_ci
+| mov CURR_PC, CURR_CI[0].pc
 |.endmacro
 
  // inc curr_pc
@@ -159,8 +160,11 @@ struct {
   size_t size;
 }pc_stack;
 
+size_t* lpc_chain = NULL;
+
 #define Dst &state
 #define DEF_PC_SIZE 64
+#define DEF_RING_SIZE 32
 
 static void a2_dynasm_new(dasm_State **state, const void *actionlist){
   pc_stack.cap = 0;
@@ -274,6 +278,7 @@ static void _per(struct a2_vm* vm_p){
 | pop A2_VM
 | pop rbp
 |//---------write pc-----------------
+| return_op
 | ret
 |.endmacro
 
@@ -450,9 +455,16 @@ static void _opt_error(struct a2_vm* vm_p){
   vm_error("the varable is not number.");
 }
 static void _fp_error(struct a2_vm* vm_p){
-  printf("call here?\n");
   vm_error("the varable is not map or array.");
-  printf("end here?\n");
+}
+static void _for_step_error(struct a2_vm* vm_p){
+  vm_error("the for's step is must number.");
+}
+static void _for_count_error(struct a2_vm* vm_p){
+  vm_error("the for's count is must number.");
+}
+static void _for_idx_error(struct a2_vm* vm_p){
+  vm_error("the index varable is must number.");
 }
 
 // call a function 
@@ -709,21 +721,24 @@ static void _jit_move(struct a2_vm* vm_p, ir _ir){
   | inc_pc
 }
 
+
 //-----------------------------------------------------------------------
 // jit foreach 
 //-----------------------------------------------------------------------
-static void _jit_foreach(struct a2_vm* vm_p, ir _ir){
-  size_t c_idx = ir_ga(_ir)+2;
-  size_t k_idx = ir_ga(_ir);
-  size_t v_idx = ir_ga(_ir)+1;
-
+static size_t _jump_pc(struct a2_vm* vm_p, ir _ir){
   struct a2_obj* _oa = a2_closure_const(curr_cls, ir_gbx(_ir));
   assert(obj_t(_oa) == _A2_TADDR);
-  curr_pc = obj_vX(_oa, addr);
-  size_t j_pc = obj_vX(_oa, addr);
+  return obj_vX(_oa, addr);  
+}
 
+static void _jit_foreachprep(struct a2_vm* vm_p, ir _ir){
+  int c_idx = ir_ga(_ir)+2;
+  int k_idx = ir_ga(_ir);
+  int v_idx = ir_ga(_ir)+1;
 
-  dasm_growpc(&state, maxpc+=6);
+  size_t j_pc = _jump_pc(vm_p, _ir);
+
+  dasm_growpc(&state, maxpc+=7);
   | sf_obj c_idx, R_OBJ1 // get the container value
   | cmp_type R_OBJ1, A2_TMAP
   | je =>(maxpc-1)
@@ -752,22 +767,19 @@ static void _jit_foreach(struct a2_vm* vm_p, ir _ir){
   | jne =>(maxpc-6)
   | set_pc j_pc
   | jmp =>(maxpc-3)
-  | je =>(maxpc-3)
   |=>(maxpc-6):
   | reg_obj2sf v_idx, R_OBJ2
   |=>(maxpc-4):   // next
   | inc_pc
+  |=>(maxpc-7):
 }
 
 static  void _jit_foreachloop(struct a2_vm* vm_p, ir _ir){
-  size_t c_idx = ir_ga(_ir)+2;
-  size_t k_idx = ir_ga(_ir);
-  size_t v_idx = ir_ga(_ir)+1;
+  int c_idx = ir_ga(_ir)+2;
+  int k_idx = ir_ga(_ir);
+  int v_idx = ir_ga(_ir)+1;
 
-  struct a2_obj* _oa = a2_closure_const(curr_cls, ir_gbx(_ir));
-  assert(obj_t(_oa) == _A2_TADDR);
-  curr_pc = obj_vX(_oa, addr);
-  size_t j_pc = obj_vX(_oa, addr);
+  size_t j_pc = _jump_pc(vm_p, _ir);
 
   dasm_growpc(&state, maxpc+=3);
   size_t l_pc = pop_labelpc();
@@ -787,7 +799,7 @@ static  void _jit_foreachloop(struct a2_vm* vm_p, ir _ir){
   | je =>(maxpc-3)
   | reg_obj2sf v_idx, R_OBJ2
   | set_pc j_pc
-  | jmp =>(l_pc-1)
+  | jmp =>(l_pc-7)
   |
   |=>(maxpc-2):  // forech array
   | sf_obj k_idx, R_OBJ2
@@ -796,13 +808,133 @@ static  void _jit_foreachloop(struct a2_vm* vm_p, ir _ir){
   | je =>(maxpc-3)
   | reg_obj2sf v_idx, R_OBJ2
   | set_pc j_pc
-  | jmp =>(l_pc-2)
+  | jmp =>(l_pc-7)
   |
   |=>(maxpc-3): // next
   | inc_pc
   |=>(l_pc-3):
 }
 
+//-----------------------------------------------------------------------
+// jit for 
+//-----------------------------------------------------------------------
+static void _jit_forprep(struct a2_vm* vm_p, ir _ir){
+  int _i = ir_ga(_ir);
+  int _count = ir_ga(_ir)+1;
+  int _step = ir_ga(_ir)+2;
+
+  size_t j_pc = _jump_pc(vm_p, _ir);
+
+  dasm_growpc(&state, maxpc+=6);
+  push_labelpc(maxpc);
+  | sf_obj _step, R_OBJ1
+  | cmp_type R_OBJ1, A2_TNUMBER
+  | je =>(maxpc-1)
+  | dynasm_call _for_step_error // step error
+  |=>(maxpc-1):
+  | sf_obj _i, R_OBJ1
+  | cmp_type R_OBJ1, A2_TNUMBER
+  | je =>(maxpc-2)
+  | dynasm_call _for_idx_error // index error
+  |=>(maxpc-2):
+  | sf_obj _count, R_OBJ2
+  | cmp_type R_OBJ2, A2_TNUMBER
+  | je =>(maxpc-3)
+  | dynasm_call _for_count_error // count error
+  |=>(maxpc-3):
+  | mov rax, R_OBJ1[0].value.number
+  | movd xmm0, rax
+  | mov rax, R_OBJ2[0].value.number
+  | movd xmm1, rax
+  | ucomisd xmm0, xmm1
+  | setae al
+  | and al, 1
+  | cmp al, 0
+  | je =>(maxpc-4)
+  | set_pc j_pc
+  | jmp =>(maxpc-5) // jump for end 
+  |=>(maxpc-4):
+  | inc_pc
+  |=>(maxpc-6):
+  |
+}
+
+static void _jit_forloop(struct a2_vm* vm_p, ir _ir){
+  int _i = ir_ga(_ir);
+  int _count = ir_ga(_ir)+1;
+  int _step = ir_ga(_ir)+2;
+
+  size_t j_pc = _jump_pc(vm_p, _ir);
+  size_t l_pc = pop_labelpc();
+
+  dasm_growpc(&state, maxpc+=2);
+  | sf_obj _i, R_OBJ1
+  | sf_obj _count, R_OBJ2
+  | sf_obj _step, R_OBJ3
+  | cmp_type R_OBJ1, A2_TNUMBER
+  | je =>(maxpc-1)
+  | dynasm_call _for_idx_error // index error
+  |=>(maxpc-1):
+  | mov rax, R_OBJ1[0].value.number
+  | movd xmm0, rax
+  | mov rax, R_OBJ3[0].value.number
+  | movd xmm1, rax
+  | addsd xmm0, xmm1
+  | mov rax, R_OBJ2[0].value.number
+  | movd xmm1, rax
+  | ucomisd xmm1, xmm0
+  | seta al
+  | and al, 1
+  | cmp al, 0
+  | je =>(maxpc-2)
+  | movd rax, xmm0 
+  | mov R_OBJ1[0].value.number, rax
+  | set_pc j_pc
+  | jmp =>(l_pc-6)
+  |=>(maxpc-2):
+  | inc_pc
+  |=>(l_pc-5):
+  |
+}
+
+
+//-----------------------------------------------------------------------
+// test jump  
+//-----------------------------------------------------------------------
+static void _jit_test(struct a2_vm* vm_p, ir _ir){
+  int v_idx = ir_ga(_ir);
+  size_t j_pc = _jump_pc(vm_p, _ir);
+
+  dasm_growpc(&state, maxpc+=3);
+
+  if(lpc_chain[j_pc] == 0){
+    lpc_chain[j_pc] = (maxpc-3+1);
+  }
+
+  | sf_obj v_idx, R_OBJ1
+  | cmp_type R_OBJ1, A2_TNIL
+  | je =>(maxpc-1)
+  | cmp_type R_OBJ1, A2_TBOOL
+  | jne =>(maxpc-2)
+  | mov eax, R_OBJ1[0].value.uinteger
+  | cmp eax, 0
+  | jne =>(maxpc-2)
+  |=>(maxpc-1): // if false
+  | set_pc j_pc
+  | jmp =>(lpc_chain[j_pc]-1)
+  |=>(maxpc-2):
+  | inc_pc
+}
+static void _jit_jump(struct a2_vm* vm_p, ir _ir){
+  size_t j_pc = _jump_pc(vm_p, _ir);
+  dasm_growpc(&state, maxpc+=1);
+  if(lpc_chain[j_pc] == 0){
+    lpc_chain[j_pc] = (maxpc-1+1);
+  }
+
+  | set_pc j_pc
+  | jmp =>(lpc_chain[j_pc]-1)
+}
 
 //-----------------------------------------------------------------------
 // not jit opcode 
@@ -812,7 +944,8 @@ typedef void(*inter_func)(struct a2_vm*);
 static void _njit_func(struct a2_vm* vm_p, inter_func func){
   | mov64 rdi, (uintptr_t)vm_p
   | write_pc
-  | callp func   // call interpreter function 
+  | callp func   // call interpreter function
+  | get_pc
 }
 
 static void _njit_vm_call(struct a2_vm* vm_p){
@@ -837,6 +970,7 @@ static void _njit_return(struct a2_vm* vm_p){
 
   |.macro _ret_1
   | get_base_sf
+  | get_pc
   |.endmacro
 
   dasm_growpc(&state, maxpc+=2);
@@ -853,7 +987,7 @@ static void _njit_return(struct a2_vm* vm_p){
   | mov CURR_CI, CURR_CI->next
   | mov rax, CURR_CI->cls
   | cmp rax, NULL
-  | jne =>(maxpc-2)
+  | je =>(maxpc-2)
   | dynasm_call __vm_return_function
   | dynasm_ret _ret_1
   |=>(maxpc-2):
@@ -861,25 +995,33 @@ static void _njit_return(struct a2_vm* vm_p){
   | dynasm_ret_ax
 }
 
-static void _njit_or(struct a2_vm* vm_p){
+static void _vm_or(struct a2_vm* vm_p){
   _vm_opl(||);
-  curr_pc++;
 }
 
-static void _njit_and(struct a2_vm* vm_p){
+static void _vm_and(struct a2_vm* vm_p){
   _vm_opl(&&);
-  curr_pc++;
 }
 
-static void _njit_equ(struct a2_vm* vm_p){
-  _vm_ope(!=);
-  curr_pc++;
+static void _vm_equ(struct a2_vm* vm_p){
+  _vm_ope(==);
 }
 
-static void _njit_nequ(struct a2_vm* vm_p){
+static void _vm_nequ(struct a2_vm* vm_p){
   _vm_ope(!=);
-  curr_pc++;
 }
+
+// or - not jit
+#define _njit_or(vm_p)    _njit_func(vm_p, _vm_or)
+
+// and - not jit
+#define _njit_and(vm_p)    _njit_func(vm_p, _vm_and)
+
+// equ - not jit
+#define _njit_equ(vm_p)    _njit_func(vm_p, _vm_equ)
+
+// nequ - not jit
+#define _njit_nequ(vm_p)   _njit_func(vm_p, _vm_nequ)
 
 // not - not jit
 #define _njit_not(vm_p)    _njit_func(vm_p, _vm_not)
@@ -916,9 +1058,17 @@ static dynasm_func _jit_build(struct a2_vm* vm_p){
   printf("vm_p = %p sf_p = %p curr_ci = %p base_ci=%p\n", vm_p, vm_p->stack_frame.sf_p, 
         curr_ci, curr_ci->reg_stack.sf_idx+vm_p->stack_frame.sf_p);
 
+  size_t count = a2_closure_ircount(curr_cls);
+  lpc_chain = (size_t*)calloc(count, sizeof(size_t));
+
   _per(vm_p);
-  for(i=0; i<a2_closure_ircount(curr_cls); i++){
+  for(i=0; i<count; i++){
     ir _ir = a2_closure_ir(curr_cls, i);
+    
+    if(0!=lpc_chain[i]){
+      |=>(lpc_chain[i]-1):
+    }
+
     switch(ir_gop(_ir)){
       case LOAD:
         _jit_load(vm_p, _ir);
@@ -958,6 +1108,12 @@ static dynasm_func _jit_build(struct a2_vm* vm_p){
         break;
       case CLOSURE:
         _njit_closure(vm_p);
+        break;
+      case TEST:
+        _jit_test(vm_p, _ir);
+        break;
+      case JUMP:
+        _jit_jump(vm_p, _ir);
         break;
       case MOVE:
         _jit_move(vm_p, _ir);
@@ -1007,6 +1163,18 @@ static dynasm_func _jit_build(struct a2_vm* vm_p){
       case CAT:
         _njit_cat(vm_p);
         break;
+      case FOREACHLOOP:
+        _jit_foreachloop(vm_p, _ir);
+        break;
+      case FOREACHPREP:
+        _jit_foreachprep(vm_p, _ir);
+        break;
+      case FORPREP:
+        _jit_forprep(vm_p, _ir);
+        break;
+      case FORLOOP:
+        _jit_forloop(vm_p, _ir);
+        break;
       case CALL:
         _njit_call(vm_p);
         break;
@@ -1018,6 +1186,7 @@ static dynasm_func _jit_build(struct a2_vm* vm_p){
     }
   }
 
+  free(lpc_chain);
   dynasm_func asm_func = _end(vm_p);
   return asm_func;
 }
