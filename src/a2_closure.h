@@ -39,6 +39,7 @@ void a2_closure_free(struct a2_closure* cls);
 
 #define a2_closure_regscount(cls)		((cls)->xcls_p->regs)
 #define a2_closure_ir(cls, pc)			(assert(pc>=0 && pc<(cls)->xcls_p->len), (cls)->xcls_p->ir_chain[pc])
+#define a2_closure_ircount(cls)			((cls)->xcls_p->len)
 #define a2_closure_const(cls, idx)  	xcls_const((cls->xcls_p), (idx))
 #define a2_closure_line(cls, pc)		xcls_line((cls)->xcls_p, (pc))
 #define a2_closure_cls(cls, idx)		xcls_xcls((cls)->xcl_p, idx)

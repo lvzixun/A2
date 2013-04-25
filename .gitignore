@@ -8,3 +8,7 @@
 *.out
 *.txt
 *.bnf
+*.log
+*.dSYM
+*.s
+reg_list

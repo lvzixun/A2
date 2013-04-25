@@ -1,7 +1,6 @@
 CC = gcc 
 CFLAGS += -O2 -g -Wall
 AR = ar rcu
-
 ifeq ($(OS), Windows_NT)
  N = \\
  RM = del

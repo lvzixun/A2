@@ -10,11 +10,25 @@ enum gc_mark{
 	mark_blue = 3		// global gc obj
 };
 
+struct a2_gcobj{
+	int type;
+	byte mark;
+	union{
+		char* str;
+		struct a2_closure* cls;
+		struct a2_array* array;
+		struct a2_map* map;
+		struct a2_obj* uv;
+		void* obj;
+	}value;
+	struct a2_gcobj* next;
+};
+
+
 struct a2_obj;
 struct a2_map;
 struct a2_array;
 struct a2_gc;
-struct a2_gcobj;
 struct a2_closure;
 
 struct a2_gc* a2_gc_new(struct a2_env* env_p);

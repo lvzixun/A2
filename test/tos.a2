@@ -1,0 +1,4 @@
+
+for(i=1, 54, 1){
+	os('wget http://topic.it168.com/factory/DTCC2013/doc/a'..i..'.pdf')
+}

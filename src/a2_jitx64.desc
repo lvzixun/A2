@@ -19,6 +19,8 @@
 |.type R_OBJ2, struct a2_obj, r13
 |.type R_OBJ3, struct a2_obj, r12
 |.type R_UV1, struct a2_upvalue, r11
+|.type R_GCOBJ1, struct a2_gcobj, r11
+|.type R_ARRAY, struct a2_array, r11
 
 |.define OBJ_SIZE, sizeof(struct a2_obj)
 
@@ -93,9 +95,9 @@
 |.endmacro
 
 // set nil for a2 object
-|.macro nil4obj, obj
-| mov ecx, A2_TNIL; mov64 rdx, (uintptr_t)NULL
-| mov obj->type, ecx; mov obj->value.point, rdx
+|.macro nil4obj, R_OBJ
+| xor ecx, ecx; or ecx, A2_TNIL; xor rdx, rdx
+| mov R_OBJ[0].type, ecx; mov R_OBJ[0].value.point, rdx
 |.endmacro
 
 // compare the a2_obj type
@@ -282,17 +284,11 @@ static void _per(struct a2_vm* vm_p){
 | ret
 |.endmacro
 
-|.macro _end_return_op
-| xor eax, eax
-|.endmacro  
 
 |.macro _end_return_ax
 |
 |.endmacro
 
-|.macro  dynasm_ret_void
-| dynasm_ret _end_return_op
-|.endmacro
 
 |.macro dynasm_ret_ax
 | dynasm_ret _end_return_ax
@@ -301,7 +297,7 @@ static void _per(struct a2_vm* vm_p){
 
 static dynasm_func _end(struct a2_vm* vm_p){
 
-  | dynasm_ret_void
+  | dynasm_ret_ax
 
   // get dynasm func
   dynasm_func fptr = a2_jitcode_new(&state);
@@ -483,6 +479,11 @@ static void _for_idx_error(struct a2_vm* vm_p){
 | mov R2, rax
 |.endmacro
 
+|.macro obj2c, vv, R_OBJ, R2
+| mov R_GCOBJ1, R_OBJ->value.obj
+| mov R2, R_GCOBJ1[0].value.vv
+|.endmacro
+
 |.macro container_get, func, R_C, R_K, R2
 | mov rdi, R_C
 | mov rsi, R_K
@@ -490,15 +491,28 @@ static void _for_idx_error(struct a2_vm* vm_p){
 | mov R2, rax
 |.endmacro
 
+|.macro array_get, R_C, R_K, R2
+| mov rax, R_K[0].value.number
+| movd xmm0, rax
+| cvttsd2si rax, xmm0
+| mov R_ARRAY, R_C
+| mov R2, R_ARRAY->list
+| imul rax, OBJ_SIZE
+| add R2, rax 
+|.endmacro
+
 // get array with index
 |.macro get_array, R_C, R_K, R2
-| obj2container a2_gcobj2array, R_C, R_C
-| container_get a2_array_get, R_C, R_K, R2
+| obj2c array, R_C, R_C
+//| obj2container a2_gcobj2array, R_C, R_C
+//| container_get a2_array_get, R_C, R_K, R2
+| array_get R_C, R_K, R2
 |.endmacro
 
 // get map with index
 |.macro get_map, R_C, R_K, R2
-| obj2container a2_gcobj2map, R_C, R_C
+| obj2c map, R_C, R_C
+//| obj2container a2_gcobj2map, R_C, R_C
 | container_get a2_map_query, R_C, R_K, R2
 |.endmacro
 
@@ -525,7 +539,7 @@ static void _for_idx_error(struct a2_vm* vm_p){
 | je =>(maxpc-3)
 | dynasm_call _gk_array_error    // if key not number
 |=>(maxpc-3):
-|  get_array R_OBJ2, R_OBJ3, R_OBJ1
+| get_array R_OBJ2, R_OBJ3, R_OBJ1
 | cmp R_OBJ1, NULL
 | je =>(maxpc-4)
 | op_macro
@@ -964,15 +978,6 @@ static void _njit_vm_call(struct a2_vm* vm_p){
 }
 
 static void _njit_return(struct a2_vm* vm_p){ 
-  |.macro _ret_0
-  | xor eax, eax
-  |.endmacro
-
-  |.macro _ret_1
-  | get_base_sf
-  | get_pc
-  |.endmacro
-
   dasm_growpc(&state, maxpc+=2);
   |// the closure is end
   | mov CURR_CI, A2_VM->call_chain
@@ -980,7 +985,7 @@ static void _njit_return(struct a2_vm* vm_p){
   | cmp rax, NULL
   | jne =>(maxpc-1)
   | dynasm_call callinfo_free
-  | dynasm_ret _ret_0
+  | dynasm_ret_ax
   |=>(maxpc-1):
   | // if return to a2 function
   | mov CURR_CI, A2_VM->call_chain
@@ -989,7 +994,7 @@ static void _njit_return(struct a2_vm* vm_p){
   | cmp rax, NULL
   | je =>(maxpc-2)
   | dynasm_call __vm_return_function
-  | dynasm_ret _ret_1
+  | dynasm_ret_ax
   |=>(maxpc-2):
   | dynasm_call __vm_return_cfunction
   | dynasm_ret_ax
@@ -1048,15 +1053,19 @@ static void _vm_nequ(struct a2_vm* vm_p){
 #define _njit_closure(vm_p) _njit_func(vm_p, _vm_closure) 
 
 // call - not jit
-#define _njit_call(vm_p) _njit_func(vm_p, _njit_vm_call)
+static void _njit_call(struct a2_vm* vm_p){
+  | mov64 rdi, (uintptr_t)vm_p
+  | write_pc
+  | callp _njit_vm_call   // call interpreter function
+  | get_base_sf
+  | get_pc
+}
 
 //-----------------------------------------------------------------------
 // jit build, the treace is function  
 //-----------------------------------------------------------------------
 static dynasm_func _jit_build(struct a2_vm* vm_p){
   size_t i;
-  printf("vm_p = %p sf_p = %p curr_ci = %p base_ci=%p\n", vm_p, vm_p->stack_frame.sf_p, 
-        curr_ci, curr_ci->reg_stack.sf_idx+vm_p->stack_frame.sf_p);
 
   size_t count = a2_closure_ircount(curr_cls);
   lpc_chain = (size_t*)calloc(count, sizeof(size_t));

@@ -3,6 +3,10 @@
 #include "a2_conf.h"
 #include "a2_ir.h"
 
+#ifdef A2_JIT
+#include "a2_jitcode.h"
+#endif
+
 struct obj_stack{
 	struct a2_obj* stk_p;
 	int top;
@@ -51,11 +55,18 @@ struct a2_xclosure{
 		int len;
 		int size;
 	}upvaluex;
+
+#ifdef A2_JIT
+	// jit function 
+	dynasm_func jit_func;
+#endif
 };
 
 #define xcls_add_refs(xcls)			((xcls)->refs++)
 void xcls_del_refs(struct a2_xclosure* xcls_p);
 
+#define xcls_is_jit(xcls)			((xcls)->jit_func!=NULL)
+#define xcls_call_jit(xcls)			((xcls)->jit_func)()
 #define xcls_cur_uvx_count(xcls)	((xcls)->upvaluex.len)
 #define xcls_const(xcls, idx)		(assert((idx)<0 && (-1-(idx))<(xcls)->c_stack.top), \
 										&((xcls)->c_stack.stk_p[-1-(idx)]))

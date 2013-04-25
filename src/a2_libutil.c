@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <string.h>
 
+#include <stdlib.h>
+
 struct kf{
 	char* key;
 	a2_cfunction func;
@@ -18,6 +20,7 @@ int a2_libtype(struct a2_state* state);
 int a2_liblen(struct a2_state* state);
 int a2_libdostring(struct a2_state* state);
 int a2_libkiss(struct a2_state* state);
+int a2_libsystem(struct a2_state* state);
 
 void a2_openutil(struct a2_state* state){
 	struct kf _reg_func[] = {
@@ -27,7 +30,8 @@ void a2_openutil(struct a2_state* state){
 		{"type", a2_libtype},
 		{"len", a2_liblen},
 		{"eve", a2_libdostring},
-		{"kiss", a2_libkiss}
+		{"kiss", a2_libkiss},
+		{"os", a2_libsystem}
 	};
 	
 	int i;
@@ -48,6 +52,15 @@ int a2_libpcall(struct a2_state* state){
 	return _args-args;
 }
 */
+
+int a2_libsystem(struct a2_state* state){
+	int args = a2_top(state);
+	if(args==0 || a2_type(state, 0)!=TSTRING)
+		a2_err(state, "the arg must string type.");
+	const char* str = a2_tostring(state, 0);
+	system(str);
+	return 0;
+}
 
 int a2_libkiss(struct a2_state* state){
 	a2_pushstring(state, "\nalex-2 powered by zixun.\n\n:eve is not eve.\n:Ang, do not forget your dreams.\n");

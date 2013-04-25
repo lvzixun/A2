@@ -11,20 +11,6 @@
 
 #define  mask(m)	((m) & 0x02)
 
-struct a2_gcobj{
-	int type;
-	byte mark;
-	union{
-		char* str;
-		struct a2_closure* cls;
-		struct a2_array* array;
-		struct a2_map* map;
-		struct a2_obj* uv;
-		void* obj;
-	}value;
-	struct a2_gcobj* next;
-};
-
 
 struct a2_gc{
 	byte gc_flag;

@@ -59,8 +59,6 @@ struct  a2_vm{
 		size_t size;
 	}stack_frame;
 	struct vm_callinfo* call_chain;
-
-	const void* dispath_addr[ir_count];
 };
 
 
@@ -189,7 +187,6 @@ static inline void callinfo_free(struct a2_vm* vm_p){
 }
 
 
-
 static void _vm_run(struct a2_env* env_p, struct a2_vm* vm_p){
 	a2_vm_run(vm_p);
 }
@@ -290,23 +287,27 @@ int a2_vm_load(struct a2_vm* vm_p, struct a2_closure* cls){
 						assert(obj_t(_oa) == _A2_TADDR); \
 						curr_pc = obj_vX(_oa, addr);}while(0)
 
-// vm
+#ifdef A2_JIT
+// a2 jit
+#include "dynasm/dasm_proto.h"
+#include "dynasm/dasm_x86.h"
+#include "a2_jit.h"
 
-// for token  op dispath
-/*
+// jit bytecodes
 static int a2_vm_run(struct a2_vm* vm_p){
-	int ret = 0;
-	dispath_init(_dis_ptr);
+	// if not jit build, so build it
+	if(!xcls_is_jit(curr_cls->xcls_p)){
+		curr_cls->xcls_p->jit_func = _jit_build(vm_p);
+	}
 
-	dispath_begin
-	dispath_goto(_dis_ptr, curr_op);
-	#include "a2_vm_dispath.inc"
-
+	int ret =  xcls_call_jit(curr_cls->xcls_p);
+	printf("call jit success!\n");
 	return ret;
 }
-*/
 
- 
+#else 
+
+ // Interpreter bytecodes
 static int a2_vm_run(struct a2_vm* vm_p){
 	int ret = 0;
 
@@ -379,7 +380,7 @@ static int a2_vm_run(struct a2_vm* vm_p){
 				_vm_op(-);
 				break;
 			case DIV:
-				_vm_op(/);
+				 _vm_op(/);
 				break;
 			case MUL:
 				_vm_op(*);
@@ -430,7 +431,7 @@ static int a2_vm_run(struct a2_vm* vm_p){
 	}
 	return ret;
 }
-
+#endif
 
 // load
 static inline void _vm_load(struct a2_vm* vm_p){

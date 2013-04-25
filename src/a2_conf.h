@@ -19,6 +19,9 @@ typedef double	 a2_number;
 
 #define A2_API	 
 
+ // for jitm only suport x64 unlix
+//#define A2_JIT
+
 // for mingw32 
 #ifndef _MINGW32_
 	#define _sf snprintf

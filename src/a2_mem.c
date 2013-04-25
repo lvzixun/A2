@@ -24,7 +24,7 @@ static void _mem_add(void* p, char* file, int line){
 		if(_mi[i].p==NULL){
 			_mi[i].p = p;
 			_mi[i].line = line;
-			_mi[i].file = file;
+			_mi[i].line = line;
 			return;
 		}
 	}
@@ -34,7 +34,9 @@ static void _mem_del(void* p){
 	int i;
 	for(i=0; i<MEM_SIZE; i++){
 		if(_mi[i].p==p){
+			_mi[i].line = 0;
 			_mi[i].p=NULL;
+			_mi[i].line = 0;
 			return;
 		}
 	}
@@ -45,6 +47,8 @@ static void _mem_set(void* _p, void* p){
 	for(i=0; i<MEM_SIZE; i++){
 		if(_mi[i].p==_p){
 			_mi[i].p = p;
+			if(_p==NULL) mc++;
+			return;
 		}
 	}
 }

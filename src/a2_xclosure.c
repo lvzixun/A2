@@ -42,6 +42,14 @@ struct a2_xclosure* a2_xclosure_new(){
 void a2_xclosure_free(struct a2_xclosure* xcls){
 	assert(xcls);
 	free(xcls->ir_chain);
+	#ifdef A2_JIT
+	// free jit code
+	if(xcls->jit_func){
+		a2_jitcode_free(xcls->jit_func);
+		xcls->jit_func = NULL;
+	}
+	#endif
+	
 	// stack obj free
 	obj_stack_destory(&(xcls->c_stack));
 	free(xcls->xcls_stack.xcls_chain);
