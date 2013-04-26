@@ -1,6 +1,3 @@
-function func(a, b){
-	print(a, b)
-	return 1123
-}
+local al = [11, 22, 33]
 
-print(func(11, 22))
+print(al[-11])

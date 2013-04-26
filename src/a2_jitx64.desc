@@ -1,9 +1,9 @@
 // the A2 JIT for x64 CPU.
 
-#define A2_JIT
-
 |.arch x64
 |.actionlist actions
+
+|.globals _A2_VM_JIT_GLOB_
 
 //-----------------------------------------------------------------------
 // the vm and a2_obj struct operation
@@ -491,22 +491,12 @@ static void _for_idx_error(struct a2_vm* vm_p){
 | mov R2, rax
 |.endmacro
 
-|.macro array_get, R_C, R_K, R2
-| mov rax, R_K[0].value.number
-| movd xmm0, rax
-| cvttsd2si rax, xmm0
-| mov R_ARRAY, R_C
-| mov R2, R_ARRAY->list
-| imul rax, OBJ_SIZE
-| add R2, rax 
-|.endmacro
-
 // get array with index
 |.macro get_array, R_C, R_K, R2
 | obj2c array, R_C, R_C
 //| obj2container a2_gcobj2array, R_C, R_C
-//| container_get a2_array_get, R_C, R_K, R2
-| array_get R_C, R_K, R2
+| container_get a2_array_get, R_C, R_K, R2
+//| array_get R_C, R_K, R2
 |.endmacro
 
 // get map with index
@@ -530,7 +520,7 @@ static void _for_idx_error(struct a2_vm* vm_p){
 
 // the container operator
 |.macro container_oper, c_idx, k_idx, op_macro
-|| dasm_growpc(&state, maxpc+=6); 
+|| dasm_growpc(&state, maxpc+=8); 
 | sf_obj c_idx,   R_OBJ2       // get container
 | get_value  k_idx,  R_OBJ3       // get key
 | cmp_type R_OBJ2, A2_TARRAY      // if array
