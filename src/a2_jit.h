@@ -14,7 +14,7 @@
 
 //|.arch x64
 //|.actionlist actions
-static const unsigned char actions[2627] = {
+static const unsigned char actions[2687] = {
   85,65,87,65,82,83,65,86,65,85,65,84,65,83,81,82,83,72,137,229,73,191,237,
   237,73,139,135,233,76,139,144,233,73,139,135,233,72,139,152,233,72,105,219,
   239,73,3,159,233,255,91,90,89,65,91,65,92,65,93,65,94,91,65,90,65,95,93,195,
@@ -38,115 +38,117 @@ static const unsigned char actions[2627] = {
   139,142,233,73,139,150,233,255,73,188,237,237,255,73,137,220,73,129,196,239,
   255,65,139,133,233,129,252,248,239,15,133,245,65,139,132,253,36,233,129,252,
   248,239,15,132,245,76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,
-  237,252,255,208,249,77,139,157,233,77,139,171,233,76,137,252,239,76,137,230,
-  72,184,237,237,252,255,208,73,137,198,73,129,252,254,239,15,132,245,255,65,
-  139,142,233,73,139,150,233,137,139,233,72,137,147,233,252,233,245,249,65,
-  139,133,233,129,252,248,239,15,133,245,65,139,132,253,36,233,129,252,248,
-  239,15,132,245,65,139,132,253,36,233,129,252,248,239,15,132,245,76,137,252,
-  255,73,139,135,233,255,76,137,144,233,72,184,237,237,252,255,208,249,77,139,
-  157,233,77,139,171,233,76,137,252,239,76,137,230,72,184,237,237,252,255,208,
-  73,137,198,73,131,252,254,0,15,132,245,65,139,142,233,73,139,150,233,137,
-  139,233,72,137,147,233,252,233,245,249,76,137,252,255,73,139,135,233,76,137,
-  144,233,72,184,237,237,255,252,255,208,249,76,137,252,255,73,139,135,233,
-  76,137,144,233,72,184,237,237,252,255,208,249,73,252,255,194,255,65,139,141,
-  233,73,139,149,233,65,137,142,233,73,137,150,233,252,233,245,249,65,139,133,
-  233,129,252,248,239,15,133,245,65,139,132,253,36,233,129,252,248,239,15,132,
-  245,65,139,132,253,36,233,129,252,248,239,15,132,245,76,137,252,255,73,139,
-  135,233,255,76,137,144,233,72,184,237,237,252,255,208,249,77,139,157,233,
-  77,139,171,233,76,137,252,239,76,137,230,72,184,237,237,252,255,208,73,137,
-  198,73,131,252,254,0,15,132,245,255,65,139,141,233,73,139,149,233,65,137,
-  142,233,73,137,150,233,252,233,245,249,76,137,252,255,73,139,135,233,76,137,
-  144,233,72,184,237,237,252,255,208,249,76,137,252,255,73,139,135,233,76,137,
-  144,233,72,184,237,237,252,255,208,249,73,252,255,194,255,65,139,134,233,
-  129,252,248,239,15,133,245,65,139,133,233,129,252,248,239,15,133,245,73,139,
-  134,233,102,72,15,110,192,73,139,133,233,102,72,15,110,200,252,242,15,88,
-  193,102,72,15,126,192,73,137,222,73,129,198,239,185,237,65,137,142,233,73,
-  137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,76,137,144,233,
-  72,184,237,237,255,65,139,134,233,129,252,248,239,15,133,245,65,139,133,233,
-  129,252,248,239,15,133,245,73,139,134,233,102,72,15,110,192,73,139,133,233,
-  102,72,15,110,200,252,242,15,92,193,102,72,15,126,192,73,137,222,73,129,198,
-  239,185,237,65,137,142,233,73,137,134,233,252,233,245,249,76,137,252,255,
-  73,139,135,233,76,137,144,233,72,184,237,237,255,65,139,134,233,129,252,248,
-  239,15,133,245,65,139,133,233,129,252,248,239,15,133,245,73,139,134,233,102,
-  72,15,110,192,73,139,133,233,102,72,15,110,200,252,242,15,94,193,102,72,15,
-  126,192,73,137,222,73,129,198,239,185,237,65,137,142,233,73,137,134,233,252,
-  233,245,249,76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,255,
-  65,139,134,233,129,252,248,239,15,133,245,65,139,133,233,129,252,248,239,
-  15,133,245,73,139,134,233,102,72,15,110,192,73,139,133,233,102,72,15,110,
-  200,252,242,15,89,193,102,72,15,126,192,73,137,222,73,129,198,239,185,237,
-  65,137,142,233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,
-  76,137,144,233,72,184,237,237,255,65,139,134,233,129,252,248,239,15,133,245,
-  65,139,133,233,129,252,248,239,15,133,245,73,139,134,233,102,72,15,110,192,
-  73,139,133,233,102,72,15,110,200,102,15,46,193,15,151,208,36,1,72,15,182,
-  192,102,72,15,110,192,102,72,15,126,192,73,137,222,73,129,198,239,185,237,
-  65,137,142,233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,
-  76,137,144,233,72,184,237,237,255,65,139,134,233,129,252,248,239,15,133,245,
-  65,139,133,233,129,252,248,239,15,133,245,73,139,134,233,102,72,15,110,192,
-  73,139,133,233,102,72,15,110,200,102,15,46,200,15,151,208,36,1,72,15,182,
-  192,102,72,15,110,192,102,72,15,126,192,73,137,222,73,129,198,239,185,237,
-  65,137,142,233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,
-  76,137,144,233,72,184,237,237,255,65,139,134,233,129,252,248,239,15,133,245,
-  65,139,133,233,129,252,248,239,15,133,245,73,139,134,233,102,72,15,110,192,
-  73,139,133,233,102,72,15,110,200,102,15,46,193,15,147,208,36,1,72,15,182,
-  192,102,72,15,110,192,102,72,15,126,192,73,137,222,73,129,198,239,185,237,
-  65,137,142,233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,
-  76,137,144,233,72,184,237,237,255,65,139,134,233,129,252,248,239,15,133,245,
-  65,139,133,233,129,252,248,239,15,133,245,73,139,134,233,102,72,15,110,192,
-  73,139,133,233,102,72,15,110,200,102,15,46,200,15,147,208,36,1,72,15,182,
-  192,102,72,15,110,192,102,72,15,126,192,73,137,222,73,129,198,239,185,237,
-  65,137,142,233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,
-  76,137,144,233,72,184,237,237,255,73,137,222,73,129,198,239,65,139,142,233,
-  73,139,150,233,137,139,233,72,137,147,233,73,252,255,194,255,73,137,222,73,
-  129,198,239,65,139,134,233,129,252,248,239,15,132,245,65,139,134,233,129,
+  237,252,255,208,249,77,139,157,233,77,139,171,233,252,242,73,15,44,132,253,
+  36,233,72,131,252,248,0,15,140,245,77,137,252,235,73,59,131,233,15,141,245,
+  255,77,139,179,233,72,193,224,4,73,1,198,252,233,245,249,77,49,252,246,249,
+  73,129,252,254,239,15,132,245,65,139,142,233,73,139,150,233,137,139,233,72,
+  137,147,233,252,233,245,249,65,139,133,233,129,252,248,239,15,133,245,65,
+  139,132,253,36,233,255,129,252,248,239,15,132,245,65,139,132,253,36,233,129,
   252,248,239,15,132,245,76,137,252,255,73,139,135,233,76,137,144,233,72,184,
-  237,237,252,255,208,255,249,73,137,221,73,129,197,239,49,201,129,201,239,
-  72,49,210,65,137,141,233,73,137,149,233,73,139,190,233,72,184,237,237,252,
-  255,208,73,137,198,76,137,252,247,76,137,252,238,72,184,237,237,252,255,208,
-  73,137,197,73,129,252,253,239,15,133,245,73,186,237,237,252,233,245,249,65,
-  139,141,233,73,139,149,233,255,137,139,233,72,137,147,233,252,233,245,249,
-  73,137,221,73,129,197,239,49,201,129,201,239,72,49,210,65,137,141,233,73,
-  137,149,233,73,139,190,233,72,184,237,237,252,255,208,73,137,198,76,137,252,
-  247,76,137,252,238,72,184,237,237,252,255,208,73,137,197,73,129,252,253,239,
-  15,133,245,73,186,237,237,252,233,245,249,255,65,139,141,233,73,139,149,233,
-  137,139,233,72,137,147,233,249,73,252,255,194,249,255,73,137,222,73,129,198,
-  239,65,139,134,233,129,252,248,239,15,132,245,65,139,134,233,129,252,248,
-  239,15,132,245,76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,
-  252,255,208,249,73,137,221,73,129,197,239,73,139,190,233,72,184,237,237,252,
-  255,208,73,137,198,76,137,252,247,76,137,252,238,72,184,237,237,255,252,255,
-  208,73,137,197,73,129,252,253,239,15,132,245,65,139,141,233,73,139,149,233,
-  137,139,233,72,137,147,233,73,186,237,237,252,233,245,249,73,137,221,73,129,
-  197,239,73,139,190,233,72,184,237,237,252,255,208,73,137,198,76,137,252,247,
-  76,137,252,238,72,184,237,237,252,255,208,73,137,197,73,129,252,253,239,15,
-  132,245,255,65,139,141,233,73,139,149,233,137,139,233,72,137,147,233,73,186,
-  237,237,252,233,245,249,73,252,255,194,249,255,73,137,222,73,129,198,239,
-  65,139,134,233,129,252,248,239,15,132,245,76,137,252,255,73,139,135,233,76,
-  137,144,233,72,184,237,237,252,255,208,249,73,137,222,73,129,198,239,65,139,
-  134,233,129,252,248,239,15,132,245,76,137,252,255,73,139,135,233,76,137,144,
-  233,72,184,237,237,252,255,208,249,255,73,137,221,73,129,197,239,65,139,133,
+  237,237,252,255,208,249,77,139,157,233,77,139,171,233,76,137,252,239,76,137,
+  230,72,184,237,237,252,255,208,73,137,198,73,131,252,254,0,15,132,245,65,
+  139,142,233,73,139,150,233,255,137,139,233,72,137,147,233,252,233,245,249,
+  76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,252,255,208,249,
+  76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,252,255,208,249,
+  73,252,255,194,255,77,139,179,233,72,193,224,4,73,1,198,252,233,245,249,77,
+  49,252,246,249,73,129,252,254,239,15,132,245,255,65,139,141,233,73,139,149,
+  233,65,137,142,233,73,137,150,233,252,233,245,249,65,139,133,233,129,252,
+  248,239,15,133,245,65,139,132,253,36,233,129,252,248,239,15,132,245,65,139,
+  132,253,36,233,129,252,248,239,15,132,245,76,137,252,255,73,139,135,233,255,
+  76,137,144,233,72,184,237,237,252,255,208,249,77,139,157,233,77,139,171,233,
+  76,137,252,239,76,137,230,72,184,237,237,252,255,208,73,137,198,73,131,252,
+  254,0,15,132,245,255,65,139,141,233,73,139,149,233,65,137,142,233,73,137,
+  150,233,252,233,245,249,76,137,252,255,73,139,135,233,76,137,144,233,72,184,
+  237,237,252,255,208,249,76,137,252,255,73,139,135,233,76,137,144,233,72,184,
+  237,237,252,255,208,249,73,252,255,194,255,65,139,134,233,129,252,248,239,
+  15,133,245,65,139,133,233,129,252,248,239,15,133,245,73,139,134,233,102,72,
+  15,110,192,73,139,133,233,102,72,15,110,200,252,242,15,88,193,102,72,15,126,
+  192,73,137,222,73,129,198,239,185,237,65,137,142,233,73,137,134,233,252,233,
+  245,249,76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,255,65,
+  139,134,233,129,252,248,239,15,133,245,65,139,133,233,129,252,248,239,15,
+  133,245,73,139,134,233,102,72,15,110,192,73,139,133,233,102,72,15,110,200,
+  252,242,15,92,193,102,72,15,126,192,73,137,222,73,129,198,239,185,237,65,
+  137,142,233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,
+  76,137,144,233,72,184,237,237,255,65,139,134,233,129,252,248,239,15,133,245,
+  65,139,133,233,129,252,248,239,15,133,245,73,139,134,233,102,72,15,110,192,
+  73,139,133,233,102,72,15,110,200,252,242,15,94,193,102,72,15,126,192,73,137,
+  222,73,129,198,239,185,237,65,137,142,233,73,137,134,233,252,233,245,249,
+  76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,255,65,139,134,
+  233,129,252,248,239,15,133,245,65,139,133,233,129,252,248,239,15,133,245,
+  73,139,134,233,102,72,15,110,192,73,139,133,233,102,72,15,110,200,252,242,
+  15,89,193,102,72,15,126,192,73,137,222,73,129,198,239,185,237,65,137,142,
+  233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,76,137,144,
+  233,72,184,237,237,255,65,139,134,233,129,252,248,239,15,133,245,65,139,133,
+  233,129,252,248,239,15,133,245,73,139,134,233,102,72,15,110,192,73,139,133,
+  233,102,72,15,110,200,102,15,46,193,15,151,208,36,1,72,15,182,192,102,72,
+  15,110,192,102,72,15,126,192,73,137,222,73,129,198,239,185,237,65,137,142,
+  233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,76,137,144,
+  233,72,184,237,237,255,65,139,134,233,129,252,248,239,15,133,245,65,139,133,
+  233,129,252,248,239,15,133,245,73,139,134,233,102,72,15,110,192,73,139,133,
+  233,102,72,15,110,200,102,15,46,200,15,151,208,36,1,72,15,182,192,102,72,
+  15,110,192,102,72,15,126,192,73,137,222,73,129,198,239,185,237,65,137,142,
+  233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,76,137,144,
+  233,72,184,237,237,255,65,139,134,233,129,252,248,239,15,133,245,65,139,133,
+  233,129,252,248,239,15,133,245,73,139,134,233,102,72,15,110,192,73,139,133,
+  233,102,72,15,110,200,102,15,46,193,15,147,208,36,1,72,15,182,192,102,72,
+  15,110,192,102,72,15,126,192,73,137,222,73,129,198,239,185,237,65,137,142,
+  233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,76,137,144,
+  233,72,184,237,237,255,65,139,134,233,129,252,248,239,15,133,245,65,139,133,
+  233,129,252,248,239,15,133,245,73,139,134,233,102,72,15,110,192,73,139,133,
+  233,102,72,15,110,200,102,15,46,200,15,147,208,36,1,72,15,182,192,102,72,
+  15,110,192,102,72,15,126,192,73,137,222,73,129,198,239,185,237,65,137,142,
+  233,73,137,134,233,252,233,245,249,76,137,252,255,73,139,135,233,76,137,144,
+  233,72,184,237,237,255,73,137,222,73,129,198,239,65,139,142,233,73,139,150,
+  233,137,139,233,72,137,147,233,73,252,255,194,255,73,137,222,73,129,198,239,
+  65,139,134,233,129,252,248,239,15,132,245,65,139,134,233,129,252,248,239,
+  15,132,245,76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,252,
+  255,208,255,249,73,137,221,73,129,197,239,49,201,129,201,239,72,49,210,65,
+  137,141,233,73,137,149,233,73,139,190,233,72,184,237,237,252,255,208,73,137,
+  198,76,137,252,247,76,137,252,238,72,184,237,237,252,255,208,73,137,197,73,
+  129,252,253,239,15,133,245,73,186,237,237,252,233,245,249,65,139,141,233,
+  73,139,149,233,255,137,139,233,72,137,147,233,252,233,245,249,73,137,221,
+  73,129,197,239,49,201,129,201,239,72,49,210,65,137,141,233,73,137,149,233,
+  73,139,190,233,72,184,237,237,252,255,208,73,137,198,76,137,252,247,76,137,
+  252,238,72,184,237,237,252,255,208,73,137,197,73,129,252,253,239,15,133,245,
+  73,186,237,237,252,233,245,249,255,65,139,141,233,73,139,149,233,137,139,
+  233,72,137,147,233,249,73,252,255,194,249,255,73,137,222,73,129,198,239,65,
+  139,134,233,129,252,248,239,15,132,245,65,139,134,233,129,252,248,239,15,
+  132,245,76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,252,255,
+  208,249,73,137,221,73,129,197,239,73,139,190,233,72,184,237,237,252,255,208,
+  73,137,198,76,137,252,247,76,137,252,238,72,184,237,237,255,252,255,208,73,
+  137,197,73,129,252,253,239,15,132,245,65,139,141,233,73,139,149,233,137,139,
+  233,72,137,147,233,73,186,237,237,252,233,245,249,73,137,221,73,129,197,239,
+  73,139,190,233,72,184,237,237,252,255,208,73,137,198,76,137,252,247,76,137,
+  252,238,72,184,237,237,252,255,208,73,137,197,73,129,252,253,239,15,132,245,
+  255,65,139,141,233,73,139,149,233,137,139,233,72,137,147,233,73,186,237,237,
+  252,233,245,249,73,252,255,194,249,255,73,137,222,73,129,198,239,65,139,134,
   233,129,252,248,239,15,132,245,76,137,252,255,73,139,135,233,76,137,144,233,
-  72,184,237,237,252,255,208,249,73,139,134,233,102,72,15,110,192,73,139,133,
-  233,102,72,15,110,200,102,15,46,193,15,147,208,36,1,60,0,15,132,245,73,186,
-  237,237,252,233,245,249,73,252,255,194,249,255,73,137,222,73,129,198,239,
-  73,137,221,73,129,197,239,73,137,220,73,129,196,239,65,139,134,233,129,252,
+  72,184,237,237,252,255,208,249,73,137,222,73,129,198,239,65,139,134,233,129,
+  252,248,239,15,132,245,76,137,252,255,73,139,135,233,76,137,144,233,72,184,
+  237,237,252,255,208,249,255,73,137,221,73,129,197,239,65,139,133,233,129,
+  252,248,239,15,132,245,76,137,252,255,73,139,135,233,76,137,144,233,72,184,
+  237,237,252,255,208,249,73,139,134,233,102,72,15,110,192,73,139,133,233,102,
+  72,15,110,200,102,15,46,193,15,147,208,36,1,60,0,15,132,245,73,186,237,237,
+  252,233,245,249,73,252,255,194,249,255,73,137,222,73,129,198,239,73,137,221,
+  73,129,197,239,73,137,220,73,129,196,239,65,139,134,233,129,252,248,239,15,
+  132,245,76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,252,255,
+  208,249,73,139,134,233,102,72,15,110,192,73,139,132,253,36,233,102,72,15,
+  110,200,252,242,15,88,193,73,139,133,233,102,72,15,110,200,102,15,46,200,
+  15,151,208,36,1,60,0,15,132,245,102,72,15,126,192,73,137,134,233,73,186,237,
+  237,255,73,137,222,73,129,198,239,65,139,134,233,129,252,248,239,15,132,245,
+  65,139,134,233,129,252,248,239,15,133,245,65,139,134,233,131,252,248,0,15,
+  133,245,249,73,186,237,237,252,233,245,249,73,252,255,194,255,73,186,237,
+  237,252,233,245,255,72,191,237,237,73,139,135,233,76,137,144,233,72,184,237,
+  237,252,255,208,73,139,135,233,76,139,144,233,255,73,139,135,233,72,139,128,
+  233,72,129,252,248,239,15,133,245,76,137,252,255,73,139,135,233,76,137,144,
+  233,72,184,237,237,252,255,208,91,90,89,65,91,65,92,65,93,65,94,91,65,90,
+  65,95,93,195,249,73,139,135,233,72,139,128,233,72,139,128,233,72,129,252,
   248,239,15,132,245,76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,
-  237,252,255,208,249,73,139,134,233,102,72,15,110,192,73,139,132,253,36,233,
-  102,72,15,110,200,252,242,15,88,193,73,139,133,233,102,72,15,110,200,102,
-  15,46,200,15,151,208,36,1,60,0,15,132,245,102,72,15,126,192,73,137,134,233,
-  73,186,237,237,255,73,137,222,73,129,198,239,65,139,134,233,129,252,248,239,
-  15,132,245,65,139,134,233,129,252,248,239,15,133,245,65,139,134,233,131,252,
-  248,0,15,133,245,249,73,186,237,237,252,233,245,249,73,252,255,194,255,73,
-  186,237,237,252,233,245,255,72,191,237,237,73,139,135,233,76,137,144,233,
-  72,184,237,237,252,255,208,73,139,135,233,76,139,144,233,255,73,139,135,233,
-  72,139,128,233,72,129,252,248,239,15,133,245,76,137,252,255,73,139,135,233,
-  76,137,144,233,72,184,237,237,252,255,208,91,90,89,65,91,65,92,65,93,65,94,
-  91,65,90,65,95,93,195,249,73,139,135,233,72,139,128,233,72,139,128,233,72,
-  129,252,248,239,15,132,245,76,137,252,255,73,139,135,233,76,137,144,233,72,
-  184,237,237,255,252,255,208,91,90,89,65,91,65,92,65,93,65,94,91,65,90,65,
-  95,93,195,249,76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,
-  252,255,208,91,90,89,65,91,65,92,65,93,65,94,91,65,90,65,95,93,195,255,72,
-  191,237,237,73,139,135,233,76,137,144,233,72,184,237,237,252,255,208,73,139,
-  135,233,72,139,152,233,72,105,219,239,73,3,159,233,73,139,135,233,76,139,
-  144,233,255
+  237,255,252,255,208,91,90,89,65,91,65,92,65,93,65,94,91,65,90,65,95,93,195,
+  249,76,137,252,255,73,139,135,233,76,137,144,233,72,184,237,237,252,255,208,
+  91,90,89,65,91,65,92,65,93,65,94,91,65,90,65,95,93,195,255,72,191,237,237,
+  73,139,135,233,76,137,144,233,72,184,237,237,252,255,208,73,139,135,233,72,
+  139,152,233,72,105,219,239,73,3,159,233,73,139,135,233,76,139,144,233,255
 };
 
 # 5 "./src/a2_jitx64.desc"
@@ -193,6 +195,7 @@ enum {
 # 24 "./src/a2_jitx64.desc"
 
 //|.define OBJ_SIZE, sizeof(struct a2_obj)
+//|.define OBJ_STEP, 4
 
 //|// set a2_vm addr
 //|.macro set_vm, p
@@ -435,7 +438,7 @@ static void _per(struct a2_vm* vm_p){
   //| get_pc
   //| get_base_sf
   dasm_put(Dst, 0, (unsigned int)((uintptr_t)vm_p), (unsigned int)(((uintptr_t)vm_p)>>32), Dt1(->call_chain), Dt3([0].pc), Dt1(->call_chain), Dt3(->reg_stack.sf_idx), sizeof(struct a2_obj), Dt1(->stack_frame.sf_p));
-# 267 "./src/a2_jitx64.desc"
+# 268 "./src/a2_jitx64.desc"
 }
 
 //|.macro dynasm_ret, return_op
@@ -471,7 +474,7 @@ static dynasm_func _end(struct a2_vm* vm_p){
 
   //| dynasm_ret_ax
   dasm_put(Dst, 49);
-# 301 "./src/a2_jitx64.desc"
+# 302 "./src/a2_jitx64.desc"
 
   // get dynasm func
   dynasm_func fptr = a2_jitcode_new(&state);
@@ -492,7 +495,7 @@ static void _jit_load(struct a2_vm* vm_p, ir _ir){
   //| obj2sf idx, src_obj
   //| inc_pc
   dasm_put(Dst, 68, (*src_obj).type, (unsigned int)((uintptr_t)((*src_obj).value.point)), (unsigned int)(((uintptr_t)((*src_obj).value.point))>>32), Dt2([idx].type), Dt2([idx].value.point));
-# 320 "./src/a2_jitx64.desc"
+# 321 "./src/a2_jitx64.desc"
 }
 
 // load nil 
@@ -517,7 +520,7 @@ static void _jit_loadnil(struct a2_vm* vm_p, ir _ir){
   //|=>(maxpc-1): 
   //| inc_pc
   dasm_put(Dst, 86, end_idx*sizeof(struct a2_obj), sizeof(struct a2_obj)*begin_idx, (maxpc-2), (maxpc-1), A2_TNIL, Dt4([0].type), Dt4([0].value.point), sizeof(struct a2_obj), (maxpc-2), (maxpc-1));
-# 343 "./src/a2_jitx64.desc"
+# 344 "./src/a2_jitx64.desc"
 }
 
 //-----------------------------------------------------------------------
@@ -544,7 +547,7 @@ static void _jit_getglobal(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 142, idx*sizeof(struct a2_obj));
    }
-# 363 "./src/a2_jitx64.desc"
+# 364 "./src/a2_jitx64.desc"
   //| get_envglobal R_OBJ1, R_OBJ2  // get global obj
   //| cmp R_OBJ2, 0              
   //| jne =>(maxpc-1)
@@ -556,7 +559,7 @@ static void _jit_getglobal(struct a2_vm* vm_p, ir _ir){
   //| reg_obj2sf des_idx, R_OBJ2   // set global value
   //| inc_pc
   dasm_put(Dst, 150, Dt1(->env_p), (unsigned int)((uintptr_t)a2_get_envglobal), (unsigned int)(((uintptr_t)a2_get_envglobal)>>32), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_jit_getglobal_error), (unsigned int)(((uintptr_t)_jit_getglobal_error)>>32), (maxpc-1), Dt5([0].type), Dt5([0].value.point), Dt2([des_idx].type), Dt2([des_idx].value.point));
-# 373 "./src/a2_jitx64.desc"
+# 374 "./src/a2_jitx64.desc"
 
 }
 
@@ -573,7 +576,7 @@ static void _jit_setglobal(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 142, k_idx*sizeof(struct a2_obj));
    }
-# 383 "./src/a2_jitx64.desc"
+# 384 "./src/a2_jitx64.desc"
   //| get_value v_idx, R_OBJ2        // get value obj
    if(v_idx<0){ // the const value
      struct a2_obj* obj = a2_closure_const((curr_cls), (v_idx));
@@ -581,12 +584,12 @@ static void _jit_setglobal(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 225, v_idx*sizeof(struct a2_obj));
    }
-# 384 "./src/a2_jitx64.desc"
+# 385 "./src/a2_jitx64.desc"
   //| set_envglobal R_OBJ1, R_OBJ2      // set global 
   //| reg_obj2sf des_idx, R_OBJ2  // copy to stack frame
   //| inc_pc
   dasm_put(Dst, 233, Dt1(->env_p), (unsigned int)((uintptr_t)a2_set_envglobal), (unsigned int)(((uintptr_t)a2_set_envglobal)>>32), Dt5([0].type), Dt5([0].value.point), Dt2([des_idx].type), Dt2([des_idx].value.point));
-# 387 "./src/a2_jitx64.desc"
+# 388 "./src/a2_jitx64.desc"
 }
 
 //-----------------------------------------------------------------------
@@ -610,11 +613,11 @@ static void _jit_getupvalue(struct a2_vm* vm_p, ir _ir){
   //| gcobj2upvalue _uv->v.uv_obj, R_OBJ1
   //| reg_obj2sf des_idx, R_OBJ1      // copy to stack frame from upvalue
   dasm_put(Dst, 272, _uv->type, uv_stack, (maxpc-1), _uv->v.sf_idx*sizeof(struct a2_obj), Dt4([0].type), Dt4([0].value.point), Dt2([des_idx].type), Dt2([des_idx].value.point), (maxpc-2), (maxpc-1), uv_gc, (maxpc-2), (unsigned int)((uintptr_t)_uv->v.uv_obj), (unsigned int)(((uintptr_t)_uv->v.uv_obj)>>32), (unsigned int)((uintptr_t)a2_gcobj2upvalue), (unsigned int)(((uintptr_t)a2_gcobj2upvalue)>>32), Dt4([0].type));
-# 409 "./src/a2_jitx64.desc"
+# 410 "./src/a2_jitx64.desc"
   //|=>(maxpc-2):
   //| inc_pc
   dasm_put(Dst, 333, Dt4([0].value.point), Dt2([des_idx].type), Dt2([des_idx].value.point), (maxpc-2));
-# 411 "./src/a2_jitx64.desc"
+# 412 "./src/a2_jitx64.desc"
 }
 
 // set upvalue
@@ -630,7 +633,7 @@ static void _jit_setupvalue(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 142, idx*sizeof(struct a2_obj));
    }
-# 420 "./src/a2_jitx64.desc"
+# 421 "./src/a2_jitx64.desc"
   //| mov eax, _uv_d->type
   //| cmp eax, uv_gc
   //| jne =>(maxpc-1)
@@ -642,11 +645,11 @@ static void _jit_setupvalue(struct a2_vm* vm_p, ir _ir){
   //| jne =>(maxpc-2)
   //| reg_obj2sf _uv_d->v.sf_idx, R_OBJ1 // set stack frame value   
   dasm_put(Dst, 350, _uv_d->type, uv_gc, (maxpc-1), (unsigned int)((uintptr_t)_uv_d->v.uv_obj), (unsigned int)(((uintptr_t)_uv_d->v.uv_obj)>>32), (unsigned int)((uintptr_t)a2_gcobj2upvalue), (unsigned int)(((uintptr_t)a2_gcobj2upvalue)>>32), Dt4([0].type), Dt4([0].value.point), Dt5([0].type), Dt5([0].value.point), (maxpc-2), (maxpc-1), uv_stack, (maxpc-2), Dt4([0].type), Dt4([0].value.point));
-# 430 "./src/a2_jitx64.desc"
+# 431 "./src/a2_jitx64.desc"
   //|=>(maxpc-2):
   //| inc_pc
   dasm_put(Dst, 337, Dt2([_uv_d->v.sf_idx].type), Dt2([_uv_d->v.sf_idx].value.point), (maxpc-2));
-# 432 "./src/a2_jitx64.desc"
+# 433 "./src/a2_jitx64.desc"
 }
 
 
@@ -707,6 +710,23 @@ static void _for_idx_error(struct a2_vm* vm_p){
 //| mov rsi, R_K
 //| callp func
 //| mov R2, rax
+//|.endmacro
+
+//|.macro array_get, R_C, R_K, R2
+//| cvttsd2si rax, R_K[0].value.number
+//| cmp rax, 0
+//| jl =>(maxpc-7) 
+//| mov R_ARRAY, R_C
+//| cmp rax, R_ARRAY->len
+//| jge =>(maxpc-7)
+//| mov R2, R_ARRAY->list
+//| imul rax, OBJ_SIZE
+//| shl rax, OBJ_STEP
+//| add R2, rax
+//| jmp =>(maxpc-8)
+//|=>(maxpc-7):
+//| xor R2, R2
+//|=>(maxpc-8):
 //|.endmacro
 
 // get array with index
@@ -792,13 +812,13 @@ static void _jit_getvalue(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 414, k_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 422, Dt5(->type), A2_TARRAY, (maxpc-1), Dt6(->type), A2_TNUMBER, (maxpc-3), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gk_array_error), (unsigned int)(((uintptr_t)_gk_array_error)>>32), (maxpc-3), Dt5(->value.obj), Dt8([0].value.array), (unsigned int)((uintptr_t)a2_array_get), (unsigned int)(((uintptr_t)a2_array_get)>>32), NULL, (maxpc-4));
-  dasm_put(Dst, 500, Dt4([0].type), Dt4([0].value.point), Dt2([des_idx].type), Dt2([des_idx].value.point), (maxpc-5), (maxpc-1), Dt5(->type), A2_TMAP, (maxpc-2), Dt6(->type), A2_TNUMBER, (maxpc-6), Dt6(->type), A2_TSTRING, (maxpc-6), Dt1(->call_chain));
-  dasm_put(Dst, 565, Dt3([0].pc), (unsigned int)((uintptr_t)_gk_map_error), (unsigned int)(((uintptr_t)_gk_map_error)>>32), (maxpc-6), Dt5(->value.obj), Dt8([0].value.map), (unsigned int)((uintptr_t)a2_map_query), (unsigned int)(((uintptr_t)a2_map_query)>>32), (maxpc-4), Dt4([0].type), Dt4([0].value.point), Dt2([des_idx].type), Dt2([des_idx].value.point), (maxpc-5), (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gv_type_error), (unsigned int)(((uintptr_t)_gv_type_error)>>32));
-# 569 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 422, Dt5(->type), A2_TARRAY, (maxpc-1), Dt6(->type), A2_TNUMBER, (maxpc-3), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gk_array_error), (unsigned int)(((uintptr_t)_gk_array_error)>>32), (maxpc-3), Dt5(->value.obj), Dt8([0].value.array), Dt6([0].value.number), (maxpc-7), Dt9(->len), (maxpc-7));
+  dasm_put(Dst, 503, Dt9(->list), (maxpc-8), (maxpc-7), (maxpc-8), NULL, (maxpc-4), Dt4([0].type), Dt4([0].value.point), Dt2([des_idx].type), Dt2([des_idx].value.point), (maxpc-5), (maxpc-1), Dt5(->type), A2_TMAP, (maxpc-2), Dt6(->type));
+  dasm_put(Dst, 568, A2_TNUMBER, (maxpc-6), Dt6(->type), A2_TSTRING, (maxpc-6), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gk_map_error), (unsigned int)(((uintptr_t)_gk_map_error)>>32), (maxpc-6), Dt5(->value.obj), Dt8([0].value.map), (unsigned int)((uintptr_t)a2_map_query), (unsigned int)(((uintptr_t)a2_map_query)>>32), (maxpc-4), Dt4([0].type), Dt4([0].value.point));
+# 587 "./src/a2_jitx64.desc"
   //| inc_pc
-  dasm_put(Dst, 646, (maxpc-4), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gv_error), (unsigned int)(((uintptr_t)_gv_error)>>32), (maxpc-5));
-# 570 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 650, Dt2([des_idx].type), Dt2([des_idx].value.point), (maxpc-5), (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gv_type_error), (unsigned int)(((uintptr_t)_gv_type_error)>>32), (maxpc-4), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gv_error), (unsigned int)(((uintptr_t)_gv_error)>>32), (maxpc-5));
+# 588 "./src/a2_jitx64.desc"
 }
 
 static void _jit_setvalue(struct a2_vm* vm_p, ir _ir){
@@ -820,25 +840,26 @@ static void _jit_setvalue(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 414, k_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 422, Dt5(->type), A2_TARRAY, (maxpc-1), Dt6(->type), A2_TNUMBER, (maxpc-3), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gk_array_error), (unsigned int)(((uintptr_t)_gk_array_error)>>32), (maxpc-3), Dt5(->value.obj), Dt8([0].value.array), (unsigned int)((uintptr_t)a2_array_get), (unsigned int)(((uintptr_t)a2_array_get)>>32), NULL, (maxpc-4));
+  dasm_put(Dst, 422, Dt5(->type), A2_TARRAY, (maxpc-1), Dt6(->type), A2_TNUMBER, (maxpc-3), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gk_array_error), (unsigned int)(((uintptr_t)_gk_array_error)>>32), (maxpc-3), Dt5(->value.obj), Dt8([0].value.array), Dt6([0].value.number), (maxpc-7), Dt9(->len), (maxpc-7));
+  dasm_put(Dst, 706, Dt9(->list), (maxpc-8), (maxpc-7), (maxpc-8), NULL, (maxpc-4));
    if(v_idx<0){ // the const value
      struct a2_obj* obj = a2_closure_const((curr_cls), (v_idx));
   dasm_put(Dst, 220, (unsigned int)((uintptr_t)obj), (unsigned int)(((uintptr_t)obj)>>32));
    }else{  // the stack frame 
   dasm_put(Dst, 225, v_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 675, Dt5([0].type), Dt5([0].value.point), Dt4([0].type), Dt4([0].value.point), (maxpc-5), (maxpc-1), Dt5(->type), A2_TMAP, (maxpc-2), Dt6(->type), A2_TNUMBER, (maxpc-6), Dt6(->type), A2_TSTRING, (maxpc-6), Dt1(->call_chain));
-  dasm_put(Dst, 741, Dt3([0].pc), (unsigned int)((uintptr_t)_gk_map_error), (unsigned int)(((uintptr_t)_gk_map_error)>>32), (maxpc-6), Dt5(->value.obj), Dt8([0].value.map), (unsigned int)((uintptr_t)a2_map_query), (unsigned int)(((uintptr_t)a2_map_query)>>32), (maxpc-4));
+  dasm_put(Dst, 735, Dt5([0].type), Dt5([0].value.point), Dt4([0].type), Dt4([0].value.point), (maxpc-5), (maxpc-1), Dt5(->type), A2_TMAP, (maxpc-2), Dt6(->type), A2_TNUMBER, (maxpc-6), Dt6(->type), A2_TSTRING, (maxpc-6), Dt1(->call_chain));
+  dasm_put(Dst, 801, Dt3([0].pc), (unsigned int)((uintptr_t)_gk_map_error), (unsigned int)(((uintptr_t)_gk_map_error)>>32), (maxpc-6), Dt5(->value.obj), Dt8([0].value.map), (unsigned int)((uintptr_t)a2_map_query), (unsigned int)(((uintptr_t)a2_map_query)>>32), (maxpc-4));
    if(v_idx<0){ // the const value
      struct a2_obj* obj = a2_closure_const((curr_cls), (v_idx));
   dasm_put(Dst, 220, (unsigned int)((uintptr_t)obj), (unsigned int)(((uintptr_t)obj)>>32));
    }else{  // the stack frame 
   dasm_put(Dst, 225, v_idx*sizeof(struct a2_obj));
    }
-# 583 "./src/a2_jitx64.desc"
+# 601 "./src/a2_jitx64.desc"
   //| inc_pc
-  dasm_put(Dst, 787, Dt5([0].type), Dt5([0].value.point), Dt4([0].type), Dt4([0].value.point), (maxpc-5), (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gv_type_error), (unsigned int)(((uintptr_t)_gv_type_error)>>32), (maxpc-4), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gv_error), (unsigned int)(((uintptr_t)_gv_error)>>32), (maxpc-5));
-# 584 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 847, Dt5([0].type), Dt5([0].value.point), Dt4([0].type), Dt4([0].value.point), (maxpc-5), (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gv_type_error), (unsigned int)(((uintptr_t)_gv_type_error)>>32), (maxpc-4), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_gv_error), (unsigned int)(((uintptr_t)_gv_error)>>32), (maxpc-5));
+# 602 "./src/a2_jitx64.desc"
 }
 
 
@@ -895,11 +916,11 @@ static void _jit_add(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 225, b_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 852, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TNUMBER, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
-# 624 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 912, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TNUMBER, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
+# 642 "./src/a2_jitx64.desc"
   //| inc_pc
-  dasm_put(Dst, 666, (maxpc-2));
-# 625 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 697, (maxpc-2));
+# 643 "./src/a2_jitx64.desc"
 }
 
 // jit sub 
@@ -925,11 +946,11 @@ static void _jit_sub(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 225, b_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 940, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TNUMBER, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
-# 634 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1000, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TNUMBER, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
+# 652 "./src/a2_jitx64.desc"
   //| inc_pc
-  dasm_put(Dst, 666, (maxpc-2));
-# 635 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 697, (maxpc-2));
+# 653 "./src/a2_jitx64.desc"
 }
 
 // jit div
@@ -955,11 +976,11 @@ static void _jit_div(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 225, b_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 1028, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TNUMBER, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
-# 644 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1088, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TNUMBER, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
+# 662 "./src/a2_jitx64.desc"
   //| inc_pc
-  dasm_put(Dst, 666, (maxpc-2));
-# 645 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 697, (maxpc-2));
+# 663 "./src/a2_jitx64.desc"
 }
 
 // jit mul
@@ -985,11 +1006,11 @@ static void _jit_mul(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 225, b_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 1116, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TNUMBER, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
-# 654 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1176, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TNUMBER, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
+# 672 "./src/a2_jitx64.desc"
   //| inc_pc
-  dasm_put(Dst, 666, (maxpc-2));
-# 655 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 697, (maxpc-2));
+# 673 "./src/a2_jitx64.desc"
 }
 
 // jit big
@@ -1019,11 +1040,11 @@ static void _jit_big(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 225, b_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 1204, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TBOOL, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
-# 668 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1264, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TBOOL, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
+# 686 "./src/a2_jitx64.desc"
   //| inc_pc
-  dasm_put(Dst, 666, (maxpc-2));
-# 669 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 697, (maxpc-2));
+# 687 "./src/a2_jitx64.desc"
 } 
 
 // jit lite
@@ -1053,11 +1074,11 @@ static void _jit_lite(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 225, b_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 1305, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TBOOL, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
-# 682 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1365, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TBOOL, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
+# 700 "./src/a2_jitx64.desc"
   //| inc_pc
-  dasm_put(Dst, 666, (maxpc-2));
-# 683 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 697, (maxpc-2));
+# 701 "./src/a2_jitx64.desc"
 }
 
 
@@ -1088,11 +1109,11 @@ static void _jit_bige(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 225, b_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 1406, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TBOOL, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
-# 697 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1466, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TBOOL, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
+# 715 "./src/a2_jitx64.desc"
   //| inc_pc
-  dasm_put(Dst, 666, (maxpc-2));
-# 698 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 697, (maxpc-2));
+# 716 "./src/a2_jitx64.desc"
 }
 
 
@@ -1124,11 +1145,11 @@ static void _jit_litee(struct a2_vm* vm_p, ir _ir){
    }else{  // the stack frame 
   dasm_put(Dst, 225, b_idx*sizeof(struct a2_obj));
    }
-  dasm_put(Dst, 1507, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TBOOL, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
-# 713 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1567, Dt4(->type), A2_TNUMBER, (maxpc-1), Dt5(->type), A2_TNUMBER, (maxpc-1), Dt4(->value.number), Dt5(->value.number), des_idx*sizeof(struct a2_obj), A2_TBOOL, Dt4([0].type), Dt4([0].value.number), (maxpc-2), (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_opt_error), (unsigned int)(((uintptr_t)_opt_error)>>32));
+# 731 "./src/a2_jitx64.desc"
   //| inc_pc
-  dasm_put(Dst, 666, (maxpc-2));
-# 714 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 697, (maxpc-2));
+# 732 "./src/a2_jitx64.desc"
 }
 
 //-----------------------------------------------------------------------
@@ -1141,8 +1162,8 @@ static void _jit_move(struct a2_vm* vm_p, ir _ir){
   //| sf_obj src_idx, R_OBJ1
   //| reg_obj2sf des_idx, R_OBJ1
   //| inc_pc
-  dasm_put(Dst, 1608, src_idx*sizeof(struct a2_obj), Dt4([0].type), Dt4([0].value.point), Dt2([des_idx].type), Dt2([des_idx].value.point));
-# 726 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1668, src_idx*sizeof(struct a2_obj), Dt4([0].type), Dt4([0].value.point), Dt2([des_idx].type), Dt2([des_idx].value.point));
+# 744 "./src/a2_jitx64.desc"
 }
 
 
@@ -1171,8 +1192,8 @@ static void _jit_foreachprep(struct a2_vm* vm_p, ir _ir){
   //| dynasm_call _fp_error
   //|
   //| //set init varable
-  dasm_put(Dst, 1635, c_idx*sizeof(struct a2_obj), Dt4(->type), A2_TMAP, (maxpc-1), Dt4(->type), A2_TARRAY, (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_fp_error), (unsigned int)(((uintptr_t)_fp_error)>>32));
-# 754 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1695, c_idx*sizeof(struct a2_obj), Dt4(->type), A2_TMAP, (maxpc-1), Dt4(->type), A2_TARRAY, (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_fp_error), (unsigned int)(((uintptr_t)_fp_error)>>32));
+# 772 "./src/a2_jitx64.desc"
   push_labelpc(maxpc);
   //|=>(maxpc-1):   // foreach map
   //| sf_obj k_idx, R_OBJ2
@@ -1184,8 +1205,8 @@ static void _jit_foreachprep(struct a2_vm* vm_p, ir _ir){
   //| jmp =>(maxpc-3)
   //|=>(maxpc-5):
   //| reg_obj2sf v_idx, R_OBJ2
-  dasm_put(Dst, 1684, (maxpc-1), k_idx*sizeof(struct a2_obj), A2_TNIL, Dt5([0].type), Dt5([0].value.point), Dt4(->value.obj), (unsigned int)((uintptr_t)a2_gcobj2map), (unsigned int)(((uintptr_t)a2_gcobj2map)>>32), (unsigned int)((uintptr_t)a2_map_next), (unsigned int)(((uintptr_t)a2_map_next)>>32), NULL, (maxpc-5), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (maxpc-3), (maxpc-5), Dt5([0].type), Dt5([0].value.point));
-# 765 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1744, (maxpc-1), k_idx*sizeof(struct a2_obj), A2_TNIL, Dt5([0].type), Dt5([0].value.point), Dt4(->value.obj), (unsigned int)((uintptr_t)a2_gcobj2map), (unsigned int)(((uintptr_t)a2_gcobj2map)>>32), (unsigned int)((uintptr_t)a2_map_next), (unsigned int)(((uintptr_t)a2_map_next)>>32), NULL, (maxpc-5), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (maxpc-3), (maxpc-5), Dt5([0].type), Dt5([0].value.point));
+# 783 "./src/a2_jitx64.desc"
   //| jmp =>(maxpc-4)
   //|=>(maxpc-2):   // foreach array
   //| sf_obj k_idx, R_OBJ2
@@ -1197,13 +1218,13 @@ static void _jit_foreachprep(struct a2_vm* vm_p, ir _ir){
   //| jmp =>(maxpc-3)
   //|=>(maxpc-6):
   //| reg_obj2sf v_idx, R_OBJ2
-  dasm_put(Dst, 1765, Dt2([v_idx].type), Dt2([v_idx].value.point), (maxpc-4), (maxpc-2), k_idx*sizeof(struct a2_obj), A2_TNIL, Dt5([0].type), Dt5([0].value.point), Dt4(->value.obj), (unsigned int)((uintptr_t)a2_gcobj2array), (unsigned int)(((uintptr_t)a2_gcobj2array)>>32), (unsigned int)((uintptr_t)a2_array_next), (unsigned int)(((uintptr_t)a2_array_next)>>32), NULL, (maxpc-6), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (maxpc-3), (maxpc-6));
-# 776 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1825, Dt2([v_idx].type), Dt2([v_idx].value.point), (maxpc-4), (maxpc-2), k_idx*sizeof(struct a2_obj), A2_TNIL, Dt5([0].type), Dt5([0].value.point), Dt4(->value.obj), (unsigned int)((uintptr_t)a2_gcobj2array), (unsigned int)(((uintptr_t)a2_gcobj2array)>>32), (unsigned int)((uintptr_t)a2_array_next), (unsigned int)(((uintptr_t)a2_array_next)>>32), NULL, (maxpc-6), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (maxpc-3), (maxpc-6));
+# 794 "./src/a2_jitx64.desc"
   //|=>(maxpc-4):   // next
   //| inc_pc
   //|=>(maxpc-7):
-  dasm_put(Dst, 1848, Dt5([0].type), Dt5([0].value.point), Dt2([v_idx].type), Dt2([v_idx].value.point), (maxpc-4), (maxpc-7));
-# 779 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1908, Dt5([0].type), Dt5([0].value.point), Dt2([v_idx].type), Dt2([v_idx].value.point), (maxpc-4), (maxpc-7));
+# 797 "./src/a2_jitx64.desc"
 }
 
 static  void _jit_foreachloop(struct a2_vm* vm_p, ir _ir){
@@ -1227,8 +1248,8 @@ static  void _jit_foreachloop(struct a2_vm* vm_p, ir _ir){
   //|=>(maxpc-1):   // foreach map
   //| sf_obj k_idx, R_OBJ2
   //| next_map R_OBJ1, R_OBJ2, R_OBJ2
-  dasm_put(Dst, 1870, c_idx*sizeof(struct a2_obj), Dt4(->type), A2_TMAP, (maxpc-1), Dt4(->type), A2_TARRAY, (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_fp_error), (unsigned int)(((uintptr_t)_fp_error)>>32), (maxpc-1), k_idx*sizeof(struct a2_obj), Dt4(->value.obj), (unsigned int)((uintptr_t)a2_gcobj2map), (unsigned int)(((uintptr_t)a2_gcobj2map)>>32), (unsigned int)((uintptr_t)a2_map_next), (unsigned int)(((uintptr_t)a2_map_next)>>32));
-# 802 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 1930, c_idx*sizeof(struct a2_obj), Dt4(->type), A2_TMAP, (maxpc-1), Dt4(->type), A2_TARRAY, (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_fp_error), (unsigned int)(((uintptr_t)_fp_error)>>32), (maxpc-1), k_idx*sizeof(struct a2_obj), Dt4(->value.obj), (unsigned int)((uintptr_t)a2_gcobj2map), (unsigned int)(((uintptr_t)a2_gcobj2map)>>32), (unsigned int)((uintptr_t)a2_map_next), (unsigned int)(((uintptr_t)a2_map_next)>>32));
+# 820 "./src/a2_jitx64.desc"
   //| cmp R_OBJ2, NULL
   //| je =>(maxpc-3)
   //| reg_obj2sf v_idx, R_OBJ2
@@ -1241,16 +1262,16 @@ static  void _jit_foreachloop(struct a2_vm* vm_p, ir _ir){
   //| cmp R_OBJ2, NULL
   //| je =>(maxpc-3)
   //| reg_obj2sf v_idx, R_OBJ2
-  dasm_put(Dst, 1953, NULL, (maxpc-3), Dt5([0].type), Dt5([0].value.point), Dt2([v_idx].type), Dt2([v_idx].value.point), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (l_pc-7), (maxpc-2), k_idx*sizeof(struct a2_obj), Dt4(->value.obj), (unsigned int)((uintptr_t)a2_gcobj2array), (unsigned int)(((uintptr_t)a2_gcobj2array)>>32), (unsigned int)((uintptr_t)a2_array_next), (unsigned int)(((uintptr_t)a2_array_next)>>32), NULL, (maxpc-3));
-# 814 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2013, NULL, (maxpc-3), Dt5([0].type), Dt5([0].value.point), Dt2([v_idx].type), Dt2([v_idx].value.point), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (l_pc-7), (maxpc-2), k_idx*sizeof(struct a2_obj), Dt4(->value.obj), (unsigned int)((uintptr_t)a2_gcobj2array), (unsigned int)(((uintptr_t)a2_gcobj2array)>>32), (unsigned int)((uintptr_t)a2_array_next), (unsigned int)(((uintptr_t)a2_array_next)>>32), NULL, (maxpc-3));
+# 832 "./src/a2_jitx64.desc"
   //| set_pc j_pc
   //| jmp =>(l_pc-7)
   //|
   //|=>(maxpc-3): // next
   //| inc_pc
   //|=>(l_pc-3):
-  dasm_put(Dst, 2038, Dt5([0].type), Dt5([0].value.point), Dt2([v_idx].type), Dt2([v_idx].value.point), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (l_pc-7), (maxpc-3), (l_pc-3));
-# 820 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2098, Dt5([0].type), Dt5([0].value.point), Dt2([v_idx].type), Dt2([v_idx].value.point), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (l_pc-7), (maxpc-3), (l_pc-3));
+# 838 "./src/a2_jitx64.desc"
 }
 
 //-----------------------------------------------------------------------
@@ -1276,8 +1297,8 @@ static void _jit_forprep(struct a2_vm* vm_p, ir _ir){
   //| dynasm_call _for_idx_error // index error
   //|=>(maxpc-2):
   //| sf_obj _count, R_OBJ2
-  dasm_put(Dst, 2067, _step*sizeof(struct a2_obj), Dt4(->type), A2_TNUMBER, (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_for_step_error), (unsigned int)(((uintptr_t)_for_step_error)>>32), (maxpc-1), _i*sizeof(struct a2_obj), Dt4(->type), A2_TNUMBER, (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_for_idx_error), (unsigned int)(((uintptr_t)_for_idx_error)>>32), (maxpc-2));
-# 845 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2127, _step*sizeof(struct a2_obj), Dt4(->type), A2_TNUMBER, (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_for_step_error), (unsigned int)(((uintptr_t)_for_step_error)>>32), (maxpc-1), _i*sizeof(struct a2_obj), Dt4(->type), A2_TNUMBER, (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_for_idx_error), (unsigned int)(((uintptr_t)_for_idx_error)>>32), (maxpc-2));
+# 863 "./src/a2_jitx64.desc"
   //| cmp_type R_OBJ2, A2_TNUMBER
   //| je =>(maxpc-3)
   //| dynasm_call _for_count_error // count error
@@ -1297,8 +1318,8 @@ static void _jit_forprep(struct a2_vm* vm_p, ir _ir){
   //| inc_pc
   //|=>(maxpc-6):
   //|
-  dasm_put(Dst, 2144, _count*sizeof(struct a2_obj), Dt5(->type), A2_TNUMBER, (maxpc-3), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_for_count_error), (unsigned int)(((uintptr_t)_for_count_error)>>32), (maxpc-3), Dt4([0].value.number), Dt5([0].value.number), (maxpc-4), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (maxpc-5), (maxpc-4), (maxpc-6));
-# 864 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2204, _count*sizeof(struct a2_obj), Dt5(->type), A2_TNUMBER, (maxpc-3), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_for_count_error), (unsigned int)(((uintptr_t)_for_count_error)>>32), (maxpc-3), Dt4([0].value.number), Dt5([0].value.number), (maxpc-4), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (maxpc-5), (maxpc-4), (maxpc-6));
+# 882 "./src/a2_jitx64.desc"
 }
 
 static void _jit_forloop(struct a2_vm* vm_p, ir _ir){
@@ -1333,14 +1354,14 @@ static void _jit_forloop(struct a2_vm* vm_p, ir _ir){
   //| mov R_OBJ1[0].value.number, rax
   //| set_pc j_pc
   //| jmp =>(l_pc-6)
-  dasm_put(Dst, 2228, _i*sizeof(struct a2_obj), _count*sizeof(struct a2_obj), _step*sizeof(struct a2_obj), Dt4(->type), A2_TNUMBER, (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_for_idx_error), (unsigned int)(((uintptr_t)_for_idx_error)>>32), (maxpc-1), Dt4([0].value.number), Dt6([0].value.number), Dt5([0].value.number), (maxpc-2), Dt4([0].value.number), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32));
-# 898 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2288, _i*sizeof(struct a2_obj), _count*sizeof(struct a2_obj), _step*sizeof(struct a2_obj), Dt4(->type), A2_TNUMBER, (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_for_idx_error), (unsigned int)(((uintptr_t)_for_idx_error)>>32), (maxpc-1), Dt4([0].value.number), Dt6([0].value.number), Dt5([0].value.number), (maxpc-2), Dt4([0].value.number), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32));
+# 916 "./src/a2_jitx64.desc"
   //|=>(maxpc-2):
   //| inc_pc
   //|=>(l_pc-5):
   //|
-  dasm_put(Dst, 2057, (l_pc-6), (maxpc-2), (l_pc-5));
-# 902 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2117, (l_pc-6), (maxpc-2), (l_pc-5));
+# 920 "./src/a2_jitx64.desc"
 }
 
 
@@ -1370,8 +1391,8 @@ static void _jit_test(struct a2_vm* vm_p, ir _ir){
   //| jmp =>(lpc_chain[j_pc]-1)
   //|=>(maxpc-2):
   //| inc_pc
-  dasm_put(Dst, 2342, v_idx*sizeof(struct a2_obj), Dt4(->type), A2_TNIL, (maxpc-1), Dt4(->type), A2_TBOOL, (maxpc-2), Dt4([0].value.uinteger), (maxpc-2), (maxpc-1), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (lpc_chain[j_pc]-1), (maxpc-2));
-# 931 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2402, v_idx*sizeof(struct a2_obj), Dt4(->type), A2_TNIL, (maxpc-1), Dt4(->type), A2_TBOOL, (maxpc-2), Dt4([0].value.uinteger), (maxpc-2), (maxpc-1), (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (lpc_chain[j_pc]-1), (maxpc-2));
+# 949 "./src/a2_jitx64.desc"
 }
 static void _jit_jump(struct a2_vm* vm_p, ir _ir){
   size_t j_pc = _jump_pc(vm_p, _ir);
@@ -1382,8 +1403,8 @@ static void _jit_jump(struct a2_vm* vm_p, ir _ir){
 
   //| set_pc j_pc
   //| jmp =>(lpc_chain[j_pc]-1)
-  dasm_put(Dst, 2396, (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (lpc_chain[j_pc]-1));
-# 941 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2456, (unsigned int)((uintptr_t)j_pc), (unsigned int)(((uintptr_t)j_pc)>>32), (lpc_chain[j_pc]-1));
+# 959 "./src/a2_jitx64.desc"
 }
 
 //-----------------------------------------------------------------------
@@ -1396,8 +1417,8 @@ static void _njit_func(struct a2_vm* vm_p, inter_func func){
   //| write_pc
   //| callp func   // call interpreter function
   //| get_pc
-  dasm_put(Dst, 2404, (unsigned int)((uintptr_t)vm_p), (unsigned int)(((uintptr_t)vm_p)>>32), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)func), (unsigned int)(((uintptr_t)func)>>32), Dt1(->call_chain), Dt3([0].pc));
-# 953 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2464, (unsigned int)((uintptr_t)vm_p), (unsigned int)(((uintptr_t)vm_p)>>32), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)func), (unsigned int)(((uintptr_t)func)>>32), Dt1(->call_chain), Dt3([0].pc));
+# 971 "./src/a2_jitx64.desc"
 }
 
 static void _njit_vm_call(struct a2_vm* vm_p){
@@ -1432,14 +1453,14 @@ static void _njit_return(struct a2_vm* vm_p){
   //| cmp rax, NULL
   //| je =>(maxpc-2)
   //| dynasm_call __vm_return_function
-  dasm_put(Dst, 2432, Dt1(->call_chain), Dt3(->next), NULL, (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)callinfo_free), (unsigned int)(((uintptr_t)callinfo_free)>>32), (maxpc-1), Dt1(->call_chain), Dt3(->next), Dt3(->cls), NULL, (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)__vm_return_function), (unsigned int)(((uintptr_t)__vm_return_function)>>32));
-# 987 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2492, Dt1(->call_chain), Dt3(->next), NULL, (maxpc-1), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)callinfo_free), (unsigned int)(((uintptr_t)callinfo_free)>>32), (maxpc-1), Dt1(->call_chain), Dt3(->next), Dt3(->cls), NULL, (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)__vm_return_function), (unsigned int)(((uintptr_t)__vm_return_function)>>32));
+# 1005 "./src/a2_jitx64.desc"
   //| dynasm_ret_ax
   //|=>(maxpc-2):
   //| dynasm_call __vm_return_cfunction
   //| dynasm_ret_ax
-  dasm_put(Dst, 2523, (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)__vm_return_cfunction), (unsigned int)(((uintptr_t)__vm_return_cfunction)>>32));
-# 991 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2583, (maxpc-2), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)__vm_return_cfunction), (unsigned int)(((uintptr_t)__vm_return_cfunction)>>32));
+# 1009 "./src/a2_jitx64.desc"
 }
 
 static void _vm_or(struct a2_vm* vm_p){
@@ -1501,8 +1522,8 @@ static void _njit_call(struct a2_vm* vm_p){
   //| callp _njit_vm_call   // call interpreter function
   //| get_base_sf
   //| get_pc
-  dasm_put(Dst, 2583, (unsigned int)((uintptr_t)vm_p), (unsigned int)(((uintptr_t)vm_p)>>32), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_njit_vm_call), (unsigned int)(((uintptr_t)_njit_vm_call)>>32), Dt1(->call_chain), Dt3(->reg_stack.sf_idx), sizeof(struct a2_obj), Dt1(->stack_frame.sf_p), Dt1(->call_chain), Dt3([0].pc));
-# 1052 "./src/a2_jitx64.desc"
+  dasm_put(Dst, 2643, (unsigned int)((uintptr_t)vm_p), (unsigned int)(((uintptr_t)vm_p)>>32), Dt1(->call_chain), Dt3([0].pc), (unsigned int)((uintptr_t)_njit_vm_call), (unsigned int)(((uintptr_t)_njit_vm_call)>>32), Dt1(->call_chain), Dt3(->reg_stack.sf_idx), sizeof(struct a2_obj), Dt1(->stack_frame.sf_p), Dt1(->call_chain), Dt3([0].pc));
+# 1070 "./src/a2_jitx64.desc"
 }
 
 //-----------------------------------------------------------------------
@@ -1520,8 +1541,8 @@ static dynasm_func _jit_build(struct a2_vm* vm_p){
     
     if(0!=lpc_chain[i]){
       //|=>(lpc_chain[i]-1):
-      dasm_put(Dst, 1846, (lpc_chain[i]-1));
-# 1069 "./src/a2_jitx64.desc"
+      dasm_put(Dst, 1906, (lpc_chain[i]-1));
+# 1087 "./src/a2_jitx64.desc"
     }
 
     switch(ir_gop(_ir)){

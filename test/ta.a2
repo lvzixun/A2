@@ -1,3 +1,5 @@
 local al = [11, 22, 33]
 
-print(al[-11])
+
+
+print(al[-1])

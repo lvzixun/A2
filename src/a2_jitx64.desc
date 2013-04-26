@@ -23,6 +23,7 @@
 |.type R_ARRAY, struct a2_array, r11
 
 |.define OBJ_SIZE, sizeof(struct a2_obj)
+|.define OBJ_STEP, 4
 
 |// set a2_vm addr
 |.macro set_vm, p
@@ -491,12 +492,29 @@ static void _for_idx_error(struct a2_vm* vm_p){
 | mov R2, rax
 |.endmacro
 
+|.macro array_get, R_C, R_K, R2
+| cvttsd2si rax, R_K[0].value.number
+| cmp rax, 0
+| jl =>(maxpc-7) 
+| mov R_ARRAY, R_C
+| cmp rax, R_ARRAY->len
+| jge =>(maxpc-7)
+| mov R2, R_ARRAY->list
+//| imul rax, OBJ_SIZE
+| shl rax, OBJ_STEP
+| add R2, rax
+| jmp =>(maxpc-8)
+|=>(maxpc-7):
+| xor R2, R2
+|=>(maxpc-8):
+|.endmacro
+
 // get array with index
 |.macro get_array, R_C, R_K, R2
 | obj2c array, R_C, R_C
 //| obj2container a2_gcobj2array, R_C, R_C
-| container_get a2_array_get, R_C, R_K, R2
-//| array_get R_C, R_K, R2
+//| container_get a2_array_get, R_C, R_K, R2
+| array_get R_C, R_K, R2
 |.endmacro
 
 // get map with index

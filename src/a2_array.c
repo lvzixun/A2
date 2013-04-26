@@ -5,12 +5,6 @@
 
 #define DEF_ARRAY_SIZE	32
 
-struct a2_array{
-	size_t len;
-	size_t size;
-	struct a2_obj* list;
-};
-
 
 struct a2_array* a2_array_new(){
 	struct a2_array* ret = (struct a2_array*)malloc(sizeof(*ret));
