@@ -44,6 +44,18 @@ php    4.8107 s
 ruby   15 s
 ```
 
+### JIT
+JIT use [dynasm](http://luajit.org/dynasm_features.html) implementation. [a2_jitx64.desc](https://github.com/lvzixun/A2/blob/master/src/a2_jitx64.desc) is source code. 
+
+the jit Performance testing
+```
+A2(not jit)   1.7143s
+A2(with jit)  0.4560s
+```
+performance improvement of 73%, is 3.7 times that of not jit.
+
+you can open `#define A2_JIT` at `a2_conf.h`, jit currently only supports x64 posix.
+
 ## Question?
 send me an email: lvzixun@gmail.com
 
