@@ -71,6 +71,11 @@
 | mov R1, SF_CIBASE; add R1, idx*OBJ_SIZE
 |.endmacro
 
+|.macro sf_idx_obj, sf_idx, R1
+| mov R1, A2_VM->stack_frame.sf_p
+| add R1, sf_idx*OBJ_SIZE
+|.endmacro
+
 |// copy object
 |.macro copy_obj, D, S, R1, R2
 |	mov R1, S.type; mov64 R2, (uintptr_t)(S.value.point)
@@ -93,6 +98,11 @@
 
 |.macro reg_obj2sf, idx, R1
 | copy_Robj SF_CIBASE[idx], R1[0]
+|.endmacro
+
+|.macro reg_obj2sf_idx, sf_idx, R1, R2
+| sf_idx_obj sf_idx, R2
+| copy_Robj R2[0], R1[0]
 |.endmacro
 
 // set nil for a2 object
@@ -399,7 +409,7 @@ static void _jit_getupvalue(struct a2_vm* vm_p, ir _ir){
   | mov eax, _uv->type
   | cmp eax, uv_stack
   | jne =>(maxpc-1)
-  | sf_obj _uv->v.sf_idx, R_OBJ1
+  | sf_idx_obj _uv->v.sf_idx, R_OBJ1
   | reg_obj2sf des_idx, R_OBJ1      // internal copy from stack frame
   | jmp =>(maxpc-2)
   |=>(maxpc-1):
@@ -427,7 +437,7 @@ static void _jit_setupvalue(struct a2_vm* vm_p, ir _ir){
   |=>(maxpc-1):
   | cmp eax, uv_stack
   | jne =>(maxpc-2)
-  | reg_obj2sf _uv_d->v.sf_idx, R_OBJ1 // set stack frame value   
+  | reg_obj2sf_idx _uv_d->v.sf_idx, R_OBJ1, R_OBJ2 // set stack frame value   
   |=>(maxpc-2):
   | inc_pc
 }

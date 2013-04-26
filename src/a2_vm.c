@@ -301,7 +301,9 @@ static int a2_vm_run(struct a2_vm* vm_p){
 	}
 
 	int ret =  xcls_call_jit(curr_cls->xcls_p);
+	#ifdef _DEBUG_
 	printf("call jit success!\n");
+	#endif
 	return ret;
 }
 

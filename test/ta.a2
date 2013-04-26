@@ -1,5 +1,13 @@
-local al = [11, 22, 33]
 
+local a = 1123
+function func(b, c){
+	return function (){
+	    b = 4
+		print(b+1, c+1)
+	}
+}
 
+local f = func(55, 66)
 
-print(al[-1])
+f()
+f()
