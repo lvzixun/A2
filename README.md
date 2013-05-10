@@ -1,6 +1,5 @@
-
 ## A2 alex-2.0
-A interpreter is Based on the register the virtual machine. Similar lua and javascript. 
+A interpreter is Based on the register the virtual machine. Similar to the lua and javascript. 
 
 ## Make it
 ```
