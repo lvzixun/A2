@@ -433,11 +433,24 @@ static inline int add_lsymbol(struct a2_ir* ir_p, struct a2_obj* k, size_t root)
 	struct a2_kv kv = {
 		k, &v
 	};
-	if(a2_map_query(curr_sym, k)){
-		ir_error(root, "the varable is volatile.");
+
+	struct a2_obj* vp = NULL;
+	if(NULL!=(vp=a2_map_query(curr_sym, k))){
+		assert(obj_t(vp)==_A2_TUINTEGER);
+		switch(v2vt(obj_vX(vp, uinteger))){
+			case var_local:
+				ir_error(root, "the varable is volatile.");
+				break;
+			case var_upvalue:  // if find upvalue, will overload upvalue
+				*vp = v;
+				break;
+			default:
+				assert(0);
+		}
 	}else{
 		a2_map_add(curr_sym, &kv);
 	}
+	
 	return _add_arg(ir_p);
 }
 

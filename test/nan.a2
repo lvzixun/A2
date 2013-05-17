@@ -1,8 +1,14 @@
 
-
-local count = 5
-
-
-for(i=0, 5, 1){
-	print(i)
+function foo(){
+	local a= 1123
+	return function (){
+		a = a+44
+		print(a)
+		local a = 4456
+		a = a+55
+		print(a)
+	}
 }
+
+local f = foo()
+f()
