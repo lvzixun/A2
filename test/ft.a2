@@ -1,0 +1,9 @@
+functon func (){
+	local a = 44 
+	functon func1(){
+		lcoal a = 11
+		functon func2(){
+			print(a)
+		}
+	}
+}

@@ -26,7 +26,7 @@
 
 #define callinfo_sfi(ci, idx)	(assert((ci) && (idx)<(ci)->reg_stack.len), (ci)->reg_stack.sf_idx+(idx))
 #define sf_reg(sf_idx)			(assert((sf_idx)<vm_p->stack_frame.cap), &(vm_p->stack_frame.sf_p[sf_idx]))				
-#define callinfo_sfreg(ci, idx)	(&(vm_p->stack_frame.sf_p[callinfo_sfi(ci, idx)]))
+#define callinfo_sfreg(ci, idx)	(assert((idx)<(ci)->reg_stack.len), &(vm_p->stack_frame.sf_p[callinfo_sfi(ci, idx)]))
 
 #define ci_iscls(ci)	((ci)->cls!=NULL)
 
@@ -114,6 +114,16 @@ void a2_vm_free(struct a2_vm* vm_p){
 
 inline size_t vm_callinfo_sfi(struct vm_callinfo* ci, size_t reg_idx){
 	return callinfo_sfi(ci, reg_idx);
+}
+
+inline size_t vm_callinfo_regi(struct vm_callinfo* ci, size_t sf_idx){
+	assert(sf_idx >= ci->reg_stack.sf_idx && \
+		sf_idx <(ci->reg_stack.len + ci->reg_stack.sf_idx));
+	return sf_idx - ci->reg_stack.sf_idx;
+}
+
+inline  struct vm_callinfo* vm_curr_callinfo(struct a2_vm* vm_p){
+	return curr_ci;
 }
 
 inline struct a2_closure* vm_callinfo_cls(struct vm_callinfo* ci){
@@ -965,6 +975,9 @@ static inline int __vm_return_function(struct a2_vm* vm_p){
 	struct vm_callinfo* call_ci = curr_ci->next;
 	int i, j, ret;
 
+	// set uped value
+	a2_closure_return(curr_cls, vm_p->env_p);
+
 	// set return
 	for(i=ir_ga(curr_ir), j=curr_ci->retbegin; 
 		i<ir_ga(curr_ir)+ir_gbx(curr_ir) && j<curr_ci->retbegin+curr_ci->retnumber;
@@ -980,7 +993,6 @@ static inline int __vm_return_function(struct a2_vm* vm_p){
 	}
 
 	ret = curr_ci->retnumber;
-	a2_closure_return(curr_cls, vm_p->env_p);
 	callinfo_free(vm_p);
 	return ret;
 }

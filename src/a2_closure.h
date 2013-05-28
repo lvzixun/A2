@@ -23,6 +23,12 @@ struct a2_upvalue{
 struct a2_closure{
 	struct a2_xclosure* xcls_p;
 
+	// uped value stack frame  gc array
+	struct{
+		struct a2_gcobj** ud_gc_p;
+		int size;
+	}ud_sf_gc;
+
 	// uped chain
 	int ud_size;
 	int ud_cap;

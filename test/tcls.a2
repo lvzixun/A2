@@ -1,0 +1,21 @@
+
+
+function func(){
+	local a = 1123
+	local b = function (){
+		print(a)
+		a = 'xxxx'
+	}
+
+	local c = function (){
+		print(a)
+		a = 'bbbbb'
+	}
+	return b, c
+}
+
+
+a, b, c = func()
+
+a()
+b()

@@ -20,6 +20,10 @@ struct a2_closure* a2_closure_new(struct vm_callinfo* ci, int idx){
 	cls->uv_size = _s;
 	cls->xcls_p = xcls_p;
 
+	//init uped value stack frame
+	cls->ud_sf_gc.size = a2_closure_regscount(cls);
+	cls->ud_sf_gc.ud_gc_p = (struct a2_gcobj**)calloc(cls->ud_sf_gc.size, sizeof(struct a2_gcobj*));
+
 	// init uped
 	cls->ud_size = DEF_UD_SIZE;
 	cls->ud_cap = 0;
@@ -65,6 +69,9 @@ struct a2_closure* a2_closure_newrun(struct a2_xclosure* xcls){
 	xcls_add_refs(xcls);
 	cls->xcls_p = xcls;
 
+	cls->ud_sf_gc.ud_gc_p = NULL;
+	cls->ud_sf_gc.size = 0;
+
 	// init upvalue
 	cls->uv_size = 0;
 	cls->uped_chain = NULL;
@@ -82,6 +89,8 @@ void a2_closure_free(struct a2_closure* cls){
 	xcls_del_refs(cls->xcls_p);
 	if(cls->uped_chain)
 		free(cls->uped_chain);
+	if(cls->ud_sf_gc.ud_gc_p)
+		free(cls->ud_sf_gc.ud_gc_p);
 	free(cls);
 }
 
@@ -89,16 +98,26 @@ void a2_closure_free(struct a2_closure* cls){
 void a2_closure_return(struct a2_closure* cls, struct a2_env* env_p){
 	assert(cls);
 	int i;
+	struct vm_callinfo* curr_ci = vm_curr_callinfo(a2_envvm(env_p));
+
 	for(i=0; i<cls->ud_cap; i++){
+		assert(cls->ud_sf_gc.ud_gc_p && cls->ud_sf_gc.size>0);
 		assert(cls->uped_chain[i]);
 		assert(cls->uped_chain[i]->type == uv_stack);
+
 		cls->uped_chain[i]->type = uv_gc;
 		cls->uped_chain[i]->cls = NULL;
 		
-		struct a2_obj* obj = a2_sfidx(env_p, cls->uped_chain[i]->v.sf_idx);
-		struct a2_gcobj* _gcobj = a2_upvalue2gcobj(obj);
-		cls->uped_chain[i]->v.uv_obj = _gcobj;
-		a2_gcadd(env_p, _gcobj);
+		size_t idx = vm_callinfo_regi(curr_ci, cls->uped_chain[i]->v.sf_idx);
+		assert(idx< cls->ud_sf_gc.size);
+		struct a2_gcobj** _gcobj = &(cls->ud_sf_gc.ud_gc_p[idx]);
+
+		if(*_gcobj == NULL){
+			struct a2_obj* obj = a2_sfidx(env_p, cls->uped_chain[i]->v.sf_idx);
+			*_gcobj = a2_upvalue2gcobj(obj);
+			a2_gcadd(env_p, (*_gcobj));
+		}
+		cls->uped_chain[i]->v.uv_obj = *_gcobj;
 	}
 	cls->ud_cap = 0;
 }

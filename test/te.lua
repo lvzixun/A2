@@ -1,15 +1,11 @@
-
-function func(a, b)
-	return function ()
-		return function ()
-			print(a, b)
-			a, b = 11, 22
-		end
+function func()
+	local a = 1123
+	local fo1 = function ()
+		a = 4456
 	end
+
+	fo1()
+	print(a)
 end
 
-local f = func(1, 2)
-
-f()()
-
-f()()
+func()
