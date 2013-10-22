@@ -175,7 +175,7 @@ void obj_dump(struct a2_obj* obj){
 			printf("%.14g", obj_vNum(obj));
 			break;
 		default:
-			printf("<null>");
+			printf("<null> type: %d\n", obj_t(obj));
 			break;
 	}
 }

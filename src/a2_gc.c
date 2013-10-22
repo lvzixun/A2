@@ -165,7 +165,6 @@ static inline void _gc_mark_array(struct a2_gc* gc_p, struct a2_gcobj* gcobj, en
 
 	while(NULL != (vp=a2_array_next(array_p, &k))){
 		a2_gc_markit(gc_p, vp, m);
-		k = *vp;
 	}
 }
 
@@ -294,7 +293,7 @@ void a2_gcobj_nilfree(struct a2_gcobj* gcobj){
 }
 
 inline char* a2_gcobj2string(struct a2_gcobj* gcobj){
-	assert(gcobj && gcobj->type==A2_TSTRING);
+	assert(gcobj->type==A2_TSTRING);
 	return gcobj->value.str;
 }
 

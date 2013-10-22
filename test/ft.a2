@@ -1,9 +1,18 @@
-functon func (){
-	local a = 44 
-	functon func1(){
-		lcoal a = 11
-		functon func2(){
-			print(a)
+
+
+function func(){
+	local  a= 1123
+	function foo1(){
+		function foo2(){
+			function foo3(){
+				a = 5467
+				print(a)
+			}
+			foo3()
 		}
+		foo2()
 	}
+	foo1()	
 }
+
+func()

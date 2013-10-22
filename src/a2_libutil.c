@@ -21,6 +21,7 @@ int a2_liblen(struct a2_state* state);
 int a2_libdostring(struct a2_state* state);
 int a2_libkiss(struct a2_state* state);
 int a2_libsystem(struct a2_state* state);
+int a2_librandom(struct a2_state* state);
 
 void a2_openutil(struct a2_state* state){
 	struct kf _reg_func[] = {
@@ -30,6 +31,7 @@ void a2_openutil(struct a2_state* state){
 		{"type", a2_libtype},
 		{"len", a2_liblen},
 		{"eve", a2_libdostring},
+		{"random", a2_librandom},
 		{"kiss", a2_libkiss},
 		{"os", a2_libsystem}
 	};
@@ -52,6 +54,17 @@ int a2_libpcall(struct a2_state* state){
 	return _args-args;
 }
 */
+
+int a2_librandom(struct a2_state* state){
+	int args = a2_top(state);
+	if(args == 0){
+		a2_pushnumber(state, (a2_number)rand());
+	}else{
+		a2_number num = a2_tonumber(state, 0);
+		a2_pushnumber(state, rand()%((int)num));
+	}
+	return 1;
+}
 
 int a2_libsystem(struct a2_state* state){
 	int args = a2_top(state);

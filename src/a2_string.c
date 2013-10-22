@@ -82,6 +82,7 @@ void a2_string_clear(char* a2_s){
 	if(a2_s==NULL)
 		return;
 	str_head(a2_s)->len = 0;
+	a2_s[0] = '\0';
 }
 
 
