@@ -8,6 +8,7 @@
 #include "a2_map.h"
 #include "a2_string.h"
 
+#include <string.h>
 #include <stdio.h>
 
 
@@ -59,6 +60,7 @@ struct  a2_vm{
 		size_t size;
 	}stack_frame;
 	struct vm_callinfo* call_chain;
+	struct vm_callinfo* call_tail;
 };
 
 
@@ -98,6 +100,7 @@ struct a2_vm* a2_vm_new(struct a2_env* env_p){
 	struct a2_vm* vm_p = (struct a2_vm*)malloc(sizeof(*vm_p));
 	vm_p->env_p = env_p;
 	vm_p->call_chain = NULL;
+	vm_p->call_tail = NULL;
 
 	vm_p->stack_frame.sf_p = (struct a2_obj*)malloc(sizeof(struct a2_obj)*DEF_STACK_FRAME_SIZE);
 	vm_p->stack_frame.cap = 0;
@@ -107,6 +110,11 @@ struct a2_vm* a2_vm_new(struct a2_env* env_p){
 
 
 void a2_vm_free(struct a2_vm* vm_p){
+	while(vm_p->call_tail){
+		struct vm_callinfo* _p = vm_p->call_tail;
+		vm_p->call_tail = _p->next;
+		free(_p);
+	}
 	free(vm_p->stack_frame.sf_p);
 	free(vm_p);
 }
@@ -171,18 +179,26 @@ static inline void down_stack_frame(struct a2_vm* vm_p, int size){
 
 static inline void callinfo_new(struct a2_vm* vm_p, struct a2_closure* cls, int retbegin, int retnumber){
 	assert(vm_p);
-	struct vm_callinfo* ci = (struct vm_callinfo*)malloc(sizeof(*ci));
+	struct vm_callinfo* ci = NULL;
+	if(vm_p->call_chain && vm_p->call_chain->front){
+		ci = vm_p->call_chain->front;
+	}else{
+		assert(vm_p->call_chain == vm_p->call_tail);
+		ci = (struct vm_callinfo*)malloc(sizeof(*ci));
+		vm_p->call_tail = ci;
+		ci->next = vm_p->call_chain;
+		if(vm_p->call_chain)
+			vm_p->call_chain->front = ci;
+		ci->front = NULL;
+	}
+
 	ci->cls = cls;
 	// set closure stack frame
 	ci->reg_stack.len = (cls)?(a2_closure_regscount(cls)):(0);
 	ci->reg_stack.sf_idx = up_stack_frame(vm_p, ci->reg_stack.len);
 	ci->pc=0;
-	ci->front = NULL;
 	ci->retbegin = retbegin;
 	ci->retnumber = retnumber;
-	ci->next = vm_p->call_chain;
-	if(vm_p->call_chain)
-		vm_p->call_chain->front = ci;
 	vm_p->call_chain = ci;
 }
 
@@ -190,9 +206,6 @@ static inline void callinfo_free(struct a2_vm* vm_p){
 	assert(curr_ci);
 	struct vm_callinfo* b = curr_ci->next;
 	down_stack_frame(vm_p, curr_ci->reg_stack.len);
-	free(curr_ci);
-	if(b)
-		b->front = NULL;
 	curr_ci = b;
 }
 
