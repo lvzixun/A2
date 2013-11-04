@@ -10,7 +10,7 @@ make
 # release modle: CFLAGS += -O2 -g -Wall   
 ```
 
-## How do use?
+## How to use?
 run `make` ,you will get a liba2.a library. you can write bound program by youself. or use `test_a2` program interpreted scripts file at `./test/test_a2`.
 
 ## Performance Comparison
