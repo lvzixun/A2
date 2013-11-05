@@ -23,7 +23,7 @@ inline size_t a2_string_len(char* a2_s){
 	return str_head(a2_s)->len;
 }
 
-inline char* a2_string_append(char* a2_s, char c){
+char* a2_string_append(char* a2_s, char c){
 	size_t len =0;
 	check_null(a2_s, 0);
 	if(!c)	return a2_s;
