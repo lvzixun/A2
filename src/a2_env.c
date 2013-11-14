@@ -29,6 +29,8 @@ struct a2_env{
 	struct a2_map* g_str;			
 	// global table
 	struct a2_map* g_var;
+	// register table
+	struct a2_map* reg_var;
 
 	// c <->a2 stack
 	struct obj_stack cstack;
@@ -44,12 +46,15 @@ struct a2_env{
 	struct a2_obj _forge_obj;
 	struct a2_gcobj* _forge_gcobj;			
 };
+
 static struct a2_gcobj* _a2_env_addstrobj(struct a2_env* env_p, char* a2_s, int is_copy);
+static inline struct a2_obj* _set_envvar(struct a2_env* env_p, struct a2_map* g_map, struct a2_obj* k, struct a2_obj* v);
 
 struct a2_env* a2_env_new(struct a2_state* state){
 	struct a2_env* ret = (struct a2_env*)malloc(sizeof(*ret));
 	ret->g_str = a2_map_new();
 	ret->g_var = a2_map_new();
+	ret->reg_var = a2_map_new();
 	ret->state = state;
 	ret->bottom = 0;
 	ret->jp = NULL;
@@ -73,6 +78,7 @@ void a2_env_free(struct a2_env* env_p){
 	a2_vm_free(env_p->vm_p);
 	a2_map_free(env_p->g_str);
 	a2_map_free(env_p->g_var);
+	a2_map_free(env_p->reg_var);
 	a2_gcobj_nilfree(env_p->_forge_gcobj);
 	free(env_p);
 }
@@ -215,8 +221,20 @@ inline struct a2_obj* a2_get_envglobal(struct a2_env* env_p, struct a2_obj* k){
 	return a2_map_query(env_p->g_var, k);
 }
 
-inline struct a2_obj* a2_set_envglobal(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v){
-	struct a2_obj* ret = a2_map_query(env_p->g_var, k);
+inline struct a2_obj* a2_set_envglobal(struct a2_env *env_p, struct a2_obj* k, struct a2_obj* v){
+	return _set_envvar(env_p, env_p->g_var, k, v);
+}
+
+inline struct a2_obj* a2_get_envreg(struct a2_env* env_p, struct a2_obj* k){
+	return a2_map_query(env_p->reg_var, k);
+}
+
+inline struct a2_obj* a2_set_envreg(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v){
+	return _set_envvar(env_p, env_p->reg_var, k, v);
+}
+
+static inline struct a2_obj* _set_envvar(struct a2_env* env_p, struct a2_map* g_map, struct a2_obj* k, struct a2_obj* v){
+	struct a2_obj* ret = a2_map_query(g_map, k);
 	
 	a2_gc_markit(env_p->gc_p, k, mark_blue);
 
@@ -229,7 +247,7 @@ inline struct a2_obj* a2_set_envglobal(struct a2_env* env_p, struct a2_obj* k, s
 		struct a2_kv kv = {
 			k, v
 		};
-		a2_map_add(env_p->g_var, &kv);
+		a2_map_add(g_map, &kv);
 		return v;
 	}
 	

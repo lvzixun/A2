@@ -129,7 +129,7 @@ int a2_obj_cmp(struct a2_obj* obj1, struct a2_obj* obj2){
 			memcmp(a2_obj_bytes(obj1), a2_obj_bytes(obj2), a2_obj_size(obj1))==0)?(a2_true):(a2_fail); 
 }
 
-inline const char* a2_type2string(int type){
+const char* a2_type2string(int type){
 	assert(type>=0 && type<sizeof(type_info)/sizeof(type_info[0]));
 	return type_info[type];
 }

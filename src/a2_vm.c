@@ -877,6 +877,7 @@ static inline void __vm_call_cfunction(struct a2_vm* vm_p, struct a2_obj* _func)
 	// call c function
 	callinfo_new(vm_p, NULL, 0, 0);
 	int ret = obj_vX(_func, cfunction)(a2_env2state(vm_p->env_p));
+	ret = (ret<0)?(0):(ret);
 	callinfo_free(vm_p);
 
 	int size = a2_gettop(vm_p->env_p)-a2_getbottom(vm_p->env_p);

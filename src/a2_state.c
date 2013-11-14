@@ -26,6 +26,7 @@ A2_API void a2_close(struct a2_state* state){
 	free(state);
 }
 
+
 A2_API int a2_loadfile(struct a2_state* state, const char* file){
 	struct a2_io* io_p = a2_io_open(state->env_p, file);
 	int ret = a2_env_load(state->env_p,io_p);

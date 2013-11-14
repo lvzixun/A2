@@ -1,7 +1,3 @@
-
-print('kiss')
-
-eve('a = 123')
-
-print('goddess', a)
-
+print('stage 1')
+load('file')
+print('stage 2')

@@ -22,6 +22,8 @@ int a2_libdostring(struct a2_state* state);
 int a2_libkiss(struct a2_state* state);
 int a2_libsystem(struct a2_state* state);
 int a2_librandom(struct a2_state* state);
+int a2_libdofile(struct a2_state* state);
+int a2_librequire(struct a2_state* state);
 
 void a2_openutil(struct a2_state* state){
 	struct kf _reg_func[] = {
@@ -31,6 +33,8 @@ void a2_openutil(struct a2_state* state){
 		{"type", a2_libtype},
 		{"len", a2_liblen},
 		{"eve", a2_libdostring},
+		{"load", a2_libdofile},
+		{"require", a2_librequire},
 		{"random", a2_librandom},
 		{"kiss", a2_libkiss},
 		{"os", a2_libsystem}
@@ -105,10 +109,27 @@ int a2_libdostring(struct a2_state* state){
 	if(args==0 || a2_type(state, 0)!=TSTRING)
 		a2_err(state, "the arg must string type.");
 	const char* str = a2_tostring(state, 0);
+	int top = a2_top(state);
 	if(a2_dostring(state, str, strlen(str))){
-		printf("%s\n", a2_tostring(state, a2_top(state)-1));
+		a2_err(state, "%s\n", a2_tostring(state, a2_top(state)-1));
+		return 0;
+	}else{
+		return a2_top(state) - top;
 	}
-	return 0;
+}
+
+int a2_libdofile(struct a2_state* state){
+	int args = a2_top(state);
+	if(args==0 || a2_type(state, 0)!=TSTRING)
+		a2_err(state, "the arg must string type.");
+	const char* filename = a2_tostring(state, 0);
+	int top = a2_top(state);
+	if(a2_loadfile(state, filename)){
+		a2_err(state, "%s\n", a2_tostring(state, a2_top(state)-1));
+		return 0;
+	}else{
+		return a2_top(state) - top;
+	}
 }
 
 // add

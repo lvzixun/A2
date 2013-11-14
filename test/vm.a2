@@ -2,7 +2,6 @@
 local a=[]
 local count = 5000
 
-print('---')
 for(i=0, count, 1){
 	add(a, count-i)
 }

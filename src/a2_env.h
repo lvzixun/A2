@@ -30,6 +30,11 @@ inline struct a2_obj* a2_getcstack(struct a2_env* env_p, int idx);
 inline struct a2_obj* a2_get_envglobal(struct a2_env* env_p, struct a2_obj* k);
 inline struct a2_obj* a2_set_envglobal(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v);
 
+// register map
+inline struct a2_obj* a2_get_envreg(struct a2_env* env_p, struct a2_obj* k);
+inline struct a2_obj* a2_set_envreg(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v);
+
+
 // global string
 inline struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s);
 inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str);
