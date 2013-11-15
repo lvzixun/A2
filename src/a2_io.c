@@ -30,7 +30,7 @@ struct a2_io*  a2_io_open(struct a2_env* env_p, const char* file_name){
 	check_null(file_name, NULL);
 	fp  = fopen(file_name, "rb");
 	if(fp == NULL) {
-		a2_error(env_p, e_io_error, "[io error]: the file is null!\n");
+		a2_error(env_p, e_io_error, "[io error]: the file\"%s\" is null!\n", file_name);
 		return NULL;
 	}
 	ret = (struct a2_io*)malloc(sizeof(*ret));

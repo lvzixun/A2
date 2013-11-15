@@ -16,3 +16,5 @@ local a = {
 	},
 	key3= 55
 }
+
+print(a.key1, a.key2, a.map, a.map.array, a.func)

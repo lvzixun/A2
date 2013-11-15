@@ -1308,12 +1308,6 @@ static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des){
 	assert(node_t(root)==map_node);
 	size_t kv_node = node_p(root)->childs[0];
 
-	// generate a2_obj add map to gc chain
-	struct a2_gcobj* _mg = 	a2_map2gcobj(a2_map_new());
-	a2_gcadd(ir_p->env_p, _mg);
-	struct a2_obj obj;
-	obj_setX(&obj, A2_TMAP, obj, _mg);
-
 	int _b = curr_arg, count=0;
 	xclosure_add_ir(curr_xcls, ir_abx(NEWMAP, des, 0), node_line(root));
 	int _kv_idx = curr_arg;
@@ -1361,12 +1355,6 @@ static inline int a2_ir_map(struct a2_ir* ir_p, size_t root, int des){
 // parse array
 static inline int a2_ir_array(struct a2_ir* ir_p, size_t root, int des){
 	assert(node_t(root)==array_node);
-	
-	// generate a2_obj, add array to gc chain
-	struct a2_gcobj* _ag = a2_array2gcobj(a2_array_new());
-	a2_gcadd(ir_p->env_p, _ag);
-	struct a2_obj obj;
-	obj_setX(&obj, A2_TARRAY, obj, _ag);
 
 	int _b = curr_arg;
 	xclosure_add_ir(curr_xcls, ir_abx(NEWLIST, des, 0), node_line(root));

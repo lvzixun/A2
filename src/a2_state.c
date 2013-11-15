@@ -11,6 +11,8 @@
 #include "a2_vm.h"
 #include "a2_string.h"
 
+#include <string.h>
+
 struct a2_state{
 	struct a2_env* env_p;
 };
@@ -115,6 +117,11 @@ A2_API inline void* a2_topoint(struct a2_state* state, int idx){
 	}
 }
 
+A2_API inline void a2_pushnil(struct a2_state* state){
+	struct a2_obj obj = a2_nil2obj();
+	a2_pushstack(state->env_p, &obj);
+}
+
 A2_API inline void a2_pushstring(struct a2_state* state, char* str){
 	struct a2_obj obj = a2_env_addstr(state->env_p, str);
 	a2_pushstack(state->env_p, &obj);
@@ -189,7 +196,7 @@ A2_API inline void a2_reg(struct a2_state* state, char* func_name, a2_cfunction 
 
 // get global
 A2_API inline void a2_getglobal(struct a2_state* state){
-	struct a2_obj* k = a2_getcstack(state->env_p, a2_gettop(state->env_p)-1);
+	struct a2_obj* k = a2_getcstack(state->env_p, a2_top(state)-1);
 	check_key(k);
 	struct a2_obj* v = a2_get_envglobal(state->env_p, k);
 	if(v==NULL)
@@ -207,6 +214,28 @@ A2_API inline void a2_setglobal(struct a2_state* state){
 	check_key(k);
 	a2_set_envglobal(state->env_p, k, v);
 	a2_topset(state, top-1);
+}
+
+A2_API inline void a2_require(struct a2_state* state){
+	struct a2_obj* k = a2_getcstack(state->env_p, a2_top(state)-1);
+	check_key(k);
+	struct a2_obj* v = a2_get_envreg(state->env_p, k);
+	if(v) // return obj
+		a2_pushstack(state->env_p, v);
+	else{ // load obj
+		const char* name = a2_gcobj2string(obj_vX(k, obj));
+		int len = strlen(name);
+		char tmp[len+8];
+		memcpy(tmp, name, len);
+		memcpy(tmp+len, ".a2", 4);
+		int top = a2_top(state);
+		a2_loadfile(state, tmp);
+		if(a2_top(state)>top)
+			a2_pushvalue(state, top);
+		else
+			a2_pushnil(state);
+		a2_set_envreg(state->env_p, k, a2_getcstack(state->env_p, top));
+	}
 }
 
 // set map

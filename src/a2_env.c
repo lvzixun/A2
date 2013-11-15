@@ -124,6 +124,8 @@ int a2_env_load(struct a2_env* env_p, struct a2_io* stream){
 		// load it
 		ret = a2_vm_load(env_p->vm_p, cls);
 		a2_gc_markit(env_p->gc_p, &obj, mark_white);
+	}else{
+		a2_gc_open(env_p->gc_p);
 	}
 
 	return ret;
@@ -173,6 +175,24 @@ inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str){
 	return ret;
 }
 
+static inline void _env_gcmark(struct a2_env* env_p){
+	struct a2_obj k = a2_nil2obj();
+	struct a2_obj* vp = NULL;
+
+	// mark global var
+	while( NULL != (vp=a2_map_next(env_p->g_var, &k))){
+		a2_gc_markit(env_p->gc_p, vp, mark_black);
+		a2_gc_markit(env_p->gc_p, &k, mark_black);
+	}
+
+	// mark  register var
+	k = a2_nil2obj();
+	while(NULL != (vp=a2_map_next(env_p->reg_var, &k))){
+		a2_gc_markit(env_p->gc_p, vp, mark_black);
+		a2_gc_markit(env_p->gc_p, &k, mark_black);	
+	}
+}
+
 inline void a2_pushstack(struct a2_env* env_p, struct a2_obj* v){
 	obj_stack_add(&env_p->cstack, v);
 }
@@ -214,6 +234,7 @@ inline struct a2_obj* a2_getcstk_top(struct a2_env* env_p){
 }
 
 inline void a2_vmgc(struct a2_env* env_p){
+	_env_gcmark(env_p);
 	a2_vm_gc(env_p->vm_p);
 }
 
@@ -235,13 +256,6 @@ inline struct a2_obj* a2_set_envreg(struct a2_env* env_p, struct a2_obj* k, stru
 
 static inline struct a2_obj* _set_envvar(struct a2_env* env_p, struct a2_map* g_map, struct a2_obj* k, struct a2_obj* v){
 	struct a2_obj* ret = a2_map_query(g_map, k);
-	
-	a2_gc_markit(env_p->gc_p, k, mark_blue);
-
-	// mark value
-	if(is_gcobj(v)){
-		a2_gc_markit(env_p->gc_p, v, mark_blue);
-	}
 
 	if(ret==NULL){
 		struct a2_kv kv = {
@@ -250,11 +264,7 @@ static inline struct a2_obj* _set_envvar(struct a2_env* env_p, struct a2_map* g_
 		a2_map_add(g_map, &kv);
 		return v;
 	}
-	
-	//  clear old value
-	if(is_gcobj(ret)){
-		a2_gc_markit(env_p->gc_p, ret, mark_white);
-	}
+
 	*ret = *v;
 	return v;
 }

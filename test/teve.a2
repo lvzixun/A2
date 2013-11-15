@@ -1,3 +1,6 @@
-print('stage 1')
-load('file')
-print('stage 2')
+local b, d, g
+b, d, g = require('treq')
+print(' seek her?')
+
+local a = eve(' local c = require(\'treq\')   print(\'@eve\', c.a) return c')
+print(a.a, b.a, d, g)

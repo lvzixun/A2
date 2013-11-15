@@ -1,0 +1,4 @@
+print('require treq!!!!')
+return {
+  a = 1123
+}, 44, 'ggg'

@@ -52,4 +52,6 @@ A2_API inline void a2_setarray(struct a2_state* state);
 A2_API inline void a2_getarray(struct a2_state* state);
 A2_API inline void a2_addarray(struct a2_state* state);
 
+A2_API inline void a2_require(struct a2_state* state);
+
 #endif
