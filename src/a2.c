@@ -23,7 +23,8 @@ static void _command(struct a2_state* state){
     char* str = NULL;
     if( NULL != (str = readline(">")) ){
       if(a2_dostring(state, str, strlen(str)))
-        printf("%s\n", a2_tostring(state, a2_top(state)-1));
+        printf("%s", a2_tostring(state, a2_top(state)-1));
+      add_history(str);
       free(str);
     }
   }

@@ -39,7 +39,8 @@ A2_T_OBJ = $(foreach s, $(_A2_T_OBJ), .$(N)src$(N)$(s))
 TEST_OBJ = .$(N)test$(N)test_a2.o
 TEST =  $(foreach s, $(TEST_OBJ), $(basename $(s)))
 
-OBJ = $(A2_OBJ) $(TEST_OBJ) $(A2_T_OBJ) $(A2_T_OBJ)
+OBJ = $(A2_OBJ) $(TEST_OBJ) $(A2_T_OBJ)
+OBJ_C = $(foreach s, $(OBJ), $(basename $(s)).c)
 
 all: $(OBJ) $(A2_STATIC_LIB) $(TEST) $(A2)
 
@@ -55,7 +56,7 @@ $(TEST): $(TEST_OBJ)
 $(A2_STATIC_LIB): $(A2_OBJ)
 	$(AR) $(A2_STATIC_LIB) $?
 
-$(OBJ): 
+$(OBJ): $(OBJ_C)
 	$(CC) $(CFLAGS) -c -o $@ $(basename $@).c
 
 .PHONY : clean
