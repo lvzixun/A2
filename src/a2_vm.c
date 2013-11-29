@@ -61,6 +61,7 @@ struct  a2_vm{
 	}stack_frame;
 	struct vm_callinfo* call_chain;
 	struct vm_callinfo* call_tail;
+	struct vm_callinfo* call_head;
 };
 
 
@@ -101,6 +102,7 @@ struct a2_vm* a2_vm_new(struct a2_env* env_p){
 	vm_p->env_p = env_p;
 	vm_p->call_chain = NULL;
 	vm_p->call_tail = NULL;
+	vm_p->call_head = NULL;
 
 	vm_p->stack_frame.sf_p = (struct a2_obj*)malloc(sizeof(struct a2_obj)*DEF_STACK_FRAME_SIZE);
 	vm_p->stack_frame.cap = 0;
@@ -180,11 +182,14 @@ static inline void down_stack_frame(struct a2_vm* vm_p, int size){
 static inline void callinfo_new(struct a2_vm* vm_p, struct a2_closure* cls, int retbegin, int retnumber){
 	assert(vm_p);
 	struct vm_callinfo* ci = NULL;
-	if(vm_p->call_chain && vm_p->call_chain->front){
+	if(vm_p->call_chain == NULL && vm_p->call_head){
+		ci = vm_p->call_head;
+	}else if(vm_p->call_chain && vm_p->call_chain->front){
 		ci = vm_p->call_chain->front;
 	}else{
 		assert(vm_p->call_chain == vm_p->call_tail);
 		ci = (struct vm_callinfo*)malloc(sizeof(*ci));
+		if(vm_p->call_head == NULL) vm_p->call_head = ci;  // set call info head 
 		vm_p->call_tail = ci;
 		ci->next = vm_p->call_chain;
 		if(vm_p->call_chain)
