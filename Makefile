@@ -1,3 +1,4 @@
+#CC = /usr/local/Cellar/gcc49/4.9-20131027/bin/gcc-4.9
 CC = gcc
 CFLAGS += -O2  -g -Wall
 AR = ar rcu
@@ -7,47 +8,60 @@ ifeq ($(OS),Windows_NT)
 	N = \\
 	RM = del
 	CFLAGS += -D __USE_MINGW_ANSI_STDIO -D _MINGW32_
-	A2 = a2.lib 
+	A2_STATIC_LIB = a2.lib
+	A2 = a2.exe 
 else 
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
 		N = //
 		RM = rm -rf
-		A2 = liba2.a
+		A2_STATIC_LIB = liba2.a
 		CFLAGS += -std=gnu89
+		A2 = a2
 	endif 
 	ifeq ($(UNAME_S), Linux)
 		N = //
 		RM = rm -rf
-		A2 = liba2.a
+		A2_STATIC_LIB = liba2.a
+		A2 = a2
 	endif
 endif
 
-A2_OBJ = a2_mem.o a2_error.o a2_io.o a2_lex.o a2_map.o a2_string.o a2_env.o  a2_closure.o \
+_A2_OBJ = a2_mem.o a2_error.o a2_io.o a2_lex.o a2_map.o a2_string.o a2_env.o  a2_closure.o \
 a2_obj.o a2_gc.o a2_parse.o a2_ir.o a2_array.o a2_state.o a2_xclosure.o a2_vm.o\
-a2_libutil.o
+a2_libutil.o 
+A2_OBJ = $(foreach s, $(_A2_OBJ), .$(N)src$(N)$(s))
+
+_A2_T_OBJ = a2.o
+A2_T_OBJ = $(foreach s, $(_A2_T_OBJ), .$(N)src$(N)$(s))
 
 #TEST_OBJ = ./test/test_io.o ./test/test_string.o ./test/test_lex.o ./test/test_map.o ./test/test_parse.o ./test/test_ir.o
-A2_OBJ_O = $(foreach s, $(A2_OBJ), .$(N)src$(N)$(s))
 TEST_OBJ = .$(N)test$(N)test_a2.o
-OBJ = $(A2_OBJ_O) $(TEST_OBJ)
-
 TEST =  $(foreach s, $(TEST_OBJ), $(basename $(s)))
 
-all: $(OBJ) $(A2) $(TEST)
+OBJ = $(A2_OBJ) $(TEST_OBJ) $(A2_T_OBJ) $(A2_T_OBJ)
 
-$(TEST):
-	$(CC) $(CFLAGS) -o $@ $? $(basename $@).o  $(A2)
+all: $(OBJ) $(A2_STATIC_LIB) $(TEST) $(A2)
 
-$(A2): $(A2_OBJ_O)
-	$(AR) $(A2) $?
+install:
+	cp a2 /usr/local/bin/
+
+$(A2): $(A2_T_OBJ)
+	$(CC) $(CFLAGS) -o $@ $? -lreadline $(A2_STATIC_LIB)
+
+$(TEST): $(TEST_OBJ)
+	$(CC) $(CFLAGS) -o $@ $?  $(A2_STATIC_LIB)
+
+$(A2_STATIC_LIB): $(A2_OBJ)
+	$(AR) $(A2_STATIC_LIB) $?
 
 $(OBJ): 
 	$(CC) $(CFLAGS) -c -o $@ $(basename $@).c
 
 .PHONY : clean
 clean:
-	$(RM) $(A2_OBJ_O)
+	$(RM) $(A2_OBJ)
 	$(RM) $(TEST_OBJ)
 	$(RM) $(TEST)
-	$(RM) $(A2)
+	$(RM) $(A2_STATIC_LIB)
+	$(RM) $(A2) $(A2_T_OBJ)

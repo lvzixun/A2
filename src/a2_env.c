@@ -118,8 +118,8 @@ int a2_env_load(struct a2_env* env_p, struct a2_io* stream){
 		struct a2_obj obj;
 		obj_setX(&obj, A2_TCLOSURE, obj, gcobj);
 		a2_gc_markit(env_p->gc_p, &obj, mark_blue);
-		a2_gcadd(env_p, gcobj); 
 		a2_gc_open(env_p->gc_p);
+		a2_gcadd(env_p, gcobj); 
 
 		// load it
 		ret = a2_vm_load(env_p->vm_p, cls);
