@@ -1,17 +1,20 @@
 ## A2 alex-2.0
 A interpreter is Based on the register the virtual machine. Similar to that of lua and javascript. 
 
-## Make it
+## install 
 ```
-make clean
 make
+make install
 
-# debug modle:   CFLAGS += -D _DEBUG_ -g -Wall   
-# release modle: CFLAGS += -O2 -g -Wall   
+:$ a2
+A2 power by zixun, rainbow from judy.
+>
 ```
 
 ## How to use?
-run `make` ,you will get a liba2.a library. you can write bound program by youself. or use `test_a2` program interpreted scripts file at `./test/test_a2`.
+run `make` ,you will get a liba2.a library and a2 executable program. you can write bound program by youself. or use `test_a2` program interpreted scripts file at `./test/test_a2`.
+
+I wrote a simple command line program to explain A2 script. detail at `./src/a2.c`
 
 ## Performance Comparison
 I did most of the scripting language test. for example: `lua`, `python`, `perl`, `php`, `ruby`.  
