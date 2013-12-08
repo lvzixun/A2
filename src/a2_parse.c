@@ -71,6 +71,7 @@ static size_t parse_cargs(struct a2_parse* parse_p);
 static size_t parse_elif(struct a2_parse* parse_p);
 static size_t parse_deep(struct a2_parse* parse_p);
 static inline size_t parse_local(struct a2_parse* parse_p);
+static size_t parse_term(struct a2_parse* parse_p);
 
 struct a2_parse*  a2_parse_open(struct a2_env* env_p){
 	struct a2_parse* ret = (struct a2_parse*)malloc(sizeof(*ret));
@@ -180,7 +181,7 @@ static size_t parse_segcontent(struct a2_parse* parse_p){
 			if(a2_ktislocal(parse_p->env_p, &cur_token) == a2_true){		// parse local
 				return parse_local(parse_p);
 			}else if(a2_ktisfunction(parse_p->env_p, &cur_token) == a2_true){ //  parse function
-				return	parse_function(parse_p);
+				return	parse_deep(parse_p);
 			}else if(a2_ktisfor(parse_p->env_p, &cur_token) == a2_true){ // parse for
 				return 	parse_for(parse_p);
 			}else if(a2_ktisforeach(parse_p->env_p, &cur_token) == a2_true){ // parse foreach
@@ -284,7 +285,6 @@ static   size_t _parse_expression(struct a2_parse* parse_p, parse_func pfunc){
 			if(tp == NULL) return new_node(parse_p, parse_readtoken(parse_p), var_node);
 			switch(tt2tk(tp->tt)){
 				case tk_op:
-					// TODO: op
 					return pfunc(parse_p);
 				case tk_end:{
 					size_t head = new_node(parse_p, parse_readtoken(parse_p), var_node);
@@ -305,7 +305,7 @@ static   size_t _parse_expression(struct a2_parse* parse_p, parse_func pfunc){
 			if(a2_ktisfunction(parse_p->env_p, &cur_token)==a2_fail)
 				goto EXP_ERROR;
 			else
-				return parse_function(parse_p);
+				return pfunc(parse_p);
 			break;
 		case tk_bool:
 		case tk_string:
@@ -429,7 +429,8 @@ static inline  size_t parse_op(struct a2_parse* parse_p){
 
 #define MERGER(op) if(node_t(exp1)==num_node && node_t(exp2)==num_node){ \
 						node_p(exp1)->token->v.number = node_p(exp1)->token->v.number op node_p(exp2)->token->v.number;\
-						return new_node(parse_p, node_p(exp1)->token, num_node); \
+						head = exp1 = new_node(parse_p, node_p(exp1)->token, num_node); \
+						continue; \
 					}else if(!nt2na(node_t(exp1)) || !nt2na(node_t(exp2))){ \
 						unexpect_token(tp); \
 					} 
@@ -451,6 +452,8 @@ static inline  size_t parse_op(struct a2_parse* parse_p){
 									MERGER(*) \
 									break; \
 								case '/': \
+									if(node_t(exp2)==num_node && node_p(exp2)->token->v.number==0) \
+										parse_error("division 0."); \
 									MERGER(/) \
 									break; \
 							} \
@@ -487,10 +490,10 @@ SKIP_N:
 		if(tt2tk(tp->tt)==tk_end) goto SKIP_N; 
 		else if(tt2op(tp->tt)==',') continue;  // jump ','
 		else if(tt2op(tp->tt)==']') return head;
-		else parse_error("you lost \' , \'.");
+		else parse_error("expected \' , \'.");
 	}
 ARRAY_END:
-	parse_error("you lost \' ] \'.");
+	parse_error("expected \' ] \'.");
 	return 0;
 }
 
@@ -521,7 +524,6 @@ static  size_t _parse_operation(struct a2_parse* parse_p, parse_func pfunc){
 
 	parse_readtoken(parse_p);		// jump = 
 	exp2 = _parse_operation(parse_p, pfunc);
-	CHECK_EXP12;
 	if(node_t(exp1) ==comma_node && node_t(exp2)!=comma_node && node_t(exp2)!=cfunc_node )
 		parse_error("the multivariable expression is can not set left value.");
 	if(node_t(exp2) ==comma_node && node_t(exp1)!=comma_node)
@@ -616,39 +618,41 @@ static size_t parse_interval(struct a2_parse* parse_p){
 // root = '>' '<' '>=' '<='
 static size_t parse_limits(struct a2_parse* parse_p){
 	size_t head, exp1, exp2;
-	exp1 = parse_arithmetic(parse_p);
-	struct a2_token* tp = parse_attoken(parse_p);
+	head = exp1 = parse_arithmetic(parse_p);
+	struct a2_token* tp = NULL;
 
-	if(!tp || tt2tk(tp->tt)==tk_end) return exp1;
+	while(!is_end){
+		tp = tp = parse_attoken(parse_p);
+		if(!tp || tt2tk(tp->tt)==tk_end) return exp1;
+		switch(tt2op(tp->tt)){
+			case '>':
+				head = new_node(parse_p, &cur_token, gt_node);
+				break;
+			case '<':
+				head = new_node(parse_p, &cur_token, lt_node);
+				break;
+			case (('<'<<8)+'='):
+				head = new_node(parse_p, &cur_token, gte_node);
+				break;
+			case (('>'<<8)+'='):
+				head = new_node(parse_p, &cur_token, lte_node);
+				break;
+			case (('='<<8)+'='):
+				head = new_node(parse_p, &cur_token, equ_node);
+				break;
+			case (('!'<<8)+'='):
+				head = new_node(parse_p, &cur_token, ne_node);
+				break;
+			default:
+				return exp1;
+		}
 
-	switch(tt2op(tp->tt)){
-		case '>':
-			head = new_node(parse_p, &cur_token, gt_node);
-			break;
-		case '<':
-			head = new_node(parse_p, &cur_token, lt_node);
-			break;
-		case (('<'<<8)+'='):
-			head = new_node(parse_p, &cur_token, gte_node);
-			break;
-		case (('>'<<8)+'='):
-			head = new_node(parse_p, &cur_token, lte_node);
-			break;
-		case (('='<<8)+'='):
-			head = new_node(parse_p, &cur_token, equ_node);
-			break;
-		case (('!'<<8)+'='):
-			head = new_node(parse_p, &cur_token, ne_node);
-			break;
-		default:
-			return exp1;
+		parse_readtoken(parse_p);
+		exp2 = parse_arithmetic(parse_p);
+		CHECK_EXP12;
+		node_p(head)->childs[0] = exp1;
+		node_p(head)->childs[1] = exp2;
 	}
-
-	parse_readtoken(parse_p);
-	exp2 = parse_arithmetic(parse_p);
-	CHECK_EXP12;
-	node_p(head)->childs[0] = exp1;
-	node_p(head)->childs[1] = exp2;
 	return head;
 }
 
@@ -718,7 +722,7 @@ static size_t parse_advanced(struct a2_parse* parse_p){
 // root = .. function call map and array access
 static size_t parse_deep(struct a2_parse* parse_p){
 	size_t head;
-	size_t exp1 = parse_base(parse_p);
+	size_t exp1 = parse_term(parse_p);
 	struct a2_token* tp = NULL;
 	int flag = 0;
 	do{
@@ -726,7 +730,7 @@ static size_t parse_deep(struct a2_parse* parse_p){
 		if(!tp || tt2tk(tp->tt)==tk_end) return exp1;
 		switch(tt2op(tp->tt)){
 			case (('.'<<8)+'.'):{
-				if(!exp1) parse_error("you lost ide before \'..\'.");
+				if(!exp1) parse_error("expected \'..\'.");
 				head = new_node(parse_p, parse_readtoken(parse_p), strcat_node);
 				node_p(head)->childs[0] = exp1;
 				_node_set(node_p(head)->childs[1], parse_deep(parse_p));
@@ -735,22 +739,18 @@ static size_t parse_deep(struct a2_parse* parse_p){
 			}
 				break;
 			case '[':
-				if(!exp1) parse_error("you lost ide before \'[\'.");
+				if(!exp1) parse_error("expected \'[\'.");
 				if(nt2nr(node_p(exp1)->type)){
 					head = new_node(parse_p, &cur_token, cma_node);
 					parse_readtoken(parse_p); // jump [
 					node_p(head)->childs[0] = exp1;
 					_node_set(node_p(head)->childs[1], parse_exp(parse_p));
 					if(is_end || tt2op(parse_readtoken(parse_p)->tt)!=']')
-						parse_error("you lost \' ] \'.");
+						parse_error("expected \' ] \'.");
 					exp1 = head;
 					flag = 1;
 					continue;
 				}
-
-				print_token(node_p(exp1)->token);
-				print_token(&cur_token);
-				printf("exp1.type = %d\n", node_p(exp1)->type);
 				parse_error("the [] left operation can not be read.");
 				break;
 			case '(':
@@ -789,12 +789,44 @@ static size_t parse_deep(struct a2_parse* parse_p){
 	return 0;
 }
 
+// root = '!' '-' 
+static size_t parse_term(struct a2_parse* parse_p){
+	size_t head = 0;
+	struct a2_token* tp = parse_attoken(parse_p);
+	if(!tp) parse_error("not expect end.");
 
-// root = '!' '-' '+' '..' '.' ('
+	int tk = tt2tk(tp->tt);
+
+	if(tk == tk_op){
+		switch(tt2op(tp->tt)){
+			case '!':
+				head = new_node(parse_p, parse_readtoken(parse_p), not_node);
+				_node_set(node_p(head)->childs[0], parse_base(parse_p));
+				break;
+			case '-':
+				head = new_node(parse_p, parse_readtoken(parse_p), neg_node);
+				size_t n_node = parse_base(parse_p);
+				if(node_t(n_node)==num_node){
+					node_p(n_node)->token->v.number *= -1;
+					return new_node(parse_p, node_p(n_node)->token, num_node);
+				}
+				node_p(head)->childs[0] = n_node;
+				break;
+			default:
+				head = parse_base(parse_p);
+				break;
+		}
+	}else
+		head = parse_base(parse_p);
+
+	return head;
+}
+
+// root = ide bool true array map nil string  ('
 static size_t parse_base(struct a2_parse* parse_p){
 	size_t head;
 	struct a2_token* tp = parse_attoken(parse_p);
-	if(!tp) parse_error("the base expression is not expect end.");
+	if(!tp) parse_error("not expect end.");
 	
 	switch(tt2tk(tp->tt)){
 		case tk_ide:{
@@ -829,34 +861,13 @@ BASE_DEF:
 					return	parse_array(parse_p);
 				case '{':
 					return  parse_map(parse_p);
-				case '!':
-					head = new_node(parse_p, parse_readtoken(parse_p), not_node);
-					_node_set(node_p(head)->childs[0], parse_base(parse_p));
-					return head;
-				case '-':{
-					head = new_node(parse_p, parse_readtoken(parse_p), neg_node);
-					size_t n_node = parse_base(parse_p);
-					if(node_t(n_node)==num_node){
-						node_p(n_node)->token->v.number *= -1;
-						return new_node(parse_p, node_p(n_node)->token, num_node);
-					}
-					node_p(head)->childs[0] = n_node;
-				}
-					return head;
-				case '+':
-					parse_readtoken(parse_p);
-					return parse_base(parse_p);
 				case '(':{
 					struct a2_token* tp = NULL;
 					parse_readtoken(parse_p);
 					head = parse_exp(parse_p);
 					tp = parse_readtoken(parse_p);
-					if(!tp || tt2op(tp->tt)!=')'){
-						char ts_buf[64] = {0};
-						a2_error(parse_p->env_p, e_parse_error,
-							"[parse error@line: %d]: unexpected symbol  near \' %s \'.\n", tp->line,
-							a2_token2str(tp, ts_buf));
-					}
+					if(!tp || tt2op(tp->tt)!=')')
+						unexpect_token(tp);
 					else
 						return head;
 				}
@@ -965,7 +976,7 @@ static size_t parse_cargs(struct a2_parse* parse_p){
 	}
 
 CARGS_END:
-	parse_error("you lost \' ) \'.");
+	parse_error("expected \' ) \'.");
 	return head;
 }
 
@@ -1016,7 +1027,7 @@ static size_t parse_args(struct a2_parse* parse_p){
 		else if(tt2op(tp->tt)==')') return head;
 	}
 
-	parse_error("you are lost \' ) \'.");
+	parse_error("expected \' ) \'.");
 	return 0;
 }
 

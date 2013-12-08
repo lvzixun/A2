@@ -48,7 +48,7 @@ A2_API int a2_pcall(struct a2_state* state, int args){
 
 A2_API int a2_dostring(struct a2_state* state, const char* str, size_t len){
 	if(str==NULL || len == 0)
-		return 1;
+		return 0;
 	struct a2_io* io_p = a2_io_openS(str, len);
 	int ret = a2_env_load(state->env_p,io_p);
 	a2_io_closeS(io_p);

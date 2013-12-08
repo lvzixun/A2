@@ -58,14 +58,18 @@ enum node_type{
 	bool_node, // true / false
 	nil_node, // nil
 	args_node,	// ...
-	func_node, 	// def function
-	map_node,   // def map
-	array_node, // def array
+	// func_node, 	// def function
+	// map_node,   // def map
+	// array_node, // def array
 	return_node,
 	break_node,
 	continue_node,
 	for_node,
 	foreach_node,
+
+	array_node = (nt_amask | nt_rmask | 0x00),   // def array
+	map_node   = (nt_amask | nt_rmask | 0x01),  		// def  map
+	func_node  = (nt_amask | nt_rmask | 0x02),    // def function 
 
 	num_node = (nt_fmask | nt_amask | 0x00),
 	// arithmetic node

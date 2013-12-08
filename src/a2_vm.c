@@ -409,9 +409,12 @@ static int a2_vm_run(struct a2_vm* vm_p){
 			case SUB:
 				_vm_op(-);
 				break;
-			case DIV:
+			case DIV:{
+				struct a2_obj* _v2 = _getvalue(vm_p, ir_gc(curr_ir));
+				if(obj_t(_v2)==A2_TNUMBER && obj_vNum(_v2)==0)
+					vm_error("division 0.");
 				 _vm_op(/);
-				break;
+				}break;
 			case MUL:
 				_vm_op(*);
 				break;

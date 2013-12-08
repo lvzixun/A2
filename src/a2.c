@@ -21,9 +21,18 @@ static inline void _load(struct a2_state* state, const char* filename){
 static void _command(struct a2_state* state){
   for(;;){
     char* str = NULL;
-    if( NULL != (str = readline(">")) ){
+    if( NULL != (str = readline(">")) ){ 
+      if(str[0]=='='){
+        size_t sz = strlen(str)+7;
+        char tmp [sz];
+        sprintf(tmp , "print(%s)", str+1);
+        tmp[sz-1] = '\0';
+        if(a2_dostring(state, tmp, strlen(tmp)))
+          printf("%s", a2_tostring(state, a2_top(state)-1)); 
+      }else{
       if(a2_dostring(state, str, strlen(str)))
         printf("%s", a2_tostring(state, a2_top(state)-1));
+      }
       add_history(str);
       free(str);
     }
