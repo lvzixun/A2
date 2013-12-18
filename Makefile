@@ -1,17 +1,23 @@
-#CC = /usr/local/Cellar/gcc49/4.9-20131027/bin/gcc-4.9
 CC = gcc
 CFLAGS += -O2  -g -Wall
 AR = ar rcu
 
+UNAME_S := $(shell uname -s)
 
 ifeq ($(OS),Windows_NT)
-	N = \\
-	RM = del
-	CFLAGS += -D __USE_MINGW_ANSI_STDIO -D _MINGW32_
-	A2_STATIC_LIB = a2.lib
-	A2 = a2.exe 
+	ifeq ($(UNAME_S), CYGWIN_NT-6.1)
+		N = //
+		RM = rm -rf
+		A2_STATIC_LIB = liba2.a
+		A2 = a2
+	else
+		N = \\
+		RM = del
+		CFLAGS += -D __USE_MINGW_ANSI_STDIO -D _MINGW32_
+		A2_STATIC_LIB = a2.lib
+		A2 = a2.exe 
+	endif
 else 
-	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
 		N = //
 		RM = rm -rf
@@ -42,7 +48,11 @@ TEST =  $(foreach s, $(TEST_OBJ), $(basename $(s)))
 OBJ = $(A2_OBJ) $(TEST_OBJ) $(A2_T_OBJ)
 OBJ_C = $(foreach s, $(OBJ), $(basename $(s)).c)
 
-all: $(OBJ) $(A2_STATIC_LIB) $(TEST) $(A2)
+all: test2 $(OBJ) $(A2_STATIC_LIB) $(TEST) $(A2)
+
+test2:
+	@echo $(OS)
+
 
 install:
 	cp a2 /usr/local/bin/

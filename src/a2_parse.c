@@ -622,7 +622,7 @@ static size_t parse_limits(struct a2_parse* parse_p){
 	struct a2_token* tp = NULL;
 
 	while(!is_end){
-		tp = tp = parse_attoken(parse_p);
+		tp = parse_attoken(parse_p);
 		if(!tp || tt2tk(tp->tt)==tk_end) return exp1;
 		switch(tt2op(tp->tt)){
 			case '>':
