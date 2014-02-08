@@ -12,7 +12,7 @@
 #include <stdio.h>
 
 
-#define ci_ir(ci)	a2_closure_ir((ci)->cls, (ci)->pc)
+#define ci_ir(ci)	 a2_closure_ir((ci)->cls, (ci)->pc)
 #define ci_op(ci)  (ir_gop(ci_ir(ci)))
 
 #define curr_ci    (vm_p->call_chain)
@@ -25,9 +25,13 @@
 // #define curr_irdes2sfi()	(curr_ci->reg_stack.sf_idx+ir_ga(curr_ir)+ir_gb(curr_ir))
 #define curr_line  a2_closure_line(curr_cls, curr_pc)
 
-#define callinfo_sfi(ci, idx)	(assert((ci) && (idx)<(ci)->reg_stack.len), (ci)->reg_stack.sf_idx+(idx))
-#define sf_reg(sf_idx)			(assert((sf_idx)<vm_p->stack_frame.cap), &(vm_p->stack_frame.sf_p[sf_idx]))				
-#define callinfo_sfreg(ci, idx)	(assert((idx)<(ci)->reg_stack.len), &(vm_p->stack_frame.sf_p[callinfo_sfi(ci, idx)]))
+#define sf_reg(sf_idx)					(assert((sf_idx)<vm_p->stack_frame.cap), &(vm_p->stack_frame.sf_p[sf_idx]))
+
+#define callinfo_sfi(ci, idx)		(assert((ci) && (idx)<(ci)->reg_stack.len), (ci)->reg_stack.sf_idx+(idx))
+#define callinfo_reg_top(ci)		( (ci)->reg_stack.top_idx )				
+#define callinfo_sfreg(ci, idx)	( assert((idx)<(ci)->reg_stack.len), \
+																	callinfo_reg_top(ci) = (callinfo_reg_top(ci)<(idx))?(idx):(callinfo_reg_top(ci)), \
+																	&(vm_p->stack_frame.sf_p[callinfo_sfi(ci, idx)]))
 
 #define ci_iscls(ci)	((ci)->cls!=NULL)
 
@@ -41,6 +45,7 @@ struct vm_callinfo{
 	struct a2_closure* cls;
 	struct {
 		size_t sf_idx;
+		size_t top_idx;
 		size_t len;
 	}reg_stack;
 
@@ -132,6 +137,7 @@ inline size_t vm_callinfo_regi(struct vm_callinfo* ci, size_t sf_idx){
 	return sf_idx - ci->reg_stack.sf_idx;
 }
 
+
 inline  struct vm_callinfo* vm_curr_callinfo(struct a2_vm* vm_p){
 	return curr_ci;
 }
@@ -199,6 +205,7 @@ static inline void callinfo_new(struct a2_vm* vm_p, struct a2_closure* cls, int 
 
 	ci->cls = cls;
 	// set closure stack frame
+	ci->reg_stack.top_idx = 0;
 	ci->reg_stack.len = (cls)?(a2_closure_regscount(cls)):(0);
 	ci->reg_stack.sf_idx = up_stack_frame(vm_p, ci->reg_stack.len);
 	ci->pc=0;
@@ -843,7 +850,8 @@ static inline void _vm_cat(struct a2_vm* vm_p){
 	char* a2_s = a2_string_new(obj2str(_lv, buf, sizeof(buf)-1));
 	a2_s = a2_string_cat(a2_s, obj2str(_rv, buf0, sizeof(buf0)-1));
 
-	obj_setX(_d, A2_TSTRING, obj, a2_env_addstrobj(vm_p->env_p, a2_s));
+	struct a2_gcobj* gcobj = a2_env_addstrobj(vm_p->env_p, a2_s);
+	obj_setX(_d, A2_TSTRING, obj, gcobj);
 
 	a2_string_free(a2_s);
 	curr_pc++;
@@ -1034,23 +1042,7 @@ void a2_vm_gc(struct a2_vm* vm_p){
 
 	size_t i, end;
 	struct a2_obj* obj = NULL;
-	switch(ci_op(cip)){
-		case NEWLIST:
-		case NEWMAP:
-		case CAT:
-		case CLOSURE:
-			end = ir_ga(ci_ir(cip))+cip->reg_stack.sf_idx;
-			break;
-		case RETURN:
-			end = ir_ga(ci_ir(cip)) + ir_gbx(ci_ir(cip)) + cip->reg_stack.sf_idx;
-			break;
-		default:
-			assert(cip->pc>0);
-			ir per_ir = a2_closure_ir(cip->cls, cip->pc-1);
-			assert(ir_gop(per_ir) == CALL);
-			end = ir_ga(per_ir)+ir_gb(per_ir)+cip->reg_stack.sf_idx + 1;
-			break;
-	}
+	end = cip->reg_stack.sf_idx+cip->reg_stack.top_idx+1;
 
 	assert(end <= vm_p->stack_frame.cap);
 
