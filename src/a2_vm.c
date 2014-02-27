@@ -522,18 +522,20 @@ static inline void _vm_setglobal(struct a2_vm* vm_p){
 
 // new list
 static inline void _vm_newlist(struct a2_vm* vm_p){
-	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
 	struct a2_gcobj* _gcobj = a2_array2gcobj(a2_array_new());
 	a2_gcadd(vm_p->env_p, _gcobj);
+
+	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
 	obj_setX(_d, A2_TARRAY, obj,  _gcobj);
 	curr_pc++;
 }
 
 // new map
 static inline void _vm_newmap(struct a2_vm* vm_p){
-	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
 	struct a2_gcobj* _gcobj = a2_map2gcobj(a2_map_new());
 	a2_gcadd(vm_p->env_p, _gcobj);
+	
+	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
 	obj_setX(_d, A2_TMAP, obj, _gcobj);
 	curr_pc++;
 }
@@ -632,11 +634,11 @@ static inline void _vm_setvalue(struct a2_vm* vm_p){
  	vm_error("the key is overfllow.");
 }
 
-// TODO: closure
+// closure
 static inline void _vm_closure(struct a2_vm* vm_p){
-	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	struct a2_closure* _cls = a2_closure_new(curr_ci, ir_gbx(curr_ir));
 	struct a2_gcobj* _gcobj = a2_closure2gcobj(_cls);
+	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
 	obj_setX(_d, A2_TCLOSURE, obj, _gcobj);
 	a2_gcadd(vm_p->env_p, _gcobj);
 	curr_pc++;
@@ -841,7 +843,6 @@ static inline void _vm_set_upvalue(struct a2_vm* vm_p){
 
 // cat
 static inline void _vm_cat(struct a2_vm* vm_p){
-	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
 	struct a2_obj* _lv = _getvalue(vm_p, ir_gb(curr_ir));
 	struct a2_obj* _rv = _getvalue(vm_p, ir_gc(curr_ir));
 
@@ -851,6 +852,7 @@ static inline void _vm_cat(struct a2_vm* vm_p){
 	a2_s = a2_string_cat(a2_s, obj2str(_rv, buf0, sizeof(buf0)-1));
 
 	struct a2_gcobj* gcobj = a2_env_addstrobj(vm_p->env_p, a2_s);
+	struct a2_obj* _d = _getvalue(vm_p, ir_ga(curr_ir));
 	obj_setX(_d, A2_TSTRING, obj, gcobj);
 
 	a2_string_free(a2_s);
