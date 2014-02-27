@@ -191,6 +191,13 @@ static inline void _env_gcmark(struct a2_env* env_p){
 		a2_gc_markit(env_p->gc_p, vp, mark_black);
 		a2_gc_markit(env_p->gc_p, &k, mark_black);	
 	}
+
+	// mark eval stack
+	int i;
+	for(i=0; i<env_p->cstack.top; i++){
+		struct a2_obj* obj = &env_p->cstack.stk_p[i];
+		a2_gc_markit(env_p->gc_p, obj, mark_black);
+	}
 }
 
 inline void a2_pushstack(struct a2_env* env_p, struct a2_obj* v){
