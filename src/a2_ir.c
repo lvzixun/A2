@@ -1136,17 +1136,7 @@ static inline int _a2_ir_mass(struct a2_ir* ir_p, size_t root){
 }
 
 static int _rv_mass(struct a2_ir* ir_p, int vt, int idx, size_t right_root){
-	int _vb = (int)right_root;
-	switch(vt){
-		case var_global:
-		case var_local:
-		case var_upvalue:
-			return _vb;
-		default:
-			assert(0);
-	}
-	assert(0);
-	return 0;
+	return (int)right_root;
 }
 
 static inline int a2_ir_exp(struct a2_ir* ir_p, size_t root){
