@@ -1160,8 +1160,9 @@ static size_t parse_elif(struct a2_parse* parse_p){
 void dump_node(struct a2_parse* parse_p, size_t root){
 	for( ;root; ){
 		char ts_buf[64] = {0};
+		struct a2_token* token = node_p(root)->token;
 		printf("[%zd] nt=%d token=\' %s \' <@line: %zd>\n", root, node_p(root)->type, 
-			a2_token2str(node_p(root)->token, ts_buf), node_p(root)->token->line);
+			a2_token2str(token, ts_buf), (token)?(token->line):(0));
 		printf("    childs[%zd %zd %zd %zd] next[%zd]\n", node_p(root)->childs[0],
 			node_p(root)->childs[1],node_p(root)->childs[2],node_p(root)->childs[3], node_p(root)->next);
 		int i;

@@ -28,6 +28,13 @@ A2_API void a2_close(struct a2_state* state){
 	free(state);
 }
 
+A2_API inline void a2_pop(struct a2_state* state, int count){
+	int top = a2_gettop(state->env_p);
+	int bottom = a2_getbottom(state->env_p);
+	if(count > 0 && top-count>=bottom)
+		a2_settop(state->env_p, top-count);
+}
+
 
 A2_API int a2_loadfile(struct a2_state* state, const char* file){
 	struct a2_io* io_p = a2_io_open(state->env_p, file);
@@ -250,7 +257,7 @@ A2_API inline void a2_setmap(struct a2_state* state){
 	check_map(map);
 	check_key(k);
 	a2_map_set(a2_gcobj2map(obj_vX(map, obj)), k, v);
-	a2_topset(state, top-1);
+	a2_pop(state, 1);
 }
 
 
@@ -270,6 +277,17 @@ A2_API inline void a2_getmap(struct a2_state* state){
 		*map = *v;
 }
 
+// del key/value
+A2_API inline void a2_delmap(struct a2_state* state){
+	int top = a2_top(state)-1;
+	struct a2_obj* k = a2_getcstack(state->env_p, top);
+	struct a2_obj* map = a2_getcstack(state->env_p, top-1);
+
+	check_map(map);
+	check_key(k);
+	a2_map_del(a2_gcobj2map(obj_vX(map, obj)), k);
+	a2_pop(state, 1);
+}
 
 // set array
 A2_API inline void a2_setarray(struct a2_state* state){

@@ -24,11 +24,13 @@ int a2_libsystem(struct a2_state* state);
 int a2_librandom(struct a2_state* state);
 int a2_libdofile(struct a2_state* state);
 int a2_librequire(struct a2_state* state);
+int a2_libdel(struct a2_state* state);
 
 void a2_openutil(struct a2_state* state){
 	struct kf _reg_func[] = {
 		{"print", a2_libprint},
 		{"add", a2_libadd},
+		{"del", a2_libdel},
 		{"t_time", a2_libt_time},
 		{"type", a2_libtype},
 		{"len", a2_liblen},
@@ -155,6 +157,15 @@ int a2_libadd(struct a2_state* state){
 	return 0;
 }
 
+// del
+int a2_libdel(struct a2_state* state){
+	int args = a2_top(state);
+	if(args==2 && a2_type(state, 0)==TMAP)
+		a2_delmap(state);
+	else
+		a2_err(state, "exp: del(map, key)");
+	return 0;
+}
 
 // t_time
 int a2_libt_time(struct a2_state* state){

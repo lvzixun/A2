@@ -25,6 +25,7 @@ A2_API void a2_err(struct a2_state* state, const char* f, ...);
 A2_API int a2_pcall(struct a2_state* state, int args);
 
 // a2 <-> c stack
+A2_API inline void a2_pop(struct a2_state* state, int count);
 A2_API inline int a2_top(struct a2_state* state);
 A2_API inline void a2_topset(struct  a2_state* state, int idx);
 
@@ -48,6 +49,7 @@ A2_API inline void a2_getglobal(struct a2_state* state);
 A2_API inline void a2_setglobal(struct a2_state* state);
 A2_API inline void a2_setmap(struct a2_state* state);
 A2_API inline void a2_getmap(struct a2_state* state);
+A2_API inline void a2_delmap(struct a2_state* state);
 A2_API inline void a2_setarray(struct a2_state* state);
 A2_API inline void a2_getarray(struct a2_state* state);
 A2_API inline void a2_addarray(struct a2_state* state);

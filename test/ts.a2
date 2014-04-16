@@ -4,9 +4,22 @@ local map = {
 }
 
 
+local func = function (map){
+  foreach(k, v in map){
+    print(k, v)
+  }
+}
 
 
+func(map)
+print('-----------')
+del(map, 'k2')
+func(map)
+print('-----------')
+add(map, 'k2', 33)
+add(map, 'k3', 44)
+func(map)
+print('-----------')
+del(map, 'k3')
 
-
-
-local a = map[1]
+func(map)
