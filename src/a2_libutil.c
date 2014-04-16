@@ -146,7 +146,7 @@ int a2_libadd(struct a2_state* state){
 			break;
 		case TMAP:
 			if(args!=3)
-				a2_err(state, "the number of args is error at map set.[exp: add(map, key value)]");
+				a2_err(state, "the number of args is error at map set.[exp: add(map, key, value)]");
 			a2_setmap(state);
 			break;
 		default:

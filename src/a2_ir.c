@@ -38,7 +38,7 @@
 #define add_forh(addr) _for_stack_add(curr_fh, (addr))
 
 #define top_arg (assert(curr_clssym->arg_cap), curr_clssym->arg_cap-1)
-#define del_arg  _del_arg(ir_p)
+// #define del_arg  _del_arg(ir_p)
 
 #define sym_v(vt,i)	(((vt)<<(30))|(i))
 #define v2vt(v)  ((v)>>(30)) 
@@ -95,7 +95,7 @@ struct a2_ir{
 static void _init_op_modle(struct a2_ir* ir_p);
 
 static inline int _add_arg(struct a2_ir* ir_p);
-static inline int _del_arg(struct a2_ir* ir_p);
+// static inline int _del_arg(struct a2_ir* ir_p);
 static inline int _set_arg(struct a2_ir* ir_p, int i);
 
 static inline void _for_stack_init(struct for_stack* fs);
@@ -273,10 +273,10 @@ static inline int _add_arg(struct a2_ir* ir_p){
 	return curr_clssym->arg_cap++;
 }
 
-static inline int _del_arg(struct a2_ir* ir_p){
-	assert(curr_clssym->arg_cap>0);
-	return curr_clssym->arg_cap--;
-}
+// static inline int _del_arg(struct a2_ir* ir_p){
+// 	assert(curr_clssym->arg_cap>0);
+// 	return curr_clssym->arg_cap--;
+// }
 
 
 static inline int _set_arg(struct a2_ir* ir_p, int i){
@@ -1399,6 +1399,8 @@ static inline int a2_ir_cma(struct a2_ir* ir_p, size_t root, int ldes, int des, 
 	size_t key_node = node_p(root)->childs[1];
 	int _b = curr_arg;
 
+	curr_line = node_line(root);
+	
 	// generate get container obj
 	assert(ldes>=0);
 	int ctn_idx = _a2_ir_exp(ir_p, ctn_node, ldes);
