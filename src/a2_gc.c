@@ -184,6 +184,11 @@ static inline void _gc_mark_map(struct a2_gc* gc_p, struct a2_gcobj* gcobj, enum
 		}
 		a2_gc_markit(gc_p, vp, m);
 	}
+
+	// mark meta
+	if(gcobj->meta){
+		_gc_mark_map(gc_p, gcobj->meta, m);
+	}
 }
 
 // mark closure
@@ -216,6 +221,12 @@ static inline void _gc_mark_closure(struct a2_gc* gc_p, struct a2_gcobj* gcobj, 
 
 inline void a2_gc_mark(struct a2_gcobj* gcobj, enum gc_mark mark){
 	gcobj->mark = mark;
+}
+
+inline void a2_gc_setmeta(struct a2_gcobj* gcobj, struct a2_gcobj* meta_obj){
+	assert(gcobj->type==A2_TMAP);
+	assert(meta_obj->type==A2_TMAP);
+	gcobj->meta = meta_obj;
 }
 
 inline enum gc_mark a2_gc_getmark(struct a2_gcobj* gcobj){

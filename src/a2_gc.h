@@ -21,6 +21,7 @@ struct a2_gcobj{
 		struct a2_obj* uv;
 		void* obj;
 	}value;
+	struct a2_gcobj* meta;  // meta data 
 	struct a2_gcobj* next;
 };
 
@@ -54,6 +55,9 @@ void a2_gcobj_stringfree(struct a2_gcobj* gcobj);
 // closure
 struct a2_gcobj* a2_closure2gcobj(struct a2_closure* cls);
 inline struct a2_closure* a2_gcobj2closure(struct a2_gcobj* gcobj);
+
+// meta
+inline void a2_gc_setmeta(struct a2_gcobj* gcobj, struct a2_gcobj* meta_obj);
 
 // array
 struct a2_gcobj* a2_array2gcobj(struct a2_array* array); 

@@ -1,0 +1,25 @@
+local map = {
+  key1 = 1123,
+  key2 = 'test_string'
+}
+
+local meta1 = {
+  name = 'meta1'
+}
+
+local meta2 = {
+  name = 'meta2'
+}
+
+local meta3 = {
+  name = 'meta3'
+}
+
+
+setmeta(map, {__index = meta1})
+setmeta(meta1, {__index = meta2})
+setmeta(meta2, {__index = map})
+
+# setmeta(map , {__index = {key3 = 'ooxx'}})
+
+print(map.key3)

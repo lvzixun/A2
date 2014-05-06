@@ -2,6 +2,16 @@
 #define _A2_ENV_H_
 #include "a2_conf.h"
 
+enum mk{
+  MK_INDEX,
+  // no support
+  MK_NEWINDEX,
+  MK_GC,
+  MK_CALL,
+
+  MK_COUNT
+};
+
 struct a2_state;
 struct a2_io;
 struct a2_env;
@@ -34,6 +44,8 @@ inline struct a2_obj* a2_set_envglobal(struct a2_env* env_p, struct a2_obj* k, s
 inline struct a2_obj* a2_get_envreg(struct a2_env* env_p, struct a2_obj* k);
 inline struct a2_obj* a2_set_envreg(struct a2_env* env_p, struct a2_obj* k, struct a2_obj* v);
 
+// meta key
+struct a2_obj* a2_env_getmk(struct a2_env* env_p, enum mk t);
 
 // global string
 inline struct a2_gcobj* a2_env_addstrobj(struct a2_env* env_p, char* a2_s);

@@ -56,4 +56,5 @@ A2_API inline void a2_addarray(struct a2_state* state);
 
 A2_API inline void a2_require(struct a2_state* state);
 
+A2_API void a2_setmeta(struct a2_state* state);
 #endif

@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 
+
 struct a2_env{
 	struct a2_lex* lex_p;
 	struct a2_gc*  gc_p;
@@ -44,9 +45,13 @@ struct a2_env{
 
 	// private forge a2_obj
 	struct a2_obj _forge_obj;
-	struct a2_gcobj* _forge_gcobj;			
+	struct a2_gcobj* _forge_gcobj;	
+
+	// meta key chain
+	struct a2_obj  meta_keys[MK_COUNT];		
 };
 
+static void _a2_init_mk(struct a2_env* env_p);
 static struct a2_gcobj* _a2_env_addstrobj(struct a2_env* env_p, char* a2_s, int is_copy);
 static inline struct a2_obj* _set_envvar(struct a2_env* env_p, struct a2_map* g_map, struct a2_obj* k, struct a2_obj* v);
 
@@ -65,6 +70,7 @@ struct a2_env* a2_env_new(struct a2_state* state){
 	ret->vm_p = a2_vm_new(ret);
 	ret->ir_p = a2_ir_open(ret);
 	ret->_forge_gcobj = a2_nil2gcobj();
+	_a2_init_mk(ret);
 	return ret;
 }
 
@@ -99,6 +105,27 @@ static void _a2_load(struct a2_env* env_p, struct _a2_ld_args* ud){
 	#endif
 }
 
+static void _a2_init_mk(struct a2_env* env_p){
+	char* mk_str[] = {
+		"__index",
+		"__newindex",
+		"__gc",
+		"__call"
+	};
+
+	assert(sizeof(mk_str)/sizeof(mk_str[0]) == MK_COUNT);
+	for(int i=0; i<MK_COUNT; i++){
+		struct a2_obj mk_obj = a2_env_addstr(env_p, mk_str[i]);
+		struct a2_gcobj* _gcobj = obj_vX(&mk_obj, obj);
+		a2_gc_mark(_gcobj, mark_blue);
+		env_p->meta_keys[i] = mk_obj;
+	}
+}
+
+struct a2_obj* a2_env_getmk(struct a2_env* env_p, enum mk t){
+	assert(t<MK_COUNT && t>=0);
+	return &(env_p->meta_keys[t]);
+}
 
 int a2_env_load(struct a2_env* env_p, struct a2_io* stream){
 	struct a2_xclosure* xcls = NULL;
@@ -168,10 +195,9 @@ static struct a2_gcobj* _a2_env_addstrobj(struct a2_env* env_p, char* a2_s, int 
 
 inline struct a2_obj a2_env_addstr(struct a2_env* env_p, char* str){
 	char* a2_s = a2_string_new(str);
-	struct a2_gcobj* _gcp = _a2_env_addstrobj(env_p, a2_s, 1);
+	struct a2_gcobj* _gcp = _a2_env_addstrobj(env_p, a2_s, 0);
 	struct a2_obj ret;
 	obj_setX(&ret, A2_TSTRING, obj, _gcp);
-	a2_string_free(a2_s);
 	return ret;
 }
 

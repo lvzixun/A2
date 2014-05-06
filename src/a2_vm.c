@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#define META_GETVALUE_COUNT 100
 
 #define ci_ir(ci)	 a2_closure_ir((ci)->cls, (ci)->pc)
 #define ci_op(ci)  (ir_gop(ci_ir(ci)))
@@ -40,6 +41,10 @@
 #define vm_error(s)  do{a2_error(vm_p->env_p, e_vm_error, \
 					"[vm error@%zd]: %s\n", curr_line, s);}while(0)
 
+struct a2_mobj{
+	int tag;
+	struct a2_obj* obj;
+};
 
 struct vm_callinfo{
 	struct a2_closure* cls;
@@ -102,6 +107,9 @@ static inline int _vm_return(struct a2_vm* vm_p, int* ret);
 static inline int __vm_return_function(struct a2_vm* vm_p);
 static inline int __vm_return_cfunction(struct a2_vm* vm_p);
 
+// meta method
+static struct a2_obj* _mgetvalue(struct a2_vm* vm_p, struct a2_obj* c, struct a2_obj* k, int is_raw);
+
 struct a2_vm* a2_vm_new(struct a2_env* env_p){
 	struct a2_vm* vm_p = (struct a2_vm*)malloc(sizeof(*vm_p));
 	vm_p->env_p = env_p;
@@ -152,6 +160,7 @@ inline struct a2_obj* vm_sf_index(struct a2_vm* vm_p, size_t sf_idx){
 	assert(sf_idx < vm_p->stack_frame.cap);
 	return &(vm_p->stack_frame.sf_p[sf_idx]);
 }
+
 
 // get slice from stack_frame
 // the size is max  for move stack.
@@ -572,6 +581,55 @@ static inline void _vm_setmap(struct a2_vm* vm_p){
 	curr_pc++;
 }
 
+static inline struct a2_obj* _vm_meta_getvalue(struct a2_vm* vm_p, struct a2_obj* c, struct a2_obj* k){
+	return _mgetvalue(vm_p, c, k, 0);
+}
+
+
+static struct a2_obj* _mgetvalue(struct a2_vm* vm_p, struct a2_obj* c, struct a2_obj* k, int is_raw){
+	assert(obj_t(c) == A2_TMAP);
+	assert(obj_t(k)==A2_TNUMBER || obj_t(k)==A2_TSTRING);
+
+	for(int i=0; i<META_GETVALUE_COUNT; i++){
+		struct a2_map* map = a2_gcobj2map(obj_vX(c, obj));
+		struct a2_obj* v = a2_map_query(map, k);
+		if(v == NULL && is_raw)
+			goto GET_ERROR;
+		else if(v)
+			return v;
+		else if(!is_raw){
+			struct a2_gcobj*  meta = obj_vX(c, obj)->meta;
+			if(!meta)
+				goto GET_ERROR;
+			else{
+				assert(meta->type==A2_TMAP);
+				assert(!is_raw==1);
+				
+				struct a2_obj* _mk_index = a2_env_getmk(vm_p->env_p, MK_INDEX);
+				struct a2_obj* _m_obj = a2_map_query(a2_gcobj2map(meta), _mk_index);
+				if(!_m_obj) goto GET_ERROR;
+
+				int type = obj_t(_m_obj);
+				if(type==A2_TMAP){
+					c = _m_obj;
+					continue;
+				}else if(type==A2_TCLOSURE){
+					vm_error("__index is closure will add in the future.");
+				}else{
+					assert(0);
+				}
+			}
+		}else
+			goto GET_ERROR;
+	}
+	vm_error("loop get meta value.");
+
+GET_ERROR:
+ 	vm_error("the key is overfllow.");
+
+	return NULL;
+}
+
 // get value 
 static inline void _vm_getvalue(struct a2_vm* vm_p){
 	struct a2_obj* _d = callinfo_sfreg(curr_ci, ir_ga(curr_ir));
@@ -589,7 +647,8 @@ static inline void _vm_getvalue(struct a2_vm* vm_p){
 		case A2_TMAP:
 			if(obj_t(_k)!=A2_TNUMBER && obj_t(_k)!=A2_TSTRING)
 				vm_error("the key is must number or string at get map.");
-			__d = a2_map_query(a2_gcobj2map(obj_vX(_c, obj)), _k);
+			__d = _vm_meta_getvalue(vm_p, _c, _k);
+			// __d = a2_map_query(a2_gcobj2map(obj_vX(_c, obj)), _k);
 			if(!__d) goto GVALUE_ERROR;
 			*_d = *__d;
 			break;

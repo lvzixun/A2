@@ -43,6 +43,18 @@ A2_API int a2_loadfile(struct a2_state* state, const char* file){
 	return ret;
 }
 
+A2_API void a2_setmeta(struct a2_state* state){
+	int top = a2_top(state)-1;
+	struct a2_obj* m = a2_getcstack(state->env_p, top);
+	struct a2_obj* v = a2_getcstack(state->env_p, top-1);
+
+	if(obj_t(v)!=A2_TMAP || obj_t(m)!=A2_TMAP)
+		a2_err(state, "the value and meta should map type.");
+
+	a2_gc_setmeta(obj_vX(v, obj), obj_vX(m, obj));
+	a2_topset(state, top-1);
+}
+
 A2_API int a2_pcall(struct a2_state* state, int args){
 	struct a2_obj* cls_obj = a2_getcstack(state->env_p, a2_top(state)-args-1);
 	struct a2_obj* args_obj = a2_getcstack(state->env_p, a2_top(state)-args);

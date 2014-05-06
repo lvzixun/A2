@@ -25,6 +25,7 @@ int a2_librandom(struct a2_state* state);
 int a2_libdofile(struct a2_state* state);
 int a2_librequire(struct a2_state* state);
 int a2_libdel(struct a2_state* state);
+int a2_libsetmeta(struct a2_state* state);
 
 void a2_openutil(struct a2_state* state){
 	struct kf _reg_func[] = {
@@ -39,7 +40,8 @@ void a2_openutil(struct a2_state* state){
 		{"require", a2_librequire},
 		{"random", a2_librandom},
 		{"kiss", a2_libkiss},
-		{"os", a2_libsystem}
+		{"os", a2_libsystem},
+		{"setmeta", a2_libsetmeta},
 	};
 	
 	int i;
@@ -60,6 +62,14 @@ int a2_libpcall(struct a2_state* state){
 	return _args-args;
 }
 */
+
+int a2_libsetmeta(struct a2_state* state){
+	int args = a2_top(state);
+	if(args<2)
+		a2_err(state, "the arg error.");
+	a2_setmeta(state);
+	return 0;
+}
 
 int a2_librequire(struct a2_state* state){
 	int args = a2_top(state);
