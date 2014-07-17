@@ -98,6 +98,15 @@ static void _a2_load(struct a2_env* env_p, struct _a2_ld_args* ud){
 	size_t len = 0;
 	a2_ir_newxcls(env_p->ir_p);
 	struct a2_token* tk = a2_lex_read(env_p->lex_p, ud->stream, &len);
+	
+	#ifdef _DEBUG_
+	printf("---------token --------------\n");
+	for (int i = 0; i < len; ++i){
+		print_token(&tk[i]);
+	}
+	printf("\n");
+	#endif
+
 	*(ud->xcls_p) = a2_parse_run(env_p->parse_p, tk, len);
 	
 	#ifdef _DEBUG_	

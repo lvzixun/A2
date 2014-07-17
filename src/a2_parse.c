@@ -623,7 +623,7 @@ static size_t parse_limits(struct a2_parse* parse_p){
 
 	while(!is_end){
 		tp = parse_attoken(parse_p);
-		if(!tp || tt2tk(tp->tt)==tk_end) return exp1;
+		if(!tp || tt2tk(tp->tt)==tk_end) return head;
 		switch(tt2op(tp->tt)){
 			case '>':
 				head = new_node(parse_p, &cur_token, gt_node);
@@ -644,7 +644,7 @@ static size_t parse_limits(struct a2_parse* parse_p){
 				head = new_node(parse_p, &cur_token, ne_node);
 				break;
 			default:
-				return exp1;
+				return head;
 		}
 
 		parse_readtoken(parse_p);
