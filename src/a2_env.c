@@ -101,7 +101,8 @@ static void _a2_load(struct a2_env* env_p, struct _a2_ld_args* ud){
 	
 	#ifdef _DEBUG_
 	printf("---------token --------------\n");
-	for (int i = 0; i < len; ++i){
+	int i;
+	for (i = 0; i < len; ++i){
 		print_token(&tk[i]);
 	}
 	printf("\n");
@@ -123,7 +124,8 @@ static void _a2_init_mk(struct a2_env* env_p){
 	};
 
 	assert(sizeof(mk_str)/sizeof(mk_str[0]) == MK_COUNT);
-	for(int i=0; i<MK_COUNT; i++){
+	int i;
+	for(i=0; i<MK_COUNT; i++){
 		struct a2_obj mk_obj = a2_env_addstr(env_p, mk_str[i]);
 		struct a2_gcobj* _gcobj = obj_vX(&mk_obj, obj);
 		a2_gc_mark(_gcobj, mark_blue);
