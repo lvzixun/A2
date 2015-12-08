@@ -590,7 +590,8 @@ static struct a2_obj* _mgetvalue(struct a2_vm* vm_p, struct a2_obj* c, struct a2
 	assert(obj_t(c) == A2_TMAP);
 	assert(obj_t(k)==A2_TNUMBER || obj_t(k)==A2_TSTRING);
 
-	for(int i=0; i<META_GETVALUE_COUNT; i++){
+	int i;
+	for(i=0; i<META_GETVALUE_COUNT; i++){
 		struct a2_map* map = a2_gcobj2map(obj_vX(c, obj));
 		struct a2_obj* v = a2_map_query(map, k);
 		if(v == NULL && is_raw)
