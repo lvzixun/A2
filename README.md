@@ -7,7 +7,7 @@ make
 make install
 
 :$ a2
-A2 power by zixun, rainbow from judy.
+A2 power by zixun, rainbow from.
 >
 ```
 
