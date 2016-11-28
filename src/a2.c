@@ -9,7 +9,7 @@
 #include <readline/history.h>
 
 
-#define A2_COM_HEAD "A2 power by zixun, rainbow from judy.\n"
+#define A2_COM_HEAD "A2 power by zixun.\n"
 
 
 static inline void _load(struct a2_state* state, const char* filename){
